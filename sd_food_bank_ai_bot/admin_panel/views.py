@@ -18,7 +18,7 @@ def login_view(request):
             return redirect() # No Home page yet, need to add redirect later
         else: 
             form = AuthenticationForm()
-        return render(request, 'admin_panel/login.html')
+        return render(request, 'admin_panel/login.html', {'form: form'})
 
 def faq_page_view(request):
     return render(request, 'faq_page.html')
