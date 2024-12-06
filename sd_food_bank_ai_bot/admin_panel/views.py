@@ -10,3 +10,6 @@ def login_view(request):
     validate the user's credentials and log them in, then redirect them to the home page.
     """
     return render(request, 'admin_panel/login.html')
+
+def faq_page_view(request):
+    return render(request, 'faq_page.html')
