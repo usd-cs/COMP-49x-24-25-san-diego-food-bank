@@ -15,10 +15,10 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect() # No Home page yet, need to add redirect later
-        else: 
-            form = AuthenticationForm()
-        return render(request, 'admin_panel/login.html', {'form: form'})
+            return redirect('faq_page') 
+    else: 
+        form = AuthenticationForm()
+    return render(request, 'admin_panel/login.html', {'form: form'})
 
 def faq_page_view(request):
     return render(request, 'faq_page.html')
