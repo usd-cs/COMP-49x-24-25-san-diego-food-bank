@@ -15,6 +15,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: admin_user
+          POSTGRES_PASSWORD: admin_321
+          POSTGRES_DB: sd_foodbank_db
+        ports:
+          - 5432:5432
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +36,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Set up Database
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
+        run: |
+          # Wait for PostgreSQL to be ready
+          until pg_isready -h localhost -p 5432 -U admin_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -34,5 +52,8 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
+        env:
+          DJANGO_SETTINGS_MODULE: sd_food_bank_ai_bot.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
         run: |
           python ./sd_food_bank_ai_bot/manage.py test admin_panel
