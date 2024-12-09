@@ -37,14 +37,14 @@ jobs:
           pip install flake8
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Set up Database
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
-      run: |
-        # Wait for PostgreSQL to be ready
-        until pg_isready -h localhost -p 5432 -U admin_user; do
-          echo "Waiting for PostgreSQL..."
-          sleep 1
-        done
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
+        run: |
+          # Wait for PostgreSQL to be ready
+          until pg_isready -h localhost -p 5432 -U admin_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
