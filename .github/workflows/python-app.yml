@@ -53,7 +53,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         env:
-        DJANGO_SETTINGS_MODULE: sd_food_bank_ai_bot.settings
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
+          DJANGO_SETTINGS_MODULE: sd_food_bank_ai_bot.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
         run: |
           python ./sd_food_bank_ai_bot/manage.py test admin_panel
