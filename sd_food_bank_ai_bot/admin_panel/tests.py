@@ -14,7 +14,7 @@ class LoginViewsTestCase(TestCase):
         """Test the GET request for the login view"""
         response = self.client.get(reverse('login')) # Make sure the URL works 
         self.assertEqual(response.status_code, 200) 
-        self.assertTemplateUsed(response, 'admin_panel/login.html')
+        self.assertTemplateUsed(response, 'login.html')
 
     # def test_post_request(self):
     #     """Test the POST request with valid login credentials"""
@@ -25,6 +25,6 @@ class LoginViewsTestCase(TestCase):
     def test_post_invalid_user(self):
         """Test the POST request with invalid login credentials"""
         response = self.client.post(reverse('login'), {'username': 'user3', 'password': 'pass321'})
-        self.assertTemplateUsed(response, 'admin_panel/login.html')
+        self.assertTemplateUsed(response, 'login.html')
         self.assertContains(response, 'Please enter a correct username and password.')
         
