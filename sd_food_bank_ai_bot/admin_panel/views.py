@@ -18,7 +18,7 @@ def login_view(request):
             return redirect('faq_page') 
     else: 
         form = AuthenticationForm()
-    return render(request, 'admin_panel/login.html', {'form: form'})
+    return render(request, 'login.html', {'form': form})
 
 def faq_page_view(request):
     return render(request, 'faq_page.html')
