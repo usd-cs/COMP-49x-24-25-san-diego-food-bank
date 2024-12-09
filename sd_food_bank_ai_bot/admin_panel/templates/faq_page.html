@@ -2,5 +2,31 @@
 {% load static %}
 
 {% block content %}
-<!-- Put html for this page here -->
+<link rel="stylesheet" href="{% static 'css/faq_page.css' %}">
+
+<div class="faq-container">
+    <h1>FAQ Page</h1>
+    <div class="faq-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Answer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for faq in faqs %}
+                <tr>
+                    <td><input type="checkbox"></td>
+                    <td>Placeholder question text</td>
+                    <td>Placeholder answer text</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="create-faq">
+        <button class="create-btn">+ Create new FAQ</button>
+    </div>
+</div>
 {% endblock %}
