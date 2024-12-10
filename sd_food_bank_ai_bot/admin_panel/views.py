@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth import login
+from django.contrib.auth import login,logout
 from django.db.models import Q
 from .models import FAQ, Tag
 
@@ -22,6 +22,13 @@ def login_view(request):
     else: 
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
+
+def logout_view(request):
+    """ 
+    Properly handle user logout and redirect back to the login page
+    """
+    logout(request)
+    return redirect('login')
 
 def faq_page_view(request):
     query = request.GET.get('q')

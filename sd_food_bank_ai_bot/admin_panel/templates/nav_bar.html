@@ -50,6 +50,7 @@
     <a href="{% url 'faq_page' %}" {% if request.path == '/FAQs' %} id="active" {% endif %}>FAQs</a>
     <a>Monitoring</a>
     <a>Reboot System</a>
+    <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
   </div>
 
   <!-- Content Block for Other Templates to Extend -->
