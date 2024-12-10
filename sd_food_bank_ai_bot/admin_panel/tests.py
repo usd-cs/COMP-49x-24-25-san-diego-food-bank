@@ -30,7 +30,7 @@ class LoginViewsTestCase(TestCase):
 class FAQPageTestCase(TestCase):
     def setUp(self):
         self.client = Client()
-        self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+        self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
         self.faq_2 = FAQ.objects.create(question="How can I have access to the food bank client choice center?", answer="To have access to the client choice center, you must have scheduled an appointment")
     
     def test_get_request(self):
@@ -44,11 +44,17 @@ class FAQPageTestCase(TestCase):
 
         # Check first FAQ appears
         self.assertContains(response, "When does the food bank open?")
-        self.assertContains(response, "The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+        self.assertContains(response, "The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
 
         # Check second FAQ appears
         self.assertContains(response, "How can I have access to the food bank client choice center?")
         self.assertContains(response, "To have access to the client choice center, you must have scheduled an appointment")
 
-    
-        
+    def test_search_no_results(self):
+        response = self.client.get(reverse('faq_page'), {'q': "asdfasdfasdfasdf"})
+        self.assertContains(response, "No matching entries found")
+
+    def test_search_with_results(self):
+        response = self.client.get(reverse('faq_page'), {'q': "appointment"})
+        self.assertContains(response, "How can I have access to the food bank client choice center?")
+        self.assertNotContains(response, "When does the food bank open?")
