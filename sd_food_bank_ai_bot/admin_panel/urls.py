@@ -1,10 +1,12 @@
 """This module contains URL routing for the web forum application."""
 
 from django.urls import path
+from django.shortcuts import redirect
 from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
+    path("", lambda request: redirect('login/'), name="default"),
     path("faqs/", views.faq_page_view, name="faq_page"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name='logout'),
