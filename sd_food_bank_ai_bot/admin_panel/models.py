@@ -8,6 +8,9 @@ class Tag(models.Model):
     """Table for storing tags to assign to FAQs"""
     name = models.TextField()
 
+    def __str__(self):
+        return self.name
+
 class FAQ(models.Model):
     """Table for storing FAQs"""
     question = models.TextField()

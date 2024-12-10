@@ -3,6 +3,8 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
 from django.db.models import Q
 from .models import FAQ, Tag
+from .forms import FAQForm
+
 
 # Create your views here.
 
@@ -45,3 +47,27 @@ def delete_faq(request, faq_id):
         faq = get_object_or_404(FAQ, id=faq_id)
         faq.delete()
         return redirect('faq_page')
+    
+def create_faq(request):
+    if request.method == "POST":
+        form = FAQForm(request.POST)
+        if form.is_valid():
+            faq = form.save(commit=False)
+            faq.save()
+        
+            existing_tags = form.cleaned_data['existing_tags']
+            for tag in existing_tags:
+                faq.tags.add(tag)
+
+            new_tags = form.cleaned_data['new_tags']
+            if new_tags:
+                new_tag_names = [name.strip() for name in new_tags.split(',') if name.strip()]
+                for tag_name in new_tag_names:
+                    tag, created = Tag.objects.get_or_create(name=tag_name)
+                    faq.tags.add(tag)
+            return redirect("faq_page")
+    else:
+        form = FAQForm()
+
+    return render(request, "create_faq.html", {"form": form})
+
