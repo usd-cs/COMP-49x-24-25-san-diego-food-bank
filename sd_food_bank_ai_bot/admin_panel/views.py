@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login,logout
 from django.db.models import Q
 from .models import FAQ, Tag
@@ -32,6 +33,7 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+@login_required
 def faq_page_view(request):
     query = request.GET.get('q')
     selected_tag = request.GET.get('tag', '')
@@ -49,12 +51,14 @@ def faq_page_view(request):
     return render(request, 'faq_page.html', {"faqs": faqs, "query": query, "tags": tags,
         "selected_tag": int(selected_tag) if selected_tag else None,})
 
+@login_required
 def delete_faq(request, faq_id):
     if request.method == 'POST':
         faq = get_object_or_404(FAQ, id=faq_id)
         faq.delete()
         return redirect('faq_page')
-    
+
+@login_required
 def create_faq(request):
     if request.method == "POST":
         form = FAQForm(request.POST)
