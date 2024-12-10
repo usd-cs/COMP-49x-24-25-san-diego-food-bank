@@ -95,6 +95,13 @@ def edit_faq(request, faq_id):
             for tag in existing_tags:
                 new_faq.tags.add(tag)
 
+            new_tags = form.cleaned_data['new_tags']
+            if new_tags:
+                new_tag_names = [name.strip() for name in new_tags.split(',') if name.strip()]
+                for tag_name in new_tag_names:
+                    tag, created = Tag.objects.get_or_create(name=tag_name)
+                    new_faq.tags.add(tag)
+
             old_faq.delete()
 
             return redirect('faq_page')
