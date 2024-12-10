@@ -5,12 +5,16 @@
 <link rel="stylesheet" href="{% static 'css/faq_page.css' %}">
 
 <div class="faq-container">
-    <h1>FAQ Page</h1>
-    <form method="get" action="">
-        <input type="text" name="q" placeholder="Search..." {% if query %} value="{{ query }}" {% endif %}>
-        <button type="submit">Search</button>
-    </form>
+    <div class="title-and-search">
+        <h1>FAQ Page</h1>
+        <form class="search-and-button" method="get" action="">
+            <input type="text" name="q" placeholder="Search..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
+            <button type="submit" class="search-button">Search</button>
+        </form>
+        <h1 style="color: white;">FAQ Page</h1>
+    </div>
     <div class="faq-table">
+        {% if faqs %}
         <table>
             <thead>
                 <tr>
@@ -24,11 +28,12 @@
                     <td>{{ faq.question }}</td>
                     <td>{{ faq.answer }}</td>
                 </tr>
-                {% empty %}
-                <h3>No items found</h3>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <h3>No matching entries found</h3>
+        {% endif %}
     </div>
     <div class="create-faq">
         <button class="create-btn">+ Create new FAQ</button>

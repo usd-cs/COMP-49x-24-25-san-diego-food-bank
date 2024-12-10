@@ -15,8 +15,10 @@ body {
 }
 
 .faq-container h1 {
+    display: flex;
     font-size: 24px;
-    margin-bottom: 20px;
+    /*margin-bottom: 20px;*/
+    justify-content: left;
 }
 
 .faq-table {
@@ -69,4 +71,32 @@ body {
 
 .create-btn:hover {
     background-color: #218838;
+}
+
+.title-and-search {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.search-and-button {
+    display: flex;
+    justify-content: center;
+}
+
+input, button {
+    border-style: solid;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+button {
+    border-color:#82B65B;
+    color: #82B65B;
+    background-color: transparent;
+}
+
+button:hover {
+    background-color: #abe082;
 }
