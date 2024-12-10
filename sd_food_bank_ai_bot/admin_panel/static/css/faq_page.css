@@ -102,7 +102,7 @@ body {
     justify-content: center;
 }
 
-.search-bar, .search-button {
+.search-bar, .search-button, .tag-dropdown {
     border-style: solid;
     border-radius: 5px;
     padding: 5px;
@@ -116,4 +116,9 @@ body {
 
 .search-button:hover {
     background-color: #abe082;
+}
+
+.tag-dropdown:hover {
+    background-color: #f1f1f1;
+    cursor: pointer;
 }
