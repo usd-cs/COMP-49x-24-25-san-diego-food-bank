@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User 
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from admin_panel.models import Admin, FAQ, Tag
 
@@ -26,6 +27,24 @@ class LoginViewsTestCase(TestCase):
         response = self.client.post(reverse('login'), {'username': 'user3', 'password': 'pass321'})
         self.assertTemplateUsed(response, 'login.html')
 
+class LogoutViewTestCase(TestCase): 
+    def setUp(self):
+        """Set up test client and a user"""
+        self.client = Client()
+        User = get_user_model()
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+    
+    def test_logout_redirect(self):
+        """Test that the logout view redirects back to login page"""
+        self.client.login(username='testuser', password='testpassword')
+        response = self.client.get(reverse('logout'))
+        self.assertRedirects(response, reverse('login'))
+
+    def test_user_logged_out(self):
+        """Test to make sure the user is logged out"""
+        self.client.login(username='testuser', password='testpassword')
+        response = self.client.get(reverse('logout'))
+        self.assertNotIn('_auth_user_id', self.client.session) # There should be no user id in the session
 
 class FAQPageTestCase(TestCase):
     def setUp(self):
