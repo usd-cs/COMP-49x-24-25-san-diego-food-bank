@@ -17,7 +17,6 @@ body {
 .faq-container h1 {
     display: flex;
     font-size: 24px;
-    /*margin-bottom: 20px;*/
     justify-content: left;
 }
 
