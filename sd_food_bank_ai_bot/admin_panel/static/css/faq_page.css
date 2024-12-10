@@ -91,6 +91,24 @@ body {
     transform: scale(1.05);
 }
 
+.edit-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+
 .title-and-search {
     display: flex;
     align-items: center;

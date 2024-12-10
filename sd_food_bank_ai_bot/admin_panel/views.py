@@ -78,3 +78,23 @@ def create_faq(request):
 
     return render(request, "create_faq.html", {"form": form})
 
+def edit_faq(request, faq_id):
+    old_faq = get_object_or_404(FAQ, id=faq_id)
+
+    if request.method == 'POST':
+        form = FAQForm(request.POST)
+        if form.is_valid():
+            new_faq = form.save(commit=False)
+            new_faq.save()
+
+            existing_tags = form.cleaned_data['existing_tags']
+            for tag in existing_tags:
+                new_faq.tags.add(tag)
+
+            old_faq.delete()
+
+            return redirect('faq_page')
+    else:
+        form = FAQForm(instance=old_faq)
+
+    return render(request, 'edit_faq.html', {'form': form, 'faq': old_faq})
