@@ -9,6 +9,12 @@
         <h1>FAQ Page</h1>
         <form class="search-and-button" method="get" action="">
             <input type="text" name="q" placeholder="Search..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
+            <select name="tag" class="tag-dropdown">
+                <option value="" {% if not selected_tag %}selected{% endif %}>All Tags</option>
+                {% for tag in tags %}
+                <option value="{{ tag.id }}" {% if tag.id == selected_tag %}selected{% endif %}>{{ tag.name }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="search-button">Search</button>
         </form>
         <h1 style="color: white;">FAQ Page</h1>

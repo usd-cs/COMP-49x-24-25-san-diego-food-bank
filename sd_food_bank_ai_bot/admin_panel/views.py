@@ -5,6 +5,7 @@ from django.db.models import Q
 from .models import FAQ, Tag
 from .forms import FAQForm
 
+
 # Create your views here.
 
 def login_view(request):
@@ -26,11 +27,20 @@ def login_view(request):
 
 def faq_page_view(request):
     query = request.GET.get('q')
+    selected_tag = request.GET.get('tag', '')
+
     if query:
         faqs = FAQ.objects.filter(Q(question__icontains=query) | Q(answer__icontains=query))
     else:
         faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
-    return render(request, 'faq_page.html', {"faqs": faqs, "query": query})
+
+    if selected_tag:
+        faqs = faqs.filter(tags__id=selected_tag)
+
+    tags = Tag.objects.all()
+
+    return render(request, 'faq_page.html', {"faqs": faqs, "query": query, "tags": tags,
+        "selected_tag": int(selected_tag) if selected_tag else None,})
 
 def delete_faq(request, faq_id):
     if request.method == 'POST':

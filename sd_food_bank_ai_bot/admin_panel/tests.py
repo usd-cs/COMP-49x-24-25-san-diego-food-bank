@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User 
 from django.urls import reverse
-from admin_panel.models import Admin, FAQ
+from admin_panel.models import Admin, FAQ, Tag
 
 
 class LoginViewsTestCase(TestCase):
@@ -33,7 +33,11 @@ class FAQPageTestCase(TestCase):
         self.client = Client()
         self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
         self.faq_2 = FAQ.objects.create(question="How can I have access to the food bank client choice center?", answer="To have access to the client choice center, you must have scheduled an appointment")
-    
+        self.tag_1 = Tag.objects.create(name="Hours")
+        self.tag_2 = Tag.objects.create(name="Access")
+        self.faq_1.tags.add(self.tag_1)
+        self.faq_2.tags.add(self.tag_2)
+
     def test_get_request(self):
         """Test the GET request for FAQ view"""
         response = self.client.get(reverse('faq_page'))
@@ -84,3 +88,21 @@ class FAQPageTestCase(TestCase):
         response = self.client.get(reverse('faq_page'), {'q': "appointment"})
         self.assertContains(response, "How can I have access to the food bank client choice center?")
         self.assertNotContains(response, "When does the food bank open?")
+
+    def test_tag_filter_hours(self):
+        """Test filtering by 'Hours' tag"""
+        response = self.client.get(reverse('faq_page'), {'tag': self.tag_1.id})
+        self.assertContains(response, "When does the food bank open?")
+        self.assertNotContains(response, "How can I have access to the food bank client choice center?")
+
+    def test_tag_filter_access(self):
+        """Test filtering by 'Access' tag"""
+        response = self.client.get(reverse('faq_page'), {'tag': self.tag_2.id})
+        self.assertContains(response, "How can I have access to the food bank client choice center?")
+        self.assertNotContains(response, "When does the food bank open?")
+
+    def test_tag_filter_all_tags(self):
+        """Test displaying all FAQs when no tag is selected"""
+        response = self.client.get(reverse('faq_page'))
+        self.assertContains(response, "When does the food bank open?")
+        self.assertContains(response, "How can I have access to the food bank client choice center?")
