@@ -6,6 +6,10 @@
 
 <div class="faq-container">
     <h1>FAQ Page</h1>
+    <form method="get" action="">
+        <input type="text" name="q" placeholder="Search..." {% if query %} value="{{ query }}" {% endif %}>
+        <button type="submit">Search</button>
+    </form>
     <div class="faq-table">
         <table>
             <thead>
@@ -17,10 +21,11 @@
             <tbody>
                 {% for faq in faqs %}
                 <tr>
-                    <!-- <td><input type="checkbox"></td> -->
                     <td>{{ faq.question }}</td>
                     <td>{{ faq.answer }}</td>
                 </tr>
+                {% empty %}
+                <h3>No items found</h3>
                 {% endfor %}
             </tbody>
         </table>
