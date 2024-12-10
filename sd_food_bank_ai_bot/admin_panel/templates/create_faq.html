@@ -1,0 +1,24 @@
+{% extends 'nav_bar.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/create_faq.css' %}">
+
+<div class="create_faq_container">
+    <h1>Create FAQ</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-row">
+            <label for="{{ form.question.id_for_label }}">Question</label>
+            {{ form.question }}
+        </div>
+
+        <div class="form-row">
+            <label for="{{ form.answer.id_for_label }}">Answer</label>
+            {{ form.answer }}
+        </div>
+
+        <button type="submit" class="create-btn">Save FAQ</button>
+    </form>
+</div>
+{% endblock %}

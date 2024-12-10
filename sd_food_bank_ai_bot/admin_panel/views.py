@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
 from django.db.models import Q
-from .models import FAQ
+from .models import FAQ, Tag
+from .forms import FAQForm
 
 # Create your views here.
 
@@ -36,3 +37,15 @@ def delete_faq(request, faq_id):
         faq = get_object_or_404(FAQ, id=faq_id)
         faq.delete()
         return redirect('faq_page')
+    
+def create_faq(request):
+    if request.method == "POST":
+        form = FAQForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("faq_page")
+    else:
+        form = FAQForm()
+
+    return render(request, "create_faq.html", {"form": form})
+
