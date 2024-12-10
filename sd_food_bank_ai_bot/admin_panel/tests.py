@@ -29,8 +29,9 @@ class LoginViewsTestCase(TestCase):
 
 class FAQPageTestCase(TestCase):
     def setUp(self):
+        """Set up a test client and FAQ objects"""
         self.client = Client()
-        self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+        self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
         self.faq_2 = FAQ.objects.create(question="How can I have access to the food bank client choice center?", answer="To have access to the client choice center, you must have scheduled an appointment")
     
     def test_get_request(self):
@@ -40,15 +41,26 @@ class FAQPageTestCase(TestCase):
         self.assertTemplateUsed(response, 'faq_page.html')
     
     def test_items_displayed(self):
+        """Test all items being displayed when not searching"""
         response = self.client.get(reverse('faq_page'))
 
         # Check first FAQ appears
         self.assertContains(response, "When does the food bank open?")
-        self.assertContains(response, "The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+        self.assertContains(response, "The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
 
         # Check second FAQ appears
         self.assertContains(response, "How can I have access to the food bank client choice center?")
         self.assertContains(response, "To have access to the client choice center, you must have scheduled an appointment")
 
-    
-        
+    def test_search_no_results(self):
+        """Test no search results when searching for a string not in any questions/answers"""
+        response = self.client.get(reverse('faq_page'), {'q': "asdfasdfasdfasdf"})
+        self.assertNotContains(response, "When does the food bank open?")
+        self.assertNotContains(response, "How can I have access to the food bank client choice center?")
+        self.assertContains(response, "No matching entries found")
+
+    def test_search_with_results(self):
+        """Test the correct item is displayed when searching for a string in a question/answer"""
+        response = self.client.get(reverse('faq_page'), {'q': "appointment"})
+        self.assertContains(response, "How can I have access to the food bank client choice center?")
+        self.assertNotContains(response, "When does the food bank open?")
