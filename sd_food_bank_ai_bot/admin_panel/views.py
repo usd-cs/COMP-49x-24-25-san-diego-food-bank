@@ -24,5 +24,4 @@ def login_view(request):
 
 def faq_page_view(request):
     faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
-    return render(request, 'faq_page.html')
-    
+    return render(request, 'faq_page.html', {"faqs": faqs})

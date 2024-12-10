@@ -17,9 +17,9 @@
             <tbody>
                 {% for faq in faqs %}
                 <tr>
-                    <td><input type="checkbox"></td>
-                    <td>Placeholder question text</td>
-                    <td>Placeholder answer text</td>
+                    <!-- <td><input type="checkbox"></td> -->
+                    <td>{{ faq.question }}</td>
+                    <td>{{ faq.answer }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
