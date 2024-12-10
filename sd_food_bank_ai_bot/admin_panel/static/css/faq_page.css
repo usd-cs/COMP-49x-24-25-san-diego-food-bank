@@ -84,18 +84,18 @@ body {
     justify-content: center;
 }
 
-input, button {
+.search-bar, .search-button {
     border-style: solid;
     border-radius: 5px;
     padding: 5px;
 }
 
-button {
+.search-button {
     border-color:#82B65B;
     color: #82B65B;
     background-color: transparent;
 }
 
-button:hover {
+.search-button:hover {
     background-color: #abe082;
 }
