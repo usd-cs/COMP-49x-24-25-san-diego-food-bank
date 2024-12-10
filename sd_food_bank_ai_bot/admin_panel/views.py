@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
+from django.db.models import Q
 from .models import FAQ
 
 # Create your views here.
@@ -23,8 +24,12 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 def faq_page_view(request):
-    faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
-    return render(request, 'faq_page.html', {"faqs": faqs})
+    query = request.GET.get('q')
+    if query:
+        faqs = FAQ.objects.filter(Q(question__icontains=query) | Q(answer__icontains=query))
+    else:
+        faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
+    return render(request, 'faq_page.html', {"faqs": faqs, "query": query})
 
 def delete_faq(request, faq_id):
     if request.method == 'POST':
