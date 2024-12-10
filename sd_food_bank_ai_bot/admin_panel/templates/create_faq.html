@@ -18,6 +18,18 @@
             {{ form.answer }}
         </div>
 
+        <div class="form-row">
+            <label for="{{ form.existing_tags.id_for_label }}">{{ form.existing_tags.label }}</label>
+            <div class="checkboxes-container">
+                {{ form.existing_tags }}
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <label for="{{ form.new_tags.id_for_label }}">{{ form.new_tags.label }}</label>
+            {{ form.new_tags }}
+        </div>
+
         <button type="submit" class="create-btn">Save FAQ</button>
     </form>
 </div>

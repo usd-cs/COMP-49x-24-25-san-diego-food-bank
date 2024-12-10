@@ -36,7 +36,7 @@ form {
     display: block;
 }
 
-form input, form textarea {
+form input, form textarea, form select {
     width: 100%;
     padding: 12px;
     border: 1px solid #444;
@@ -68,4 +68,21 @@ form textarea {
 
 .create-btn:hover {
     background-color: #218838;
+}
+
+.checkboxes-container {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.form-row input[type="checkbox"] {
+    accent-color: #82B65B;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.form-row input[type="checkbox"]:checked {
+    background-color: #82B65B;
 }

@@ -42,7 +42,19 @@ def create_faq(request):
     if request.method == "POST":
         form = FAQForm(request.POST)
         if form.is_valid():
-            form.save()
+            faq = form.save(commit=False)
+            faq.save()
+        
+            existing_tags = form.cleaned_data['existing_tags']
+            for tag in existing_tags:
+                faq.tags.add(tag)
+
+            new_tags = form.cleaned_data['new_tags']
+            if new_tags:
+                new_tag_names = [name.strip() for name in new_tags.split(',') if name.strip()]
+                for tag_name in new_tag_names:
+                    tag, created = Tag.objects.get_or_create(name=tag_name)
+                    faq.tags.add(tag)
             return redirect("faq_page")
     else:
         form = FAQForm()
