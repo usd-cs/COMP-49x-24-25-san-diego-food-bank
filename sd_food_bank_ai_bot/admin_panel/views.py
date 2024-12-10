@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login
 from django.db.models import Q
@@ -30,3 +30,9 @@ def faq_page_view(request):
     else:
         faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
     return render(request, 'faq_page.html', {"faqs": faqs, "query": query})
+
+def delete_faq(request, faq_id):
+    if request.method == 'POST':
+        faq = get_object_or_404(FAQ, id=faq_id)
+        faq.delete()
+        return redirect('faq_page')
