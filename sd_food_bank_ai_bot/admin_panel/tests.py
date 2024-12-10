@@ -50,5 +50,25 @@ class FAQPageTestCase(TestCase):
         self.assertContains(response, "How can I have access to the food bank client choice center?")
         self.assertContains(response, "To have access to the client choice center, you must have scheduled an appointment")
 
+    def test_delete_faq(self):
+        """Test deleting an FAQ"""
+        # Verify the FAQ exists initially
+        self.assertTrue(FAQ.objects.filter(id=self.faq_1.id).exists())
+
+        # Send POST request to delete the FAQ
+        response = self.client.post(reverse('delete_faq', args=[self.faq_1.id]))
+
+        # Check redirection after deletion
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('faq_page'))
+
+        # Verify the FAQ no longer exists in the database
+        self.assertFalse(FAQ.objects.filter(id=self.faq_1.id).exists())
+
+        # Check if the FAQ is no longer displayed on the page
+        response = self.client.get(reverse('faq_page'))
+        self.assertNotContains(response, "When does the food bank open?")
+        self.assertNotContains(response, "The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+
     
         
