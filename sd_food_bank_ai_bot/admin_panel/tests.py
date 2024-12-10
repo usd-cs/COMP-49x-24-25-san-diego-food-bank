@@ -70,7 +70,7 @@ class FAQPageTestCase(TestCase):
         # Check if the FAQ is no longer displayed on the page
         response = self.client.get(reverse('faq_page'))
         self.assertNotContains(response, "When does the food bank open?")
-        self.assertNotContains(response, "The food bank is open Monday-Friday from ():00 AM to 5:00 PM")
+        self.assertNotContains(response, "The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
 
     def test_search_no_results(self):
         """Test no search results when searching for a string not in any questions/answers"""
