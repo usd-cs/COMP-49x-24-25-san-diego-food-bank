@@ -43,7 +43,7 @@ def faq_page_view(request):
     if query:
         faqs = FAQ.objects.filter(Q(question__icontains=query) | Q(answer__icontains=query))
     else:
-        faqs = FAQ.objects.all() # Retrieve FAQs from database and update the view
+        faqs = FAQ.objects.all()  # Retrieve FAQs from database and update the view
 
     if selected_tag:
         faqs = faqs.filter(tags__id=selected_tag)
