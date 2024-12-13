@@ -43,6 +43,7 @@ class LogoutViewTestCase(TestCase):
     def test_user_logged_out(self):
         """Test to make sure the user is logged out"""
         self.client.login(username='testuser', password='testpassword')
+        self.client.get(reverse('logout'))
         self.assertNotIn('_auth_user_id', self.client.session)  # There should be no user id in the session
 
 
