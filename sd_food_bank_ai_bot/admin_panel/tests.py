@@ -54,8 +54,10 @@ class FAQPageTestCase(TestCase):
         User = get_user_model()
         self.user = User.objects.create_user(username='testuser', password='testpassword')
 
-        self.faq_1 = FAQ.objects.create(question="When does the food bank open?", answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
-        self.faq_2 = FAQ.objects.create(question="How can I have access to the food bank client choice center?", answer="To have access to the client choice center, you must have scheduled an appointment")
+        self.faq_1 = FAQ.objects.create(question="When does the food bank open?",
+                                        answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
+        self.faq_2 = FAQ.objects.create(question="How can I have access to the food bank client choice center?",
+                                        answer="You must have an appointment.")
         self.tag_1 = Tag.objects.create(name="Hours")
         self.tag_2 = Tag.objects.create(name="Access")
         self.faq_1.tags.add(self.tag_1)
@@ -79,7 +81,7 @@ class FAQPageTestCase(TestCase):
 
         # Check second FAQ appears
         self.assertContains(response, "How can I have access to the food bank client choice center?")
-        self.assertContains(response, "To have access to the client choice center, you must have scheduled an appointment")
+        self.assertContains(response, "You must have an appointment.")
 
     def test_delete_faq(self):
         """Test deleting an FAQ"""
