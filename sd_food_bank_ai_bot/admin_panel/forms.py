@@ -1,6 +1,7 @@
 from django import forms
 from .models import FAQ, Tag
 
+
 class FAQForm(forms.ModelForm):
     existing_tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
@@ -13,6 +14,7 @@ class FAQForm(forms.ModelForm):
         required=False,
         label="New Tags",
     )
+
     class Meta:
         model = FAQ
         fields = ['question', 'answer', 'existing_tags', 'new_tags']
