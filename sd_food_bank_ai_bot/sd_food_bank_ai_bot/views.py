@@ -1,6 +1,7 @@
-from django.shortcuts import render, HttpResponse, redirect
-from django.contrib.auth import login 
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
+
 
 def login_view(request):
     """
