@@ -121,10 +121,12 @@ def edit_faq(request, faq_id):
 
     if request.method == 'POST':
         form = FAQForm(request.POST)
+        # Extract content from form of old fag to decipher if any was changed and update accordingly
         if form.is_valid():
             new_faq = form.save(commit=False)
+            new_faq.id = old_faq.id
+            new_faq.tags.clear()
             new_faq.save()
-
             existing_tags = form.cleaned_data['existing_tags']
             for tag in existing_tags:
                 new_faq.tags.add(tag)
@@ -135,8 +137,7 @@ def edit_faq(request, faq_id):
                 for tag_name in new_tag_names:
                     tag, created = Tag.objects.get_or_create(name=tag_name)
                     new_faq.tags.add(tag)
-            # Remove the old FAQ tag once new one is saved
-            old_faq.delete()
+            new_faq.save()
 
             return redirect('faq_page')
     else:
