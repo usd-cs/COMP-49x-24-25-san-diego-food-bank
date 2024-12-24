@@ -40,9 +40,9 @@ def faq_page_view(request):
     """
     Display the FAQ page.
 
-    This view retrieves FAQs from the database and displays them on a page. Admins can 
+    This view retrieves FAQs from the database and displays them on a page. Admins can
     search for FAQs or filter them by their assigned tag. All available tags are also displayed
-    for the admins to select. 
+    for the admins to select.
     """
     query = request.GET.get('q')
     selected_tag = request.GET.get('tag', '')
@@ -52,7 +52,7 @@ def faq_page_view(request):
         faqs = FAQ.objects.filter(Q(question__icontains=query) | Q(answer__icontains=query))
     else:
         # Retrieve all FAQs and update the view if no search query is specified
-        faqs = FAQ.objects.all()  
+        faqs = FAQ.objects.all()
 
     if selected_tag:
         faqs = faqs.filter(tags__id=selected_tag)
@@ -67,7 +67,7 @@ def faq_page_view(request):
 @login_required
 def delete_faq(request, faq_id):
     """
-    Allows admins to delete a specific FAQ. 
+    Allows admins to delete a specific FAQ.
 
     This view will allow admins to delete an FAQ entry based on the faq_id.
     After successfully deleting, the user is redirected back to the faq page.
@@ -84,7 +84,7 @@ def create_faq(request):
     Allows admin to create a new FAQ entry with the properly associated tags.
 
     This view handles the creation of new FAQs, including the ability to group them
-    with existing or new tags that can be created. 
+    with existing or new tags that can be created.
     """
     if request.method == "POST":
         form = FAQForm(request.POST)
@@ -104,16 +104,17 @@ def create_faq(request):
                     faq.tags.add(tag)
             return redirect("faq_page")
     else:
-        form = FAQForm() # Empty form for FAQ creation 
+        # Empty form for FAQ creation
+        form = FAQForm()
 
     return render(request, "create_faq.html", {"form": form})
 
 
 def edit_faq(request, faq_id):
     """
-    Allows admins to edit existing FAQs. 
+    Allows admins to edit existing FAQs.
 
-    This view retrieves an FAQ based on its faq_id and allows admins to update its content 
+    This view retrieves an FAQ based on its faq_id and allows admins to update its content
     and tags. The older FAQs can be replaced with newer, updated information. New tags can
     also be added and existing tags can be reassigned.
     """
@@ -121,22 +122,23 @@ def edit_faq(request, faq_id):
 
     if request.method == 'POST':
         form = FAQForm(request.POST)
+        # Extract content from form of old fag to decipher if any was changed and update accordingly
         if form.is_valid():
             new_faq = form.save(commit=False)
+            new_faq.id = old_faq.id
+            new_faq.tags.clear()
             new_faq.save()
-
             existing_tags = form.cleaned_data['existing_tags']
             for tag in existing_tags:
                 new_faq.tags.add(tag)
-            
+
             new_tags = form.cleaned_data['new_tags']
             if new_tags:
                 new_tag_names = [name.strip() for name in new_tags.split(',') if name.strip()]
                 for tag_name in new_tag_names:
                     tag, created = Tag.objects.get_or_create(name=tag_name)
                     new_faq.tags.add(tag)
-            # Remove the old FAQ tag once new one is saved
-            old_faq.delete()
+            new_faq.save()
 
             return redirect('faq_page')
     else:

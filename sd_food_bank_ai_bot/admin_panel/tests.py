@@ -104,6 +104,65 @@ class FAQPageTestCase(TestCase):
         self.assertNotContains(response, "When does the food bank open?")
         self.assertNotContains(response, "The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
 
+    def test_add_valid_faq(self):
+        """Test adding a valid FAQ"""
+        faq_info = {
+            'question': 'What do you sell?',
+            'answer': 'We sell food of all kinds.',
+            'existing_tags': [self.tag_1.id, self.tag_2.id],
+            'new_tags': 'Products',
+        }
+
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('create_faq'), faq_info)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('faq_page'))
+
+        faq = FAQ.objects.get(question='What do you sell?')
+        self.assertIsNotNone(faq)
+        self.assertEqual(faq.question, 'What do you sell?')
+        self.assertEqual(faq.answer, 'We sell food of all kinds.')
+        self.assertEqual(faq.tags.count(), 3)
+
+    def test_add_invalid_faq(self):
+        """Test adding an invalid FAQ"""
+        faq_info = {
+            'question': '',
+            'answer': '',
+            'existing_tags': [self.tag_1.id, self.tag_2.id],
+            'new_tags': 'Products',
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('create_faq'), faq_info)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(FAQ.objects.filter(question='').exists())
+
+    def test_edit_faq(self):
+        """Test editing already existing FAQ"""
+        self.client.force_login(self.user)
+        faq = FAQ.objects.get(question="When does the food bank open?")
+        new_faq_info = {
+            'question': 'What do you sell?',
+            'answer': 'We sell food of all kinds.',
+            'existing_tags': [self.tag_1.id, self.tag_2.id],
+            'new_tags': 'Products',
+        }
+
+        response = self.client.post(reverse('edit_faq', args=[faq.id]), new_faq_info)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('faq_page'))
+
+        faq.refresh_from_db()
+
+        self.assertEqual(faq.question, 'What do you sell?')
+        self.assertEqual(faq.answer, 'We sell food of all kinds.')
+        self.assertEqual(faq.tags.count(), 3)
+
     def test_search_no_results(self):
         """Test no search results when searching for a string not in any questions/answers"""
         self.client.force_login(self.user)
