@@ -104,8 +104,7 @@ def create_faq(request):
                     faq.tags.add(tag)
             return redirect("faq_page")
     else:
-        # Empty form for FAQ creation
-        form = FAQForm()
+        form = FAQForm()  # Empty form for FAQ creation
 
     return render(request, "create_faq.html", {"form": form})
 
