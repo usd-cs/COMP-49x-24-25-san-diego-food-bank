@@ -54,6 +54,6 @@ jobs:
       - name: Test with pytest
         env:
           DJANGO_SETTINGS_MODULE: sd_food_bank_ai_bot.settings
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/sd_foodbank_db
+          DATABASE_URL: postgres://admin_user:admin_321@localhost:5432/sd_foodbank_db
         run: |
           python ./sd_food_bank_ai_bot/manage.py test admin_panel
