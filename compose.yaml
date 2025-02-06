@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: sd_foodbank_db
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: admin_321
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    command: >
+      sh -c "
+        python sd_food_bank_ai_bot/manage.py migrate &&
+        python sd_food_bank_ai_bot/manage.py runserver 0.0.0.0:8000
+      "
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgres://admin_user:admin_321@db:5432/sd_foodbank_db"
+
+volumes:
+  postgres_data:

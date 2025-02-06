@@ -4,3 +4,4 @@ sqlparse==0.5.1
 asgiref==3.8.1
 psycopg2==2.9.10
 pytest-django
+dj-database-url
