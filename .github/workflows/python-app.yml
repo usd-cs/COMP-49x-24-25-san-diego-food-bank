@@ -45,6 +45,10 @@ jobs:
             echo "Waiting for PostgreSQL..."
             sleep 1
           done
+      - name: Format Python Code with Black
+        run: |
+          # format all python files based on black formatting guidelines which follow pep8
+          black .
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names

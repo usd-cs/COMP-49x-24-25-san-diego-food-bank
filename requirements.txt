@@ -3,5 +3,6 @@ django==5.1.5
 sqlparse==0.5.1
 asgiref==3.8.1
 psycopg2==2.9.10
-pytest-django
-dj-database-url
+pytest-django==4.10.0
+dj-database-url==2.3.0
+black==25.1.0
