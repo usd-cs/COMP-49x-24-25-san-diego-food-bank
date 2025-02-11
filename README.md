@@ -26,13 +26,21 @@
    
    git@github.com:usd-cs/COMP-49x-24-25-san-diego-food-bank.git
 
-3. Install required dependencies from requirements.txt:
+2. Install Docker
+   
+   https://www.docker.com/products/docker-desktop/
 
-4. Setup the PostgreSQL database:
-    python manage.py migrate 
+3. Connect docker account
 
-5. Create a superuser account to access the admin:
-    python manage.py createsuperuser 
+   docker login -u <username>
 
-6. Run the development server and visit http://127.0.0.1:8000 to access via browser:
-    python manage.py runserver 
+4. Run the application
+
+   (first time running) docker compose up --build
+
+   (any other time) docker compose up
+
+7. Visit http://127.0.0.1:8000 to access via browser
+
+   (end application) docker compose down
+    
