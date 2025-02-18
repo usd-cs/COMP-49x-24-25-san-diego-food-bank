@@ -13,6 +13,6 @@ urlpatterns = [
     path("delete_faq/<int:faq_id>/", views.delete_faq, name="delete_faq"),
     path("create_faq/", views.create_faq, name="create_faq"),
     path("edit_faq/<int:faq_id>/", views.edit_faq, name="edit_faq"),
-    path("answer/", views.answer_call, name="answer_call")
-    #path for twilio webhook URL later on 
+    path("answer/", views.answer_call, name="answer_call"),
+    path("twilio_webhook/", views.twilio_webhook, name="twilio_webhook"),
 ]
