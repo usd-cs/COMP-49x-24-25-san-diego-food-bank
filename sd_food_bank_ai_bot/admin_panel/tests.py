@@ -223,7 +223,7 @@ class TwilioViewsTestCase(TestCase):
         response = self.client.get('/twilio_webhook/')
         self.assertEqual(response.status_code, 405)
         data = json.loads(response.content.decode('utf-8'))
-        self.assertEqual(data.get('error'))
+        self.assertEqual(data.get('error'), "Method not allowed")
 
     def test_twilio_webhook_faq_query(self):
         """
