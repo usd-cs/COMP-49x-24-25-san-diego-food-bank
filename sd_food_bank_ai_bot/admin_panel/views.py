@@ -3,8 +3,13 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .models import FAQ, Tag
 from .forms import FAQForm
+import json
+from django.http import HttpResponse
+from twilio.twiml.voice_response import VoiceResponse
 
 
 # Create your views here.
@@ -144,3 +149,47 @@ def edit_faq(request, faq_id):
         form = FAQForm(instance=old_faq)
 
     return render(request, 'edit_faq.html', {'form': form, 'faq': old_faq})
+
+def answer_call(request):
+    """
+    Brief greeting upon answering incoming phone calls.
+    """
+    resp = VoiceResponse()
+    resp.say("Thank you for calling!", voice='Polly.Amy')
+    return HttpResponse(str(resp))
+
+def twilio_webhook(request):
+    """
+    Properly handle incoming Twilio webhook requests to process user intent. 
+
+    This method checks for a POST request with a JSON payload that contains the keys 
+    for the current task and user input details. Based on the "CurrentTask", it determines 
+    the appropriate response action. It then returns a JSON response with the appropriate Twilio
+    actions for the Twilio AI Assistant to execute.
+    """
+    if request.method == 'POST':
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+        # Extract the task and intent info from the payload
+        current_task = payload.get("CurrentTask", "")
+        user_input = payload.get("Field", {}).get("user_input", "")
+
+        # Example template 
+        if current_task == 'faq_query':
+            answer = " " # Need to replace later with actual FAQ lookup logic
+            actions = [
+                {"say": answer},
+                {"say": "Did that answer your question?"},
+                {"listen": True}
+            ]
+        else:
+            actions = [
+                {"say": "I didn't understand that. Could you please rephrase?"},
+                {"listen": True}
+            ]
+        return JsonResponse({"actions": actions}) # JSON response for actions to be executed
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
