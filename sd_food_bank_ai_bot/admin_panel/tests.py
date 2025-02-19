@@ -293,6 +293,7 @@ class LogModelTestCase(TestCase):
         )
     
     def test_add_intent(self):
+        """Test valid addition and counting of new and/or already existing intents throughout a call's dialogue"""
         expected_intent_dict = {"schedule": 1,
                                 "working hours": 2}
         
@@ -305,6 +306,7 @@ class LogModelTestCase(TestCase):
         self.assertEqual(self.log.intents, expected_intent_dict)
 
     def test_add_strike(self):
+        """Test correct tracking for the strike system prior to forwarding caller to an operator"""
         self.assertEqual(self.log.strikes, 0)
 
         forward = self.log.add_strike()
@@ -317,6 +319,7 @@ class LogModelTestCase(TestCase):
 
 
     def test_add_message(self):
+        """Test valid appending of dialogue to storage as call progresses between caller and bot"""
         self.log.add_transcript("caller", "Question 2!")
 
         expected_transcript = [
