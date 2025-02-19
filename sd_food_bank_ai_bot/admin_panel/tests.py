@@ -1,8 +1,9 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from admin_panel.models import Admin, FAQ, Tag
+from admin_panel.models import Admin, FAQ, Tag, Log
 import json
+import datetime
 
 
 class LoginViewsTestCase(TestCase):
@@ -277,3 +278,51 @@ class TwilioViewsTestCase(TestCase):
         # Make sure there is at least one action telling the bot to listen for further input
         listen = any(action.get("listen") is True for action in actions)
         self.assertTrue(listen)
+
+class LogModelTestCase(TestCase):
+    def setUp(self):
+        self.log = Log.objects.create(
+            phone_number = "+1111111111",
+            transcript = [
+                {"speaker": "caller", "message": "Question!"},
+                {"speaker": "bot", "message": "Response!"}
+            ],
+            length_of_call = datetime.timedelta(minutes = 4, seconds = 18),
+            strikes = 0,
+            intents = {"schedule": 1}
+        )
+    
+    def test_add_intent(self):
+        expected_intent_dict = {"schedule": 1,
+                                "working hours": 2}
+        
+        self.log.add_intent("working hours")
+        self.assertEqual(self.log.intents["working hours"], 1)
+        
+        self.log.add_intent("working hours")
+        self.assertEqual(self.log.intents["working hours"], 2)
+
+        self.assertEqual(self.log.intents, expected_intent_dict)
+
+    def test_add_strike(self):
+        self.assertEqual(self.log.strikes, 0)
+
+        forward = self.log.add_strike()
+        self.assertEqual(self.log.strikes, 1)
+        self.assertFalse(forward)
+
+        forward = self.log.add_strike()
+        self.assertEqual(self.log.strikes, 2)
+        self.assertTrue(forward)
+
+
+    def test_add_message(self):
+        self.log.add_transcript("caller", "Question 2!")
+
+        expected_transcript = [
+            {"speaker": "caller", "message": "Question!"},
+            {"speaker": "bot", "message": "Response!"},
+            {"speaker": "caller", "message": "Question 2!"}
+        ]
+
+        self.assertEqual(self.log.transcript, expected_transcript)
