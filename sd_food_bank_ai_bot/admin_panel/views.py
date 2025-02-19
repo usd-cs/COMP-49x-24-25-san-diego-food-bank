@@ -165,15 +165,27 @@ def speech_to_text(request):
     """
     Converts speech input to text.
     """
+    # Prompt a question and gather a response, then send to completed
     caller_response = VoiceResponse()
     gather = Gather(input='speech', action='/completed/')
+    gather.say('Test speech to text')
     caller_response.append(gather)
+
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def completed(request):
-    speech_input = request.GET.get('SpeechResult', '')
-    return HttpResponse(f"Speech input received: {speech_input}", content_type='text/plain')
+    """
+    Recites the response back to the caller
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    caller_response = VoiceResponse()
+    if speech_result:
+        caller_response.say(f"You said: {speech_result}")
+    else:
+        caller_response.say("Sorry, I couldn't understand that.")
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def twilio_webhook(request):
