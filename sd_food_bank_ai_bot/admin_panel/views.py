@@ -157,6 +157,7 @@ def answer_call(request):
     """
     resp = VoiceResponse()
     resp.say("Thank you for calling!")
+    resp.pause(600)
     return HttpResponse(str(resp), content_type='text/xml')
 
 @csrf_exempt
