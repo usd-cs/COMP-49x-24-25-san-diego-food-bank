@@ -157,8 +157,6 @@ def answer_call(request):
     """
     resp = VoiceResponse()
     resp.say("Thank you for calling!")
-    # Call speech_to_text
-    resp.gather(input='speech', action='/speech_to_text')
     return HttpResponse(str(resp), content_type='text/xml')
 
 @csrf_exempt
@@ -167,9 +165,14 @@ def speech_to_text(request):
     Converts speech input to text.
     """
     caller_response = VoiceResponse()
-    gather = Gather(input='speech', action='/completed')
+    gather = Gather(input='speech', action='/completed/')
     caller_response.append(gather)
     return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def completed(request):
+    speech_input = request.GET.get('SpeechResult', '')
+    return HttpResponse(f"Speech input received: {speech_input}", content_type='text/plain')
 
 @csrf_exempt
 def twilio_webhook(request):
