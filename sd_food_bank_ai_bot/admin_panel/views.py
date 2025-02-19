@@ -9,7 +9,7 @@ from .models import FAQ, Tag
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
-from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 
 
 # Create your views here.
@@ -157,6 +157,12 @@ def answer_call(request):
     resp = VoiceResponse()
     resp.say("Thank you for calling!", voice='Polly.Amy')
     return HttpResponse(str(resp))
+
+def speech_to_text():
+    response = VoiceResponse()
+    gather = Gather(input='speech', action='/completed')
+    response.append(gather)
+    return print(response)
 
 def twilio_webhook(request):
     """
