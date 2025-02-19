@@ -15,4 +15,5 @@ urlpatterns = [
     path("edit_faq/<int:faq_id>/", views.edit_faq, name="edit_faq"),
     path("answer/", views.answer_call, name="answer_call"),
     path("twilio_webhook/", views.twilio_webhook, name="twilio_webhook"),
+    path("speech_to_text/", views.speech_to_text, name="speech_to_text"),
 ]
