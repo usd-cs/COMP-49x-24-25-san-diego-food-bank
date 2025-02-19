@@ -150,14 +150,16 @@ def edit_faq(request, faq_id):
 
     return render(request, 'edit_faq.html', {'form': form, 'faq': old_faq})
 
+@csrf_exempt
 def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
     resp = VoiceResponse()
-    resp.say("Thank you for calling!", voice='Polly.Amy')
-    return HttpResponse(str(resp))
+    resp.say("Thank you for calling!")
+    return HttpResponse(str(resp), content_type='text/xml')
 
+@csrf_exempt
 def twilio_webhook(request):
     """
     Properly handle incoming Twilio webhook requests to process user intent. 
