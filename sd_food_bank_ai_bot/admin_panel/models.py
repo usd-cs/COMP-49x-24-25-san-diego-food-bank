@@ -29,7 +29,7 @@ class Log(models.Model):
     time_started = models.DateTimeField(auto_now_add = True)
     length_of_call = models.DurationField()
     strikes = models.PositiveIntegerField(default = 0)
-    intent = models.JSONField(default = dict)
+    intents = models.JSONField(default = dict)
 
     def add_intent(self, intent):
         """Increment count for intent identified during dialogue"""
