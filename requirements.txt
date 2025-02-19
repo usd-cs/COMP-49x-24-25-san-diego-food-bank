@@ -6,4 +6,4 @@ psycopg2==2.9.10
 pytest-django==4.10.0
 dj-database-url==2.3.0
 black==25.1.0
-twilio~=6.0.0
+twilio==6.0.0
