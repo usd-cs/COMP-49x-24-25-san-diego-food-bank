@@ -9,7 +9,7 @@ from .models import FAQ, Tag
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
-from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 
 
 # Create your views here.
@@ -159,6 +159,33 @@ def answer_call(request):
     resp.say("Thank you for calling!")
     resp.pause(600)
     return HttpResponse(str(resp), content_type='text/xml')
+
+@csrf_exempt
+def speech_to_text(request):
+    """
+    Converts speech input to text.
+    """
+    # Prompt a question and gather a response, then send to completed
+    caller_response = VoiceResponse()
+    gather = Gather(input='speech', action='/completed/')
+    gather.say('Test speech to text')
+    caller_response.append(gather)
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def completed(request):
+    """
+    Recites the response back to the caller
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    caller_response = VoiceResponse()
+    if speech_result:
+        caller_response.say(f"You said: {speech_result}")
+    else:
+        caller_response.say("Sorry, I couldn't understand that.")
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def twilio_webhook(request):
