@@ -188,19 +188,6 @@ def completed(request):
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
-def speech_to_text(request):
-    """
-    Converts speech input to text.
-    """
-    # Prompt a question and gather a response, then send to completed
-    caller_response = VoiceResponse()
-    gather = Gather(input='speech', action='/completed/')
-    gather.say('Test speech to text')
-    caller_response.append(gather)
-
-    return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
 def text_to_speech(request):
     """
     Convert text into speech using twilio's text to speech services 
