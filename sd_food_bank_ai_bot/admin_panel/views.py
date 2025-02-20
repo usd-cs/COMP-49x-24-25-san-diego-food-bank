@@ -155,7 +155,14 @@ def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
-
+    # Access database log from caller's phone number
+    phone_number = request.GET.get('From', '')
+    log, created = Log.objects.get_or_create(phone_number=phone_number)
+    
+    # Forward call to an operator if intent is related to requesting for an operator
+    if 'operator' in log.intents: # This is a temporary condition, it will probably be replaced
+                                  # with sending intents to LLM and seeing if a related
+                                  # intent for an operator was added
         resp = VoiceResponse()
         resp.say("Now forwarding to operator")
         dial = resp.dial()
