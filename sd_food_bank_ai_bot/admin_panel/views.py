@@ -155,10 +155,10 @@ def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
-    resp = VoiceResponse()
-    resp.say("Thank you for calling!")
-    resp.pause(600)
-    return HttpResponse(str(resp), content_type='text/xml')
+    caller_response = VoiceResponse()
+    caller_response.say("Thank you for calling!")
+    caller_response.pause(600)
+    return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def speech_to_text(request):
@@ -205,9 +205,9 @@ def text_to_speech(request):
         if not text:
             return JsonResponse({"error": "No text provided"}, status=400)
         
-        resp = VoiceResponse()
-        resp.say(text)
-        return HttpResponse(str(resp), content_type="text/xml")
+        caller_response = VoiceResponse()
+        caller_response.say(text)
+        return HttpResponse(str(caller_response), content_type="text/xml")
     else:
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
