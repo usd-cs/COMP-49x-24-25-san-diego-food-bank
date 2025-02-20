@@ -5,7 +5,7 @@ from django.contrib.auth import login, logout
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import FAQ, Tag
+from .models import FAQ, Tag, Log
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
@@ -155,6 +155,19 @@ def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
+    # Access database log from caller's phone number
+    phone_number = request.GET.get('From', '')
+    log, created = Log.objects.get_or_create(phone_number=phone_number)
+    
+    # Forward call to an operator if strikes >= 2
+    if log.add_strike():
+        resp = VoiceResponse()
+        resp.say("Now forwarding to operator")
+        dial = resp.dial()
+        dial.number('+1XXXYYYZZZZ') # Replace with operator's number
+
+        return HttpResponse(str(resp), content_type='text/xml')
+    
     resp = VoiceResponse()
     resp.say("Thank you for calling!")
     resp.pause(600)
