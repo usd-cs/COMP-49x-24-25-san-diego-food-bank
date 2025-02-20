@@ -279,6 +279,28 @@ class TwilioViewsTestCase(TestCase):
         listen = any(action.get("listen") is True for action in actions)
         self.assertTrue(listen)
 
+    def test_text_to_speech_invalid_json(self):
+        """
+        Test that an invalid JSON payload returns a 400 error.
+        """
+        response = self.client.post(
+            "/text_to_speech/", 
+            data="not json", 
+            content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        data = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(data.get("error"), "Invalid JSON payload")
+    
+    def test_text_to_speech_invalid_method(self):
+        """
+        Test that a non-POST request returns a 405 error.
+        """
+        response = self.client.get("/text_to_speech/")
+        self.assertEqual(response.status_code, 405)
+        data = json.loads(response.content.decode("utf-8"))
+        self.assertEqual(data.get("error"), "Method not allowed")
+
 class LogModelTestCase(TestCase):
     def setUp(self):
         self.log = Log.objects.create(

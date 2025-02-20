@@ -188,6 +188,57 @@ def completed(request):
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
+def speech_to_text(request):
+    """
+    Converts speech input to text.
+    """
+    # Prompt a question and gather a response, then send to completed
+    caller_response = VoiceResponse()
+    gather = Gather(input='speech', action='/completed/')
+    gather.say('Test speech to text')
+    caller_response.append(gather)
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def text_to_speech(request):
+    """
+    Convert text into speech using twilio's text to speech services 
+    """
+    if request.method == "POST":
+        if request.content_type == "application/json":
+            try:
+                data = json.loads(request.body)
+                text = data.get("text", "")
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid JSON payload"}, status=400)
+        else: 
+            text = request.POST.get("text", "")
+        
+        if not text:
+            return JsonResponse({"error": "No text provided"}, status=400)
+        
+        resp = VoiceResponse()
+        resp.say(text)
+        return HttpResponse(str(resp), content_type="text/xml")
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def completed(request):
+    """
+    Recites the response back to the caller
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    caller_response = VoiceResponse()
+    if speech_result:
+        caller_response.say(f"You said: {speech_result}")
+    else:
+        caller_response.say("Sorry, I couldn't understand that.")
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
 def twilio_webhook(request):
     """
     Properly handle incoming Twilio webhook requests to process user intent. 
@@ -223,3 +274,4 @@ def twilio_webhook(request):
         return JsonResponse({"actions": actions}) # JSON response for actions to be executed
     else:
         return JsonResponse({"error": "Method not allowed"}, status=405)
+
