@@ -155,12 +155,7 @@ def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
-    # Access database log from caller's phone number
-    phone_number = request.GET.get('From', '')
-    log, created = Log.objects.get_or_create(phone_number=phone_number)
-    
-    # Forward call to an operator if strikes >= 2
-    if log.add_strike():
+
         resp = VoiceResponse()
         resp.say("Now forwarding to operator")
         dial = resp.dial()
