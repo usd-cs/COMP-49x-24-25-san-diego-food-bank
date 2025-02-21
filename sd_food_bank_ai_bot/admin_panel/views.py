@@ -5,13 +5,14 @@ from django.contrib.auth import login, logout
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import FAQ, Tag
+from .models import FAQ, Tag, Log
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 from openai import OpenAI
 import urllib.parse
+import datetime
 
 
 # Create your views here.
@@ -164,20 +165,33 @@ def answer_call(request):
     gather.say("What can I help you with?")
     caller_response.append(gather)
 
-    caller_response.redirect("/answer/")
-
-    question_response("Is there anything you need help with?")
-    
-    # while call is running:
-    #     when webhook in done waiting for dialogflow response:
-    #           resp = VoiceResponse()
-    #           resp.say(LLM generated text)
-    #           question_response("Do you need help with anything else?)
-
-
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
+def call_status_update(request):
+    """
+    Looks at call status from twilio webhook and stores call status data when receiving a POST request.
+    """
+    if request.method == 'POST':
+        call_status = request.POST.get('CallStatus')
+        phone_number = request.POST.get('From')
+    
+        if call_status == 'completed':
+            log = Log.objects.filter(phone_number=phone_number).last()
+            if log:
+                log.time_ended = datetime.now()
+                
+                if log.time_started:
+                    call_duration = log.time_ended - log.time_started
+                    log.length_of_call = call_duration
+
+                log.save()
+
+        return JsonResponse({"status": "success"})
+
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
 def prompt_question(request):
     """
     Used to prompt the user for a question. Main use is to loop till end of call.
@@ -195,22 +209,8 @@ def question_response(prompt):
     Converts speech input to text.
     """
     # Prompt a question and gather a response, then send to response to database
-    gather = Gather(input='speech', action='/reponse_to_database/')
+    gather = Gather(input='speech', action='/get_question_from_user/')
     gather.say(prompt)
-
-@csrf_exempt
-def response_to_database(request):
-    """
-    Collects a stt response and sends it to the database
-    """
-    speech_result = request.POST.get('SpeechResult', '')
-    caller_response = VoiceResponse()
-    if speech_result:
-        pass # TODO: add speech_result to db
-    else:
-        caller_response.say("Sorry, I couldn't understand that.")
-
-    return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def text_to_speech(request):
@@ -237,20 +237,6 @@ def text_to_speech(request):
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
 @csrf_exempt
-def completed(request):
-    """
-    Recites the response back to the caller
-    """
-    speech_result = request.POST.get('SpeechResult', '')
-    caller_response = VoiceResponse()
-    if speech_result:
-        caller_response.say(f"You said: {speech_result}")
-    else:
-        caller_response.say("Sorry, I couldn't understand that.")
-
-    return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
 def get_question_from_user(request):
     """
     Gets the users question and interprets it
@@ -269,7 +255,7 @@ def get_question_from_user(request):
             caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
             caller_response.redirect("/prompt_question/")
     else:
-        caller_response.say("Sorry, I couldn't understand that.")
+        caller_response.say("Sorry, I couldn't understand that.") 
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
