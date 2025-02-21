@@ -237,6 +237,48 @@ def completed(request):
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
+################################################ UNTESTED #####################################################
+@csrf_exempt
+def get_question_from_user(request):
+    """
+    Gets the users question and interprets it
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    caller_response = VoiceResponse()
+    if speech_result:
+        question = get_matching_question(request, speech_result) # Log interpreted question
+
+        gather = Gather(input="speech", timeout=5, action=f"/confirm_question/?question={question}")
+        gather.say(f"You asked: {question} Is this correct? Yes or No.")
+        
+        caller_response.append(gather)
+    else:
+        caller_response.say("Sorry, I couldn't understand that.")
+    
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def confirm_question(request):
+    """
+    Confirms the users question is correct and provides the answer
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    caller_response = VoiceResponse()
+    if speech_result:
+        if speech_result.lower() == "yes":
+            question = request.GET.get("question") # might need to be POST
+            answer = get_corresponding_answer(request, question)
+            
+            caller_response.say(answer)
+        else:
+            # Add a strike
+            caller_response.say("Sorry about that. Please try asking again or rephrasing.") # I don't actually know if they get sent back to the right spot
+    else:
+        caller_response.say("Sorry, I couldn't understand that.")
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+###########################################################################################################################
+
 @csrf_exempt
 def twilio_webhook(request):
     """
@@ -277,7 +319,7 @@ def twilio_webhook(request):
 @csrf_exempt
 def get_matching_question(request, question):
     """
-    Takes in a question and finds the most closely related question, returning that question.
+    Takes in a users question and finds the most closely related question, returning that question.
     If there are no related questions, none is returned.
     """ 
     client = OpenAI()
@@ -308,7 +350,7 @@ def get_matching_question(request, question):
 @csrf_exempt
 def get_corresponding_answer(request, question):
     """
-    Takes in a question and returns the matching answer.
+    Takes in a predefined question and returns the matching answer.
     If there is no question/answer match in the database, None is returned.
     """
     answer = FAQ.objects.filter(question__iexact=question).first().answer
