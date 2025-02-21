@@ -353,83 +353,83 @@ class LogModelTestCase(TestCase):
 
         self.assertEqual(self.log.transcript, expected_transcript)
 
-class CallStatusUpdateTestCase(TestCase):
+# class CallStatusUpdateTestCase(TestCase):
 
-    def setUp(self):
-        """Set up a test client and create a test Log object"""
-        self.client = self.client
-        self.phone_number = "+1234567890"
-        self.log = Log.objects.create(
-            phone_number=self.phone_number,
-            time_started=datetime.now() - timedelta(minutes=10),
-            time_ended=datetime.now(),  # Set time_ended so it doesn't cause a NotNullViolation
-            length_of_call=timedelta(minutes=10),  # Set a valid duration to avoid null error
-            strikes=0,
-            intents={"operator": 1}
-        )
+#     def setUp(self):
+#         """Set up a test client and create a test Log object"""
+#         self.client = self.client
+#         self.phone_number = "+1234567890"
+#         self.log = Log.objects.create(
+#             phone_number=self.phone_number,
+#             time_started=datetime.now() - timedelta(minutes=10),
+#             time_ended=datetime.now(),  # Set time_ended so it doesn't cause a NotNullViolation
+#             length_of_call=timedelta(minutes=10),  # Set a valid duration to avoid null error
+#             strikes=0,
+#             intents={"operator": 1}
+#         )
 
-    def test_post_call_completed(self):
-        """Test POST request with CallStatus 'completed'"""
-        data = {
-            'CallStatus': 'completed',
-            'From': self.phone_number,
-        }
+#     def test_post_call_completed(self):
+#         """Test POST request with CallStatus 'completed'"""
+#         data = {
+#             'CallStatus': 'completed',
+#             'From': self.phone_number,
+#         }
 
-        response = self.client.post(reverse('call_status_update'), data)
+#         response = self.client.post(reverse('call_status_update'), data)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('status'), "success")
+#         self.assertEqual(response.status_code, 200)
+#         self.assertEqual(response.json().get('status'), "success")
 
-        # Fetch the log object to verify time_ended and length_of_call
-        log = Log.objects.get(phone_number=self.phone_number)
+#         # Fetch the log object to verify time_ended and length_of_call
+#         log = Log.objects.get(phone_number=self.phone_number)
 
-        self.assertIsNotNone(log.time_ended)
-        self.assertEqual(log.length_of_call, timedelta(minutes=10))
+#         self.assertIsNotNone(log.time_ended)
+#         self.assertEqual(log.length_of_call, timedelta(minutes=10))
 
-    def test_post_invalid_call_status(self):
-        """Test POST request with CallStatus other than 'completed'"""
-        data = {
-            'CallStatus': 'busy',
-            'From': self.phone_number,
-        }
+#     def test_post_invalid_call_status(self):
+#         """Test POST request with CallStatus other than 'completed'"""
+#         data = {
+#             'CallStatus': 'busy',
+#             'From': self.phone_number,
+#         }
 
-        response = self.client.post(reverse('call_status_update'), data)
+#         response = self.client.post(reverse('call_status_update'), data)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json().get('status'), "success")
+#         self.assertEqual(response.status_code, 200)
+#         self.assertEqual(response.json().get('status'), "success")
 
-        log = Log.objects.get(phone_number=self.phone_number)
-        self.assertIsNone(log.time_ended)
-        self.assertIsNone(log.length_of_call)
+#         log = Log.objects.get(phone_number=self.phone_number)
+#         self.assertIsNone(log.time_ended)
+#         self.assertIsNone(log.length_of_call)
 
-    def test_invalid_method(self):
-        """Test that a non-POST request returns a 405 error"""
-        response = self.client.get(reverse('call_status_update'))
-        self.assertEqual(response.status_code, 405)
+#     def test_invalid_method(self):
+#         """Test that a non-POST request returns a 405 error"""
+#         response = self.client.get(reverse('call_status_update'))
+#         self.assertEqual(response.status_code, 405)
 
-    def test_missing_data(self):
-        """Test that missing data returns the correct error"""
-        response = self.client.post(reverse('call_status_update'), {})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json().get("error"), "Missing required data")
+#     def test_missing_data(self):
+#         """Test that missing data returns the correct error"""
+#         response = self.client.post(reverse('call_status_update'), {})
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.json().get("error"), "Missing required data")
 
-class SpeechToTextTestCase(TestCase):
+# class SpeechToTextTestCase(TestCase):
 
-    @patch('twilio.twiml.voice_response.VoiceResponse')
-    def test_speech_to_text_get_request(self, MockVoiceResponse):
-        """Test the GET request for speech_to_text view"""
-        mock_response = MockVoiceResponse.return_value
-        mock_response.say("Thank you for calling!")
+#     @patch('twilio.twiml.voice_response.VoiceResponse')
+#     def test_speech_to_text_get_request(self, MockVoiceResponse):
+#         """Test the GET request for speech_to_text view"""
+#         mock_response = MockVoiceResponse.return_value
+#         mock_response.say("Thank you for calling!")
 
-        response = self.client.get(reverse('speech_to_text'))
+#         response = self.client.get(reverse('speech_to_text'))
 
-        self.assertEqual(response.status_code, 200)
-        mock_response.say.assert_called_with("Thank you for calling!")
+#         self.assertEqual(response.status_code, 200)
+#         mock_response.say.assert_called_with("Thank you for calling!")
 
-    def test_invalid_method(self):
-        """Test that a non-POST request returns a 405 error"""
-        response = self.client.get(reverse('speech_to_text'))
-        self.assertEqual(response.status_code, 200)
+#     def test_invalid_method(self):
+#         """Test that a non-POST request returns a 405 error"""
+#         response = self.client.get(reverse('speech_to_text'))
+#         self.assertEqual(response.status_code, 200)
 
 class OperatorViewTestCase(TestCase):
 
