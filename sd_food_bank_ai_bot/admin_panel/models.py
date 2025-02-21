@@ -27,6 +27,7 @@ class Log(models.Model):
     transcript = models.JSONField(default = list)
     audio = models.FileField(upload_to = "conversations/")
     time_started = models.DateTimeField(auto_now_add = True)
+    time_ended = models.DateTimeField()
     length_of_call = models.DurationField()
     strikes = models.PositiveIntegerField(default = 0)
     intents = models.JSONField(default = dict)
