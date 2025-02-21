@@ -16,4 +16,6 @@ urlpatterns = [
     path("answer/", views.answer_call, name="answer_call"),
     path("twilio_webhook/", views.twilio_webhook, name="twilio_webhook"),
     path("text_to_speech/", views.text_to_speech, name="text_to_speech"),
+    path("get_question_from_user/", views.get_question_from_user, name="get_question_from_user"),
+    path("confirm_question/<str:question>/", views.confirm_question, name="confirm_question")
 ]

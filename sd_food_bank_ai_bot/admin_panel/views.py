@@ -11,6 +11,7 @@ import json
 from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 from openai import OpenAI
+import urllib.parse
 
 
 # Create your views here.
@@ -159,7 +160,7 @@ def answer_call(request):
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
 
-    gather = Gather(input="speech", timeout=5, action="/completed/")
+    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
     gather.say("What can I help you with?")
     caller_response.append(gather)
 
@@ -237,7 +238,6 @@ def completed(request):
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
-################################################ UNTESTED #####################################################
 @csrf_exempt
 def get_question_from_user(request):
     """
@@ -246,30 +246,43 @@ def get_question_from_user(request):
     speech_result = request.POST.get('SpeechResult', '')
     caller_response = VoiceResponse()
     if speech_result:
-        question = get_matching_question(request, speech_result) # Log interpreted question
-
+        question = get_matching_question(request, speech_result) # Log interpreted question?
         if question:
-            gather = Gather(input="speech", timeout=5, action=f"/confirm_question/?question={question}")
-            gather.say(f"You asked: {question} Is this correct? Yes or No.")
+            question_encoded = urllib.parse.quote(question)
+            gather = Gather(input="speech", timeout=5, action=f"/confirm_question/{question_encoded}/")
+            gather.say(f"You asked: {question} Is this correct?")
             
             caller_response.append(gather)
         else: # No matching question found
-            caller_response.say("Sorry, I don't have the answer to that at this time.")
+            caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
     else:
         caller_response.say("Sorry, I couldn't understand that.")
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
-def confirm_question(request):
+def confirm_question(request, question):
     """
     Confirms the users question is correct and provides the answer
     """
     speech_result = request.POST.get('SpeechResult', '')
     caller_response = VoiceResponse()
+
     if speech_result:
-        if speech_result.lower() == "yes":
-            question = request.GET.get("question") # might need to be POST
+        # Query GPT for intent
+        client = OpenAI()
+        system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": speech_result}
+            ]
+        )   
+        response_pred = completion.choices[0].message.content
+
+        if response_pred.upper() == "AFFIRMATIVE":
+            question = urllib.parse.unquote(question)
             answer = get_corresponding_answer(request, question)
             
             caller_response.say(answer)
@@ -280,7 +293,6 @@ def confirm_question(request):
         caller_response.say("Sorry, I couldn't understand that.")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
-###########################################################################################################################
 
 @csrf_exempt
 def twilio_webhook(request):
