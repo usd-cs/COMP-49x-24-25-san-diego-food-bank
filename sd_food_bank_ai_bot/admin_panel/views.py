@@ -5,11 +5,11 @@ from django.contrib.auth import login, logout
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import FAQ, Tag
+from .models import FAQ, Tag, Log
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
-from twilio.twiml.voice_response import VoiceResponse, Gather, Say
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 
 
 # Create your views here.
@@ -253,9 +253,28 @@ def twilio_webhook(request):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         
         # Extract the task and intent info from the payload
+        # phone_number = payload.get("From", "Unknown")
         current_task = payload.get("CurrentTask", "")
         user_input = payload.get("Field", {}).get("user_input", "")
 
+        # if user_input:
+        #     log.add_transcript("caller", user_input)
+        # log, created = Log.objects.get_or_create(phone_number=phone_number)
+
+        # if not current_task:
+        #     # if strikes reach 2, forward the call
+        #     if log.add_strike():
+        #         response = VoiceResponse()
+        #         response.say("I'm transferring you to an operator now. Please hold.")
+                
+        #         dial = Dial()
+        #         dial.number("Replace with Operator Number")
+        #         response.append(dial)
+                
+        #         return HttpResponse(str(response), content_type="text/xml")
+        # else:
+        #     log.add_intent(current_task)
+            
         # Example template 
         if current_task == 'faq_query':
             answer = " " # Need to replace later with actual FAQ lookup logic
