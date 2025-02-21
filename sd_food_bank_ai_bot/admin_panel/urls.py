@@ -21,4 +21,5 @@ urlpatterns = [
     path("prompt_question/", views.prompt_question, name="prompt_question"),
     path("call_status_update/", views.call_status_update, name="call_status_update"),
     path("operator/", views.operator, name="operator"),
+    path('speech_to_text/', views.speech_to_text, name='speech_to_text'),
 ]

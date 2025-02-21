@@ -4,7 +4,7 @@ from django.urls import reverse
 from admin_panel.models import Admin, FAQ, Tag, Log
 import json
 import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 class LoginViewsTestCase(TestCase):
@@ -476,8 +476,9 @@ class SpeechToTextTestCase(TestCase):
         self.assertEqual(response.status_code, 200)  # Expect 200 for successful response
 
 class OperatorViewTestCase(TestCase):
-    
-    @patch('twilio.twiml.voice_response.VoiceResponse')  # Mocking the VoiceResponse object
+
+    @patch('twilio.twiml.voice_response.VoiceResponse.say')
+    @patch('twilio.twiml.voice_response.VoiceResponse.dial')
     def test_operator_call_forwarding(self, MockVoiceResponse):
         """Test that the operator function returns the correct TwiML response."""
         
