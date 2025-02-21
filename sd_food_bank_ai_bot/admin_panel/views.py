@@ -157,35 +157,42 @@ def answer_call(request):
     """
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
+
     gather = Gather(input="speech", timeout=5, action="/completed/")
     gather.say("What can I help you with?")
     caller_response.append(gather)
 
     caller_response.redirect("/answer/")
+
+    question_response("Is there anything you need help with?")
+    
+    # while call is running:
+    #     when webhook in done waiting for dialogflow response:
+    #           resp = VoiceResponse()
+    #           resp.say(LLM generated text)
+    #           question_response("Do you need help with anything else?)
+
+
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
-def speech_to_text(request):
+def question_response(prompt):
     """
     Converts speech input to text.
     """
-    # Prompt a question and gather a response, then send to completed
-    caller_response = VoiceResponse()
-    gather = Gather(input='speech', action='/completed/')
-    gather.say('Test speech to text')
-    caller_response.append(gather)
-
-    return HttpResponse(str(caller_response), content_type='text/xml')
+    # Prompt a question and gather a response, then send to response to database
+    gather = Gather(input='speech', action='/reponse_to_database/')
+    gather.say(prompt)
 
 @csrf_exempt
-def completed(request):
+def response_to_database(request):
     """
-    Recites the response back to the caller
+    Collects a stt response and sends it to the database
     """
     speech_result = request.POST.get('SpeechResult', '')
     caller_response = VoiceResponse()
     if speech_result:
-        caller_response.say(f"You said: {speech_result}")
+        pass # TODO: add speech_result to db
     else:
         caller_response.say("Sorry, I couldn't understand that.")
 
