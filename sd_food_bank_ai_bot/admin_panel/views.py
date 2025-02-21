@@ -176,8 +176,6 @@ def question_response(prompt):
     gather = Gather(input='speech', action='/reponse_to_database/')
     gather.say(prompt)
 
-    return HttpResponse(str(caller_response), content_type='text/xml')
-
 @csrf_exempt
 def response_to_database(request):
     """
@@ -186,7 +184,7 @@ def response_to_database(request):
     speech_result = request.POST.get('SpeechResult', '')
     caller_response = VoiceResponse()
     if speech_result:
-        pass # TODO: add to db
+        pass # TODO: add speech_result to db
     else:
         caller_response.say("Sorry, I couldn't understand that.")
 
