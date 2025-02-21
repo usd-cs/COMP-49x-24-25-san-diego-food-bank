@@ -157,7 +157,11 @@ def answer_call(request):
     """
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
-    caller_response.pause(600)
+    gather = Gather(input="speech", timeout=5, action="/completed/")
+    gather.say("What can I help you with?")
+    caller_response.append(gather)
+
+    caller_response.redirect("/answer/")
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
