@@ -248,10 +248,13 @@ def get_question_from_user(request):
     if speech_result:
         question = get_matching_question(request, speech_result) # Log interpreted question
 
-        gather = Gather(input="speech", timeout=5, action=f"/confirm_question/?question={question}")
-        gather.say(f"You asked: {question} Is this correct? Yes or No.")
-        
-        caller_response.append(gather)
+        if question:
+            gather = Gather(input="speech", timeout=5, action=f"/confirm_question/?question={question}")
+            gather.say(f"You asked: {question} Is this correct? Yes or No.")
+            
+            caller_response.append(gather)
+        else: # No matching question found
+            caller_response.say("Sorry, I don't have the answer to that at this time.")
     else:
         caller_response.say("Sorry, I couldn't understand that.")
     
