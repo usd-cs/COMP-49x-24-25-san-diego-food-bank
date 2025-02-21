@@ -157,6 +157,13 @@ def answer_call(request):
     """
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
+
+    gather = Gather(input="speech", timeout=5, action="/completed/")
+    gather.say("What can I help you with?")
+    caller_response.append(gather)
+
+    caller_response.redirect("/answer/")
+
     question_response("Is there anything you need help with?")
     
     # while call is running:
@@ -164,6 +171,7 @@ def answer_call(request):
     #           resp = VoiceResponse()
     #           resp.say(LLM generated text)
     #           question_response("Do you need help with anything else?)
+
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
