@@ -20,4 +20,5 @@ urlpatterns = [
     path("confirm_question/<str:question>/", views.confirm_question, name="confirm_question"),
     path("prompt_question/", views.prompt_question, name="prompt_question"),
     path("call_status_update/", views.call_status_update, name="call_status_update"),
+    path("operator/", views.operator, name="operator"),
 ]

@@ -164,28 +164,13 @@ def answer_call(request):
     return HttpResponse(str(resp), content_type='text/xml')
 
 @csrf_exempt
-def operator_intent(request):
-    # Access database log from caller's phone number
-    phone_number = request.GET.get('From', '')
-    log, created = Log.objects.get_or_create(phone_number=phone_number)
-    
-    # Forward call to an operator if intent is related to requesting for an operator
-    if 'operator' in log.intents: # This is a temporary condition, it will probably be replaced
-                                  # with sending intents to LLM and seeing if a related
-                                  # intent for an operator was added
-        resp = VoiceResponse()
-        resp.say("Now forwarding to operator")
-        dial = resp.dial()
-        dial.number('+1XXXYYYZZZZ') # Replace with operator's number
+def operator(request):
+    resp = VoiceResponse()
+    resp.say("Now forwarding to operator. Please hold.")
+    dial = resp.dial()
+    dial.number('+1XXXYYYZZZZ') # Replace with operator's number
 
-        return HttpResponse(str(resp), content_type='text/xml')
-    
-    else:
-        resp = VoiceResponse()
-        resp.say("Sorry we couldn't understand your request. Please try again.")
-        resp.redirect('/prompt_question/')
-
-        return HttpResponse(str(resp), content_type='text/xml')
+    return HttpResponse(str(resp), content_type='text/xml')
 
 @csrf_exempt
 def speech_to_text(request):
@@ -237,15 +222,6 @@ def prompt_question(request):
     caller_response.append(gather)
     
     return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
-def question_response(prompt):
-    """
-    Converts speech input to text.
-    """
-    # Prompt a question and gather a response, then send to response to database
-    gather = Gather(input='speech', action='/get_question_from_user/')
-    gather.say(prompt)
 
 @csrf_exempt
 def text_to_speech(request):
