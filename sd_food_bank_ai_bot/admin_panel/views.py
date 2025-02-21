@@ -192,6 +192,7 @@ def call_status_update(request):
     else:
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
+@csrf_exempt
 def prompt_question(request):
     """
     Used to prompt the user for a question. Main use is to loop till end of call.
