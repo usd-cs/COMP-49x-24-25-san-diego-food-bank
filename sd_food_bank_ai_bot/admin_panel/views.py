@@ -286,7 +286,7 @@ def confirm_question(request, question):
             if "operator" in question:
                 caller_response.say("I'm transferring you to an operator now. Please hold.")
                 dial = Dial()
-                dial.number("949-280-1506")
+                dial.number("###-###-####")
                 caller_response.append(dial)
 
                 return HttpResponse(str(caller_response), content_type="text/xml")
