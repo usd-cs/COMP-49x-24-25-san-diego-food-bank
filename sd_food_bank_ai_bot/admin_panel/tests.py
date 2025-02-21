@@ -357,11 +357,13 @@ class CallStatusUpdateTestCase(TestCase):
 
     def setUp(self):
         """Set up a test client and create a test Log object"""
+        self.client = self.client
         self.phone_number = "+1234567890"
         self.log = Log.objects.create(
             phone_number=self.phone_number,
             time_started=datetime.now() - timedelta(minutes=10),
-            length_of_call=None,
+            time_ended=datetime.now(),  # Set time_ended so it doesn't cause a NotNullViolation
+            length_of_call=timedelta(minutes=10),  # Set a valid duration to avoid null error
             strikes=0,
             intents={"operator": 1}
         )
@@ -375,14 +377,14 @@ class CallStatusUpdateTestCase(TestCase):
 
         response = self.client.post(reverse('call_status_update'), data)
 
-        # Check if the response is successful
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('status'), "success")
 
-        # Verify that time_ended and length_of_call are updated
+        # Fetch the log object to verify time_ended and length_of_call
         log = Log.objects.get(phone_number=self.phone_number)
+
         self.assertIsNotNone(log.time_ended)
-        self.assertIsNotNone(log.length_of_call)
+        self.assertEqual(log.length_of_call, timedelta(minutes=10))
 
     def test_post_invalid_call_status(self):
         """Test POST request with CallStatus other than 'completed'"""
@@ -393,9 +395,12 @@ class CallStatusUpdateTestCase(TestCase):
 
         response = self.client.post(reverse('call_status_update'), data)
 
-        # Check if the response is successful even with an invalid status
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get('status'), "success")
+
+        log = Log.objects.get(phone_number=self.phone_number)
+        self.assertIsNone(log.time_ended)
+        self.assertIsNone(log.length_of_call)
 
     def test_invalid_method(self):
         """Test that a non-POST request returns a 405 error"""
@@ -413,44 +418,39 @@ class SpeechToTextTestCase(TestCase):
     @patch('twilio.twiml.voice_response.VoiceResponse')
     def test_speech_to_text_get_request(self, MockVoiceResponse):
         """Test the GET request for speech_to_text view"""
-        # Mock Twilio's VoiceResponse
         mock_response = MockVoiceResponse.return_value
         mock_response.say("Thank you for calling!")
-        
-        # Simulate the function call
+
         response = self.client.get(reverse('speech_to_text'))
 
-        # Check if the response status code is 200
         self.assertEqual(response.status_code, 200)
-
-        # Ensure that the mock response methods were called
         mock_response.say.assert_called_with("Thank you for calling!")
 
     def test_invalid_method(self):
         """Test that a non-POST request returns a 405 error"""
         response = self.client.get(reverse('speech_to_text'))
-        self.assertEqual(response.status_code, 200)  # Expect 200 for successful response
+        self.assertEqual(response.status_code, 200)
 
 class OperatorViewTestCase(TestCase):
 
     @patch('twilio.twiml.voice_response.VoiceResponse')
     def test_operator_call_forwarding(self, MockVoiceResponse):
         """Test that the operator function returns the correct TwiML response."""
-        
-        # Create a mock of the VoiceResponse object
+
+        # Mock the VoiceResponse methods
         mock_response = MockVoiceResponse.return_value
         mock_response.say("Now forwarding to operator. Please hold.")
-        
-        # Simulate the function call
-        response = self.client.get(reverse('operator'))  # Assuming the URL name is 'operator'
+        dial = mock_response.dial.return_value
+        dial.number.return_value = None  # Mock the dial.number method
 
-        # Ensure the response status is 200 (successful)
+        response = self.client.get(reverse('operator'))
+
         self.assertEqual(response.status_code, 200)
-
-        # Check that the VoiceResponse's 'say' method was called with the correct message
         mock_response.say.assert_called_with("Now forwarding to operator. Please hold.")
+        dial.number.assert_called_once_with('+17028586982')  # Replace with operator's phone number
+        self.assertIn("<Response>", response.content.decode('utf-8'))
 
     def test_operator_invalid_method(self):
         """Test that the operator view only accepts GET requests"""
         response = self.client.post(reverse('operator'))
-        self.assertEqual(response.status_code, 405)  # Should return 405 Method Not Allowed
+        self.assertEqual(response.status_code, 405)  # Method Not Allowed
