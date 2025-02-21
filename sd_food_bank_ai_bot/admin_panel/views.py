@@ -168,7 +168,7 @@ def operator(request):
     resp = VoiceResponse()
     resp.say("Now forwarding to operator. Please hold.")
     dial = resp.dial()
-    dial.number('+1XXXYYYZZZZ') # Replace with operator's number
+    dial.number('+17028586982') # Replace with operator's number
 
     return HttpResponse(str(resp), content_type='text/xml')
 
