@@ -178,6 +178,18 @@ def answer_call(request):
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
+def prompt_question(request):
+    """
+    Used to prompt the user for a question. Main use is to loop till end of call.
+    """
+    caller_response = VoiceResponse()
+    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
+    gather.say("What can I help you with?")
+    caller_response.append(gather)
+    
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
 def question_response(prompt):
     """
     Converts speech input to text.
@@ -251,10 +263,11 @@ def get_question_from_user(request):
             question_encoded = urllib.parse.quote(question)
             gather = Gather(input="speech", timeout=5, action=f"/confirm_question/{question_encoded}/")
             gather.say(f"You asked: {question} Is this correct?")
-            
             caller_response.append(gather)
         else: # No matching question found
+            # Add a strike
             caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+            caller_response.redirect("/prompt_question/")
     else:
         caller_response.say("Sorry, I couldn't understand that.")
     
@@ -280,17 +293,20 @@ def confirm_question(request, question):
             ]
         )   
         response_pred = completion.choices[0].message.content
-
         if response_pred.upper() == "AFFIRMATIVE":
             question = urllib.parse.unquote(question)
             answer = get_corresponding_answer(request, question)
             
             caller_response.say(answer)
-        else:
+
+            caller_response.redirect("/prompt_question/")
+        else: # If caller has indicated unsatisfactory response, add a string and retry
             # Add a strike
-            caller_response.say("Sorry about that. Please try asking again or rephrasing.") # I don't actually know if they get sent back to the right spot
+            caller_response.say("Sorry about that. Please try asking again or rephrasing.")
+            caller_response.redirect("/prompt_question/")
     else:
-        caller_response.say("Sorry, I couldn't understand that.")
+        caller_response.say("Sorry, I couldn't understand that. Please try again.")
+        caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
