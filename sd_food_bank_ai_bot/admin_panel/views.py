@@ -180,6 +180,11 @@ def call_status_update(request):
             log = Log.objects.filter(phone_number=phone_number).last()
             if log:
                 log.time_ended = datetime.now()
+                
+                if log.time_started:
+                    call_duration = log.time_ended - log.time_started
+                    log.length_of_call = call_duration
+
                 log.save()
 
         return JsonResponse({"status": "success"})
