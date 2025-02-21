@@ -165,23 +165,7 @@ def answer_call(request):
     gather.say("What can I help you with?")
     caller_response.append(gather)
 
-    # caller_response.redirect("/answer/")
-
     return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
-def call_loop(request):
-    """
-    Where the caller is redirected to after getting their first request finished.
-    """
-    question_response("Do you have another question?")
-    
-    # while call is running:
-    #     when webhook in done waiting for dialogflow response:
-    #           resp = VoiceResponse()
-    #           resp.say(LLM generated text)
-    #           question_response("Do you need help with anything else?)
-
 
 @csrf_exempt
 def call_status_update(request):
@@ -254,10 +238,8 @@ def get_question_from_user(request):
             caller_response.append(gather)
         else: # No matching question found
             caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
-            caller_response.redirect('/call_loop/') 
     else:
-        caller_response.say("Sorry, I couldn't understand that.")
-        caller_response.redirect('/call_loop/') 
+        caller_response.say("Sorry, I couldn't understand that.") 
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -287,14 +269,11 @@ def confirm_question(request, question):
             answer = get_corresponding_answer(request, question)
             
             caller_response.say(answer)
-            caller_response.redirect('/call_loop/')
         else:
             # Add a strike
             caller_response.say("Sorry about that. Please try asking again or rephrasing.") # I don't actually know if they get sent back to the right spot
-            caller_response.redirect('/call_loop/') 
     else:
         caller_response.say("Sorry, I couldn't understand that.")
-        caller_response.redirect('/call_loop/') 
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
