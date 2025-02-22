@@ -204,14 +204,14 @@ def prompt_question(request):
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
-@csrf_exempt
-def question_response(prompt):
-    """
-    Converts speech input to text.
-    """
-    # Prompt a question and gather a response, then send to response to database
-    gather = Gather(input='speech', action='/get_question_from_user/')
-    gather.say(prompt)
+# @csrf_exempt
+# def question_response(prompt):
+#     """
+#     Converts speech input to text.
+#     """
+#     # Prompt a question and gather a response, then send to response to database
+#     gather = Gather(input='speech', action='/get_question_from_user/')
+#     gather.say(prompt)
 
 @csrf_exempt
 def text_to_speech(request):
