@@ -9,7 +9,7 @@ from .models import FAQ, Tag, Log
 from .forms import FAQForm
 import json
 from django.http import HttpResponse
-from twilio.twiml.voice_response import VoiceResponse, Gather, Say
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from openai import OpenAI
 import urllib.parse
 import datetime
@@ -282,6 +282,15 @@ def confirm_question(request, question):
         response_pred = completion.choices[0].message.content
         if response_pred.upper() == "AFFIRMATIVE":
             question = urllib.parse.unquote(question)
+
+            if "operator" in question:
+                caller_response.say("I'm transferring you to an operator now. Please hold.")
+                dial = Dial()
+                dial.number("###-###-####")
+                caller_response.append(dial)
+
+                return HttpResponse(str(caller_response), content_type="text/xml")
+
             answer = get_corresponding_answer(request, question)
             
             caller_response.say(answer)
@@ -345,6 +354,7 @@ def get_matching_question(request, question):
     # Gather all questions to be used in prompt
     questions = FAQ.objects.values_list('question', flat=True)
     questions = [question for question in questions]
+    questions.append("Can I speak to an operator?")
 
     # Set the system prompt to provide instructions on what to do
     system_prompt = f"You are a food pantry assistant with one job. When a user sends you a question, you find the closest match from questions you have memorized and respond with that question. If the question the user asks does not match any of your stored questions, respond with NONE. Only respond with the matching question or NONE.\nYour memorized questions are:{questions}"
