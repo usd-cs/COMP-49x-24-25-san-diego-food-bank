@@ -163,29 +163,29 @@ def answer_call(request):
     resp.pause(600)
     return HttpResponse(str(resp), content_type='text/xml')
 
-@csrf_exempt
-def operator(request):
-    resp = VoiceResponse()
-    resp.say("Now forwarding to operator. Please hold.")
-    dial = resp.dial()
-    dial.number('+17028586982') # Replace with operator's number
+# @csrf_exempt
+# def operator(request):
+#     resp = VoiceResponse()
+#     resp.say("Now forwarding to operator. Please hold.")
+#     dial = resp.dial()
+#     dial.number('+17028586982') # Replace with operator's number
 
-    return HttpResponse(str(resp), content_type='text/xml')
+#     return HttpResponse(str(resp), content_type='text/xml')
 
-@csrf_exempt
-def speech_to_text(request):
-    """
-    Converts speech input to text.
-    """
-    # Prompt a question and gather a response, then send to completed
-    caller_response = VoiceResponse()
-    caller_response.say("Thank you for calling!")
+# @csrf_exempt
+# def speech_to_text(request):
+#     """
+#     Converts speech input to text.
+#     """
+#     # Prompt a question and gather a response, then send to completed
+#     caller_response = VoiceResponse()
+#     caller_response.say("Thank you for calling!")
 
-    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
-    gather.say("What can I help you with?")
-    caller_response.append(gather)
+#     gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
+#     gather.say("What can I help you with?")
+#     caller_response.append(gather)
 
-    return HttpResponse(str(caller_response), content_type='text/xml')
+#     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
 def call_status_update(request):
