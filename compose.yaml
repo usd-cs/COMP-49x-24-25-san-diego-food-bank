@@ -26,6 +26,8 @@ services:
       - db
     environment:
       DATABASE_URL: "postgres://admin_user:admin_321@db:5432/sd_foodbank_db"
+    env_file:
+      - gpt.env
 
 volumes:
   postgres_data:
