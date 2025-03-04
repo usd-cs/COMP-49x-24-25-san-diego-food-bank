@@ -47,3 +47,12 @@ class Log(models.Model):
         """Append a new message to the call transcript"""
         self.transcript.append({"speaker": speaker, "message": message})
         self.save()
+
+class AppointmentTable(models.Model):
+    "Table for storing appointment data"
+    userID = models.IntegerField()
+    appointmentID = models.IntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    location = models.TextField()
+    date = models.DateTimeField()
