@@ -63,39 +63,6 @@ def prompt_question(request):
     return HttpResponse(str(caller_response), content_type='text/xml')
 
 @csrf_exempt
-def question_response(prompt):
-    """
-    Converts speech input to text.
-    """
-    # Prompt a question and gather a response, then send to response to database
-    gather = Gather(input='speech', action='/get_question_from_user/')
-    gather.say(prompt)
-
-@csrf_exempt
-def text_to_speech(request):
-    """
-    Convert text into speech using twilio's text to speech services 
-    """
-    if request.method == "POST":
-        if request.content_type == "application/json":
-            try:
-                data = json.loads(request.body)
-                text = data.get("text", "")
-            except json.JSONDecodeError:
-                return JsonResponse({"error": "Invalid JSON payload"}, status=400)
-        else: 
-            text = request.POST.get("text", "")
-        
-        if not text:
-            return JsonResponse({"error": "No text provided"}, status=400)
-        
-        caller_response = VoiceResponse()
-        caller_response.say(text)
-        return HttpResponse(str(caller_response), content_type="text/xml")
-    else:
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-@csrf_exempt
 def get_question_from_user(request):
     """
     Gets the users question and interprets it
@@ -163,43 +130,6 @@ def confirm_question(request, question):
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
-def twilio_webhook(request):
-    """
-    Properly handle incoming Twilio webhook requests to process user intent. 
-
-    This method checks for a POST request with a JSON payload that contains the keys 
-    for the current task and user input details. Based on the "CurrentTask", it determines 
-    the appropriate response action. It then returns a JSON response with the appropriate Twilio
-    actions for the Twilio AI Assistant to execute.
-    """
-    if request.method == 'POST':
-        try:
-            payload = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
-        # Extract the task and intent info from the payload
-        current_task = payload.get("CurrentTask", "")
-        user_input = payload.get("Field", {}).get("user_input", "")
-
-        # Example template 
-        if current_task == 'faq_query':
-            answer = " " # Need to replace later with actual FAQ lookup logic
-            actions = [
-                {"say": answer},
-                {"say": "Did that answer your question?"},
-                {"listen": True}
-            ]
-        else:
-            actions = [
-                {"say": "I didn't understand that. Could you please rephrase?"},
-                {"listen": True}
-            ]
-        return JsonResponse({"actions": actions}) # JSON response for actions to be executed
-    else:
-        return JsonResponse({"error": "Method not allowed"}, status=405)
 
 @csrf_exempt
 def get_matching_question(request, question):
