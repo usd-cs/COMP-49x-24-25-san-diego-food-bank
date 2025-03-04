@@ -10,6 +10,7 @@ from openai import OpenAI
 import urllib.parse
 import datetime
 
+TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 
 @csrf_exempt
 def answer_call(request):
@@ -19,7 +20,7 @@ def answer_call(request):
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
 
-    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_question_from_user/")
     gather.say("What can I help you with?")
     caller_response.append(gather)
 
@@ -56,7 +57,7 @@ def prompt_question(request):
     Used to prompt the user for a question. Main use is to loop till end of call.
     """
     caller_response = VoiceResponse()
-    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_question_from_user/")
     gather.say("What can I help you with?")
     caller_response.append(gather)
     
@@ -73,7 +74,7 @@ def get_question_from_user(request):
         question = get_matching_question(request, speech_result) # Log interpreted question?
         if question:
             question_encoded = urllib.parse.quote(question)
-            gather = Gather(input="speech", timeout=5, action=f"/confirm_question/{question_encoded}/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_question/{question_encoded}/")
             gather.say(f"You asked: {question} Is this correct?")
             caller_response.append(gather)
         else: # No matching question found
@@ -94,18 +95,8 @@ def confirm_question(request, question):
     caller_response = VoiceResponse()
 
     if speech_result:
-        # Query GPT for intent
-        client = OpenAI()
-        system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": speech_result}
-            ]
-        )   
-        response_pred = completion.choices[0].message.content
-        if response_pred.upper() == "AFFIRMATIVE":
+        sentiment = get_response_sentiment(speech_result)
+        if sentiment:
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
@@ -130,6 +121,27 @@ def confirm_question(request, question):
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def get_response_sentiment(request, sentence):
+    """
+    Returns True if the given sentence is affirmative
+    """
+    # Query GPT for intent
+    client = OpenAI()
+    system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )   
+    response_pred = completion.choices[0].message.content
+
+    if response_pred.upper() == "AFFIRMATIVE":
+        return True
+    return False
 
 @csrf_exempt
 def get_matching_question(request, question):
