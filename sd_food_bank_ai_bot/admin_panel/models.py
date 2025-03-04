@@ -5,6 +5,12 @@ from django.contrib.auth.models import AbstractUser
 class Admin(AbstractUser):
     """Table for storing information on admins"""
 
+class User(models.Model): 
+    """Table for storing user information"""
+    first_name = models.CharField(max_length=20)
+    last_name = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=15)
+    email = models.EmailField(unique=True)
 
 class Tag(models.Model):
     """Table for storing tags to assign to FAQs"""
