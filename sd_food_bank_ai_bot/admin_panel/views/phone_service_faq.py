@@ -172,6 +172,7 @@ def get_corresponding_answer(request, question):
     answer = FAQ.objects.filter(question__iexact=question).first().answer
     return answer
 
+@csrf_exempt
 def check_account(request):
     """
     Check the User table for phone number to check if the account exists. If it does, 
@@ -198,7 +199,22 @@ def check_account(request):
     
     return HttpResponse(str(response), content_type="text/xml")
 
+@csrf_exempt
+def confirm_account(request):
+    """
+    Process the caller's response. If they say yes, the account is confirmed, otherwise
+    they will be prompted to try again.
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    response = VoiceResponse
 
+    if "yes" in speech_result:
+        response.say("Great! Your account has been confirmed!")
+        response.redirect("/prompt_question/")
+    else:
+        response.say("I'm sorry, please try again.")
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 
 
