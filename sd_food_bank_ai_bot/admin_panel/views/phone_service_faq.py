@@ -177,18 +177,25 @@ def check_account(request):
     Check the User table for phone number to check if the account exists. If it does, 
     relay the information such as the saved name to confirm the account.
     """
+    # Have twilio send the caller's number using 'From'
     caller_number = request.POST.get('From', '')
     response = VoiceResponse()
+    try: 
+        # Query the User table for phone number and relay saved name.
+        user = User.objects.get(phone_number=caller_number)
+        response.say(f"Hello, {user.first_name} {user.last_name}.")
 
-    user = User.objects.get(phone_number=caller_number)
-    response.say(f"Hello, {user.first_name} {user.last_name}.")
+        # Confirm the account with the caller 
+        gather = Gather(input="speech", timeout=2, action="/confirm_account/")
+        gather.say("Is this your account? Please say yes or no.")
+        response.append(gather)
 
-    gather = Gather(input="speech", timeout=2, action="/confirm_account/")
-    gather.say("Is this your account? Please say yes or no.")
-    response.append(gather)
-
-    response.redirect("/check_account/") # Repeat the prompt if no input received
-
+        # Repeat the prompt if no input received
+        response.redirect("/check_account/") 
+    # Inform caller that there wasn't an account found
+    except User.DoesNotExist:
+        response.say("I'm sorry. We did not find an account associated with this phone number.")
+    
     return HttpResponse(str(response), content_type="text/xml")
 
 
