@@ -2,7 +2,7 @@ from django.shortcuts import redirect
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from ..models import FAQ, Log
+from ..models import FAQ, Log, User
 import json
 from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
@@ -171,3 +171,27 @@ def get_corresponding_answer(request, question):
     """
     answer = FAQ.objects.filter(question__iexact=question).first().answer
     return answer
+
+def check_account(request):
+    """
+    Check the User table for phone number to check if the account exists. If it does, 
+    relay the information such as the saved name to confirm the account.
+    """
+    caller_number = request.POST.get('From', '')
+    response = VoiceResponse()
+
+    user = User.objects.get(phone_number=caller_number)
+    response.say(f"Hello, {user.first_name} {user.last_name}.")
+
+    gather = Gather(input="speech", timeout=2, action="/confirm_account/")
+    gather.say("Is this your account? Please say yes or no.")
+    response.append(gather)
+
+    response.redirect("/check_account/") # Repeat the prompt if no input received
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+
+
+
+
