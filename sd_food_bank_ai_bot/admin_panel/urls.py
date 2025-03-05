@@ -18,5 +18,5 @@ urlpatterns = [
     path("prompt_question/", views.phone_service_faq.prompt_question, name="prompt_question"),
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
     path("check_account/", views.check_account, name="check_account"),
-    path("confirm_account/", views.confirm_account, name="confirm_account")
+    path("confirm_account/", views.confirm_account, name="confirm_account"),
 ]
