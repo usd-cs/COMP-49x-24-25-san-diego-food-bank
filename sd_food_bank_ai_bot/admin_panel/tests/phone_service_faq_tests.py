@@ -320,6 +320,6 @@ class PhoneSchedulingService(TestCase):
         content = response.content.decode("utf-8")
         root = ET.fromstring(content)
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
-        self.assertIn("Please try again.", say_text)
+        self.assertIn("I'm sorry, please try again.", say_text)
     
     
