@@ -184,18 +184,18 @@ def check_account(request):
     try: 
         # Query the User table for phone number and relay saved name.
         user = User.objects.get(phone_number=caller_number)
-        response.say(f"Hello, {user.first_name} {user.last_name}.")
+        response.say(body=f"Hello, {user.first_name} {user.last_name}.")
 
         # Confirm the account with the caller 
         gather = Gather(input="speech", timeout=2, action="/confirm_account/")
-        gather.say("Is this your account? Please say yes or no.")
+        gather.say(body="Is this your account? Please say yes or no.")
         response.append(gather)
 
         # Repeat the prompt if no input received
-        response.redirect("/check_account/") 
+        response.redirect(body="/check_account/") 
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
-        response.say("I'm sorry. We did not find an account associated with this phone number.")
+        response.say(body="I'm sorry. We did not find an account associated with this phone number.")
     
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -209,10 +209,10 @@ def confirm_account(request):
     response = VoiceResponse
 
     if "yes" in speech_result:
-        response.say("Great! Your account has been confirmed!")
-        response.redirect("/prompt_question/")
+        response.say(body="Great! Your account has been confirmed!")
+        response.redirect(body="/prompt_question/")
     else:
-        response.say("I'm sorry, please try again.")
+        response.say(body="I'm sorry, please try again.")
     
     return HttpResponse(str(response), content_type="text/xml")
 
