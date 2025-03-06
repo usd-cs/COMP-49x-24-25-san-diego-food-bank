@@ -19,4 +19,6 @@ urlpatterns = [
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
     path("check_account/", views.check_account, name="check_account"),
     path("confirm_account/", views.confirm_account, name="confirm_account"),
+    path("schedule_nearest_available/", views.schedule_nearest_available, name="schedule_nearest_available"),
+    path("handle_schedule_response/", views.handle_schedule_response, name="handle_schedule_response"),
 ]

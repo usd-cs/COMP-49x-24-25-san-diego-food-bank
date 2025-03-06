@@ -69,3 +69,49 @@ def confirm_account(request):
         response.say("I'm sorry, please try again.")
     
     return HttpResponse(str(response), content_type="text/xml")
+
+def get_nearest_available_slot(requested_time):
+    """
+    Simulate calendar scheduling for the nearest available appointment.
+    Later we can just replace this with whatever API calls that are necessary to 
+    Acuity.
+
+    If request time is "3:00 pm", we will return "3:15 pm" as nearest available.
+    """
+    return "3:15 PM"
+
+@csrf_exempt
+def schedule_nearest_available(request):
+    """
+    Provides the nearest available appointment time to the caller.
+    The caller is then prompted to confirm the appointment.
+    """
+    requested_time = "3:00 PM" # Simulated for now 
+    available_slot = get_nearest_available_slot(requested_time)
+
+    response = VoiceResponse()
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_schedule_response/")
+    gather.say(f"The nearest available appointment is at {available_slot}. Would you like to schedule this appointment?")
+    response.append(gather)
+
+    response.redirect("/schedule_nearest_available/") # Reprompt if no response
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def handle_schedule_response(request):
+    """
+    Process the caller's response to the proposed appointment time.
+    If they say yes, confirm the appointment, otherwise ask if they want other times.
+    """
+    speech_result = request.POST.get("SpeechResult", " ").strip().lower()
+    response = VoiceResponse()
+
+    if "yes" in speech_result:
+        response.say("Your appointment has been scheduled! Thank you.")
+        response.hangup()
+    else: 
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_schedule_options/")
+        gather.say("Would you like to hear other available times or a different date? Please say 'other times' or 'different date'.")
+        response.append(gather)
+    return HttpResponse(str(response), content_type="text/xml")
