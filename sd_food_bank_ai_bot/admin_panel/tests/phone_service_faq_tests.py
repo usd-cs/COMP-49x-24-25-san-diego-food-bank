@@ -40,12 +40,22 @@ class TwilioViewsTestCase(TestCase):
     
     def test_answer_call_schedule(self):
         """
-        Test for when the user indicates they wish to ask a question.
+        Test for when the user indicates they wish to schedule an appointment.
         """
         request = self.factory.post("/get_question_from_user/", {"Digits": "1"})
         response = answer_call(request)
 
         self.assertIn("/check_account/", response.content.decode())
+    
+    def test_answer_call_no_input(self):
+        """
+        Test for when the user gives no input.
+        """
+        request = self.factory.post("/get_question_from_user/", {})
+        response = answer_call(request)
+
+        self.assertNotIn("/check_account/", response.content.decode())
+        self.assertNotIn("/prompt_question/", response.content.decode())
 
 
 class LogModelTestCase(TestCase):
