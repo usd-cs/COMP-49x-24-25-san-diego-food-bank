@@ -214,3 +214,41 @@ class SchedulingServiceTests(TestCase):
         self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for date input.")
         gather_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("What date would you like to schedule an appointment for?", gather_text)
+    
+    def test_handle_schedule_options_unknown(self):
+        """
+        Test that when the caller's next response is unrecognized, the response will apologize and redirect.
+        """
+        response = self.client.post(
+            reverse("handle_schedule_options"),
+            {"SpeechResult": "I don't know"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("I'm sorry, I didn't understand that", say_text)
+        redirect_elem = root.find("Redirect")
+        self.assertIsNotNone(redirect_elem, "Expected a <Redirect> element when input is unrecognized.")
+
+    def test_handle_date_input(self):
+        """
+        Test that when the caller provides a date, the system offers an appointment slot for that day.
+        """
+        # Simulate the caller says "March 10th" as the next date.
+        response = self.client.post(
+            reverse("handle_date_input"),
+            {"SpeechResult": "March 10th"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        # Check that the prompt includes the provided date and the simulated slot "4:00 PM".
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("March 10th", say_text)
+        self.assertIn("4:00 PM", say_text)
+        
+        gathers = list(root.iter("Gather"))
+        self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for confirming the appointment on the provided date.")
