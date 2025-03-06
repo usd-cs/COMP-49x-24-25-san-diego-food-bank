@@ -82,7 +82,7 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("We did not find an account", say_text)
     
-    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_confirm_account_yes(self, mock_get_response_sentiment):
         """
         Test that when the caller confirms by saying "yes", the response 
@@ -99,7 +99,7 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("Your account has been confirmed!", say_text)
     
-    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_confirm_account_no(self, mock_get_response_sentiment):
         """
         Test that when the caller confirms by saying "no", the response 
