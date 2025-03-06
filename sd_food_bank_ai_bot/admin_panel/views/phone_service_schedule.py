@@ -115,3 +115,48 @@ def handle_schedule_response(request):
         gather.say("Would you like to hear other available times or a different date? Please say 'other times' or 'different date'.")
         response.append(gather)
     return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def handle_schedule_options(request):
+    """
+    Process the caller's follow up choice. 
+    If they say 'Other times', provide an alternative available slot.
+    If they say 'Different date', handle it accordingly.
+    """
+    speech_result = request.POST.get("SpeechResult", "").strip().lower()
+    response = VoiceResponse()
+
+    if "other times" in speech_result:
+        # Another simulated available slot 
+        alternative_slot = "3:45 PM"
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_schedule_response/")
+        gather.say(f"Another available appointment is available at {alternative_slot}. Would you like to schedule this appointment? Please say yes or no.")
+        response.append(gather)
+        response.redirect("/schedule_nearest_available/")
+    elif "different date" in speech_result:
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_date_input/")
+        gather.say("What date would you like to schedule an appointment for?")
+        response.append(gather)
+    else:
+        response.say("I'm sorry, I didn't understand that.")
+        response.redirect("/schedule_nearest_available/")
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def handle_date_input(request):
+    """
+    Processes the caller's date input, queries for available slots on that day,
+    and offers the nearest appointment.
+    """
+    date_input = request.POST.get("SpeechResult", "").strip()
+    response = VoiceResponse()
+    
+    # Simulate an available slot for the specified date.
+    available_slot = "4:00 PM"
+    
+    # Prompt the caller with the available slot and ask for confirmation.
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_schedule_response/")
+    gather.say(f"For {date_input}, the nearest available appointment is at {available_slot}. Would you like to schedule this appointment? Please say yes or no.")
+    response.append(gather)
+    
+    return HttpResponse(str(response), content_type="text/xml")
