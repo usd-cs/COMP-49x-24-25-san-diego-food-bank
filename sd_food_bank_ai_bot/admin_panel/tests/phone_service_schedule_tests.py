@@ -115,3 +115,102 @@ class PhoneSchedulingService(TestCase):
         root = ET.fromstring(content)
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
+    
+class SchedulingServiceTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def parse_twiML(self, content):
+        """
+        Helper method to parse TwiML response and convert it into an XML element tree.
+
+        This allows some of our tests to only focus on validating the response and not have to 
+        repeat the parsing logic for the TwiML responses.
+        """
+        return ET.fromstring(content)
+    
+    def test_schedule_nearest_available(self):
+        """
+        Test that the schedule_nearest_available endpoint will return 
+        a 'Gather' with the expected appointment prompt.
+        """
+        response = self.client.get(reverse("schedule_nearest_available"))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        # Check that there is at least one 'Gather' element with a prompt that mentions "available appointment"
+        gathers = list(root.iter("Gather"))
+        self.assertTrue(len(gathers) > 0, "No <Gather> element found.")
+        gather_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("The nearest available appointment is at", gather_text)
+
+    def test_handle_schedule_response_yes(self):
+        """
+        Test that when the caller confirms with "yes", the response confirms the appointment and hangs up.
+        """
+        response = self.client.post(
+            reverse("handle_schedule_response"),
+            {"SpeechResult": "Yes, please"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("Your appointment has been scheduled!", say_text)
+
+    def test_handle_schedule_response_no(self):
+        """
+        Test that when the caller says 'no', the response prompts for further options.
+        """
+        response = self.client.post(
+            reverse("handle_schedule_response"),
+            {"SpeechResult": "No"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        # Check that the response contains the prompt asking if they'd like to hear other times or choose a different date.
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("Would you like to hear other available times", say_text)
+        # Ensure a Gather element is present for the next step.
+        gathers = list(root.iter("Gather"))
+        self.assertTrue(len(gathers) > 0, "No <Gather> element found in response for 'no' response.")
+
+    def test_handle_schedule_options_other_times(self):
+        """
+        Test that when the caller says "other times", the system offers an alternative slot.
+        """
+        response = self.client.post(
+            reverse("handle_schedule_options"),
+            {"SpeechResult": "other times"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("Another available appointment is at", say_text)
+    
+        gathers = list(root.iter("Gather"))
+        self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for alternative times.")
+
+    def test_handle_schedule_options_different_date(self):
+        """
+        Test that when the caller says "different date", the system prompts for a date.
+        """
+        response = self.client.post(
+            reverse("handle_schedule_options"),
+            {"SpeechResult": "different date"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+        
+        # There should be a Gather element prompting the caller for a date.
+        gathers = list(root.iter("Gather"))
+        self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for date input.")
+        gather_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("What date would you like to schedule an appointment for?", gather_text)
