@@ -1,12 +1,13 @@
 from django.test import TestCase, Client, RequestFactory
 from unittest.mock import patch, MagicMock
 from admin_panel.views.phone_service_faq import *
-from admin_panel.models import Log, FAQ
+from admin_panel.models import Log, FAQ, User
 from django.http import HttpRequest
 from django.urls import reverse
 import urllib.parse
 import datetime
 import json
+import xml.etree.ElementTree as ET
 
 
 
@@ -247,3 +248,78 @@ class PhoneFAQService(TestCase):
 
         answer = "To schedule an appointment, visit calendly.com/sdfb."
         self.assertEqual(response, answer)
+    
+class PhoneSchedulingService(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.test_user = User.objects.create(
+            first_name="Billy",
+            last_name="Bob",
+            phone_number="+1234567890",
+            email="billybob@email.com"
+        )
+    
+    def test_check_account_found(self):
+        """
+        Test that when an account exists for the caller's number, the response
+        contains their name and a confirmation.
+        """
+        response = self.client.post(
+            reverse("check_account"),
+            {"From": self.test_user.phone_number}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+
+        root = ET.fromstring(content)
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+
+        self.assertIn("Hello, Billy Bob", say_text)
+        self.assertIn("Is this your account?", say_text)
+    
+    def test_check_account_not_found(self):
+        """
+        Test that when no account exists for the phone number, the response
+        informs the caller.
+        """
+        response = self.client.post(
+            reverse("check_account"),
+            {"From": "+1987654321"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = ET.fromstring(content)
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("We did not find an account", say_text)
+    
+    def test_confirm_account_yes(self):
+        """
+        Test that when the caller confirms by saying "yes", the response 
+        will confirm the account.
+        """
+        response = self.client.post(
+            reverse("confirm_account"),
+            {"SpeechResult": "Yes, that's correct"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = ET.fromstring(content)
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("Your account has been confirmed!", say_text)
+    
+    def test_confirm_account_no(self):
+        """
+        Test that when the caller confirms by saying "no", the response 
+        will encourage them to try again.
+        """
+        response = self.client.post(
+            reverse("confirm_account"),
+            {"SpeechResult": "No, that's not right"}
+        )
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        root = ET.fromstring(content)
+        say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
+        self.assertIn("I'm sorry, please try again.", say_text)
+    
+    
