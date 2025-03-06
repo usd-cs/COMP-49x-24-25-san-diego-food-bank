@@ -134,15 +134,11 @@ class PhoneFAQService(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("What can I help you with?", response.content.decode())
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.get_corresponding_answer")
-    def test_confirm_question_affirmative(self, mock_get_corresponding_answer, mock_openai):
+    def test_confirm_question_affirmative(self, mock_get_corresponding_answer, mock_get_response_sentiment):
         """Test for when the user has said the question is correct"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="AFFIRMATIVE"))]
-        )
+        mock_get_response_sentiment.return_value = True
 
         mock_get_corresponding_answer.return_value = "The food bank is open Monday-Friday from 9:00 AM to 5:00 PM"
 
@@ -154,15 +150,11 @@ class PhoneFAQService(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("The food bank is open Monday-Friday from 9:00 AM to 5:00 PM", response.content.decode())
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.get_corresponding_answer")
-    def test_confirm_question_operator(self, mock_get_corresponding_answer, mock_openai):
+    def test_confirm_question_operator(self, mock_get_corresponding_answer, mock_get_response_sentiment):
         """Test for when the user has said the question is correct and is asking for an operator"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="AFFIRMATIVE"))]
-        )
+        mock_get_response_sentiment.return_value = True
 
         question = "Can I speak to an operator?"
         question_encoded = urllib.parse.quote(question)
@@ -173,14 +165,10 @@ class PhoneFAQService(TestCase):
         self.assertIn("I'm transferring you to an operator now. Please hold.", response.content.decode())
         self.assertIn("###-###-####", response.content.decode())
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
-    def test_confirm_question_negative(self, mock_openai):
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    def test_confirm_question_negative(self, mock_get_response_sentiment):
         """Test for when the user has said the question is incorrect"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="NEGATIVE"))]
-        )
+        mock_get_response_sentiment.return_value = False
 
         question = "When does the food bank open?"
         question_encoded = urllib.parse.quote(question)
@@ -190,21 +178,17 @@ class PhoneFAQService(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry about that. Please try asking again or rephrasing.", response.content.decode())
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
-    def test_confirm_question_unheard(self, mock_openai):
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    def test_confirm_question_unheard(self, mock_get_response_sentiment):
         """Test for when the bot receives no input"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="NEGATIVE"))]
-        )
+        mock_get_response_sentiment.return_value = False
 
         question = "When does the food bank open?"
         question_encoded = urllib.parse.quote(question)
         request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": ""})
         response = confirm_question(request, question_encoded)
 
-        mock_client.chat.completions.create.assert_not_called()
+        mock_get_response_sentiment.assert_not_called()
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, I couldn't understand that. Please try again.", response.content.decode())
     
