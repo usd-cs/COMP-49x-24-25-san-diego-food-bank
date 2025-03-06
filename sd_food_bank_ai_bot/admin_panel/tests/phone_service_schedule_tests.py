@@ -192,7 +192,7 @@ class SchedulingServiceTests(TestCase):
         root = self.parse_twiML(content)
         
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
-        self.assertIn("Another available appointment is available at 3:45 PM. Would you like to schedule this appointment? Please say yes or no.")
+        self.assertIn("Another available appointment is available at 3:45 PM. Would you like to schedule this appointment? Please say yes or no.", say_text)
     
         gathers = list(root.iter("Gather"))
         self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for alternative times.")
