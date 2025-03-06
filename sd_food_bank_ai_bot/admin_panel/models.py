@@ -27,6 +27,7 @@ class Log(models.Model):
     transcript = models.JSONField(default = list)
     audio = models.FileField(upload_to = "conversations/")
     time_started = models.DateTimeField(auto_now_add = True)
+    time_ended = time_started = models.DateTimeField()
     length_of_call = models.DurationField()
     strikes = models.PositiveIntegerField(default = 0)
     intents = models.JSONField(default = dict)
@@ -42,6 +43,11 @@ class Log(models.Model):
         self.strikes += 1
         self.save()
         return self.strikes >= 2 # Failed intent recognition too many times, forward to operator if this returns True
+    
+    def reset_strikes(self):
+        """Bot progressed to another step in the dialogue so reset the strike system"""
+        self.strikes = 0
+        self.save()
     
     def add_transcript(self, speaker, message):
         """Append a new message to the call transcript"""

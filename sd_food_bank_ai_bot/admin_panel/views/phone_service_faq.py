@@ -9,6 +9,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from openai import OpenAI
 import urllib.parse
 import datetime
+from utilities import strike_system_handler, forward_operator
 
 
 @csrf_exempt
@@ -16,11 +17,15 @@ def answer_call(request):
     """
     Brief greeting upon answering incoming phone calls.
     """
+    phone_number = request.POST.get('From')
+    log = Log.objects.create(phone_number = phone_number)
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
+    log.add_transcript(speaker = "bot", message = "Thank you for calling!")
 
     gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
     gather.say("What can I help you with?")
+    log.add_transcript(speaker = "bot", message = "What can I help you with?")
     caller_response.append(gather)
 
     return HttpResponse(str(caller_response), content_type='text/xml')
@@ -68,6 +73,9 @@ def get_question_from_user(request):
     Gets the users question and interprets it
     """
     speech_result = request.POST.get('SpeechResult', '')
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
+    log.add_transcript(speaker = "caller", message = speech_result)
     caller_response = VoiceResponse()
     if speech_result:
         question = get_matching_question(request, speech_result) # Log interpreted question?
@@ -78,6 +86,7 @@ def get_question_from_user(request):
             caller_response.append(gather)
         else: # No matching question found
             # Add a strike
+            strike_system_handler(log)
             caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
             caller_response.redirect("/prompt_question/")
     else:
@@ -91,6 +100,8 @@ def confirm_question(request, question):
     Confirms the users question is correct and provides the answer
     """
     speech_result = request.POST.get('SpeechResult', '')
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
 
     if speech_result:
@@ -109,12 +120,7 @@ def confirm_question(request, question):
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
-                caller_response.say("I'm transferring you to an operator now. Please hold.")
-                dial = Dial()
-                dial.number("###-###-####")
-                caller_response.append(dial)
-
-                return HttpResponse(str(caller_response), content_type="text/xml")
+                return forward_operator()
 
             answer = get_corresponding_answer(request, question)
             
@@ -123,6 +129,7 @@ def confirm_question(request, question):
             caller_response.redirect("/prompt_question/")
         else: # If caller has indicated unsatisfactory response, add a string and retry
             # Add a strike
+            strike_system_handler(log)
             caller_response.say("Sorry about that. Please try asking again or rephrasing.")
             caller_response.redirect("/prompt_question/")
     else:
