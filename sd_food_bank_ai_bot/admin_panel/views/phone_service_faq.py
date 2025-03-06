@@ -21,9 +21,9 @@ def answer_call(request):
 
     digit_input = request.POST.get('Digits', '')
     if digit_input:
-        if digit_input == 1:
+        if digit_input == "1":
             caller_response.redirect("/check_account/")
-        elif digit_input == 4:
+        elif digit_input == "4":
             caller_response.redirect("/prompt_question/")
         else:
             caller_response.say("Sorry, that feature has not been added yet")
