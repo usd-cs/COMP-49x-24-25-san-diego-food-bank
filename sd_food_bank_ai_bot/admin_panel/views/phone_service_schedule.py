@@ -109,6 +109,8 @@ def get_name(request):
         response.append(gather)
     else:
         response.redirect("/check_account/")
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def process_name_confirmation(request, name_encoded):
