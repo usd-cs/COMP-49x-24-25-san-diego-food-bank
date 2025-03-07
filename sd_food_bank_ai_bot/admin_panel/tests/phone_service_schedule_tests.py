@@ -3,7 +3,9 @@ from admin_panel.views.phone_service_schedule import *
 from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 from django.urls import reverse
-from ..models import User
+from django.utils.timezone import now
+from datetime import timedelta, time
+from ..models import User, AppointmentTable
 import urllib.parse
 
 
@@ -134,7 +136,6 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
 
-
 class NameRequestTests(TestCase):
     def setUp(self):
         """Setup a request factory for use during tests"""
@@ -222,3 +223,79 @@ class NameRequestTests(TestCase):
         self.assertFalse(User.objects.filter(phone_number="+16294968156").exists())
         self.assertIn("I'm sorry, please try again.", response.content.decode())
         self.assertIn("check_account", response.content.decode())
+
+class AppointmentTests(TestCase):
+    def setUp(self):
+        """Set up test data for checking available appointments"""
+        self.client = Client()
+        self.today = now().date()
+        self.target_weekday = 1 # Gets Tuesday
+        self.url = reverse('check_for_appointment')  # Ensure this matches your URL patterns
+
+        # Define business hours
+        self.EARLIEST_TIME = time(9, 0)
+        self.LATEST_TIME = time(17, 0)
+
+        # Generate appointment dates for the next 4 weeks on Tuesday
+        self.appointment_dates = [
+            self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
+        ]
+
+    def test_check_for_appointment_valid_day(self):
+        """Tests if check_for_appointment correctly identifies available days"""
+        response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("The next available Tuesday", str(response.content))
+
+    def test_check_for_appointment_invalid_day(self):
+        """Tests if check_for_appointment correctly handles an invalid day"""
+        response = self.client.post(self.url, {'SpeechResult': 'Blursday'})  # Invalid day
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("I did not recognize that day", str(response.content))
+
+    def test_check_available_date_with_no_appointments(self):
+        """Tests check_available_date when no appointments exist (should be fully open)"""
+        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
+        self.assertTrue(is_available)
+        self.assertEqual(num_available, 4)  # Default 4 slots
+
+    def test_check_available_date_with_full_schedule(self):
+        """Tests check_available_date when all slots are taken"""
+        # Fill the whole day with back-to-back appointments
+        for date in self.appointment_dates:
+            AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(10, 0), end_time=time(11, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=3, appointmentID=103, start_time=time(11, 0), end_time=time(12, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=4, appointmentID=104, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=5, appointmentID=105, start_time=time(13, 0), end_time=time(14, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=6, appointmentID=106, start_time=time(14, 0), end_time=time(15, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=7, appointmentID=107, start_time=time(15, 0), end_time=time(16, 0), location="Office", date=date)
+            AppointmentTable.objects.create(userID=8, appointmentID=108, start_time=time(16, 0), end_time=self.LATEST_TIME, location="Office", date=date)
+
+        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
+        self.assertFalse(is_available)
+        self.assertIsNone(appointment_date)
+        self.assertEqual(num_available, 0)
+
+    def test_check_available_date_with_partial_availability(self):
+        """Tests check_available_date when there are some open slots"""
+        # Create some appointments but leave gaps
+        AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=self.appointment_dates[0])
+        AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=self.appointment_dates[0])
+
+        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
+        self.assertTrue(is_available)
+        self.assertGreater(num_available, 0)
+
+    def test_check_for_appointment_no_available_dates(self):
+        """Tests if check_for_appointment correctly handles fully booked schedules"""
+        # Fully book all weeks for the requested weekday
+        increment = 0
+        for date in self.appointment_dates:
+            for hour in range(9, 17):
+                increment += 100
+                AppointmentTable.objects.create(userID=hour, appointmentID=increment, start_time=time(hour, 0), end_time=time(hour + 1, 0), location="Office", date=date)
+
+        response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
