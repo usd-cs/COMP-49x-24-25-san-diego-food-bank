@@ -181,7 +181,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968157").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_process_name_confirmation_valid_with_middle(self, mock_get_response_sentiment):
@@ -194,7 +194,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968156", first_name="Billy", last_name="Bob").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
 
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
@@ -208,7 +208,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968155", first_name="Billy").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_process_name_confirmation_invalid(self, mock_get_response_sentiment):
@@ -241,14 +241,26 @@ class AppointmentTests(TestCase):
             self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
         ]
 
-    def test_check_for_appointment_valid_day(self):
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_check_for_appointment_valid_day(self, mock_openai):
         """Tests if check_for_appointment correctly identifies available days"""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
+        )
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("The next available Tuesday", str(response.content))
 
-    def test_check_for_appointment_invalid_day(self):
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_check_for_appointment_invalid_day(self, mock_openai):
         """Tests if check_for_appointment correctly handles an invalid day"""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Blursday"))]
+        )
         response = self.client.post(self.url, {'SpeechResult': 'Blursday'})  # Invalid day
         self.assertEqual(response.status_code, 200)
         self.assertIn("I did not recognize that day", str(response.content))
@@ -287,8 +299,15 @@ class AppointmentTests(TestCase):
         self.assertTrue(is_available)
         self.assertGreater(num_available, 0)
 
-    def test_check_for_appointment_no_available_dates(self):
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_check_for_appointment_no_available_dates(self, mock_openai):
         """Tests if check_for_appointment correctly handles fully booked schedules"""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
+        )
+
         # Fully book all weeks for the requested weekday
         increment = 0
         for date in self.appointment_dates:
