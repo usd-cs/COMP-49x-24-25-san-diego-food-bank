@@ -173,7 +173,7 @@ def confirm_request_date_availability(request):
     if declaration:
         response.redirect("/request_date_availability/") # Ask for available date again
     else:
-        response.redirect("/prompt_question/") # Send user back to the start of loop
+        response.redirect("/answer/") # Send user back to the start of loop
 
 @csrf_exempt
 def confirm_available_date(request):
