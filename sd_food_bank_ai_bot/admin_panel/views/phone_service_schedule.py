@@ -218,11 +218,11 @@ def confirm_time_selection(request):
     time = request.GET.get('time', '')
 
     phone_number = get_phone_number(request)
-    user = User.objects.get(phone_number=caller_number)
+    user = User.objects.get(phone_number=phone_number)
     first_name = user.first_name
     last_name = user.last_name
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/?time={time_encoded}&date={appointment_date_str}")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/?time={time}&date={appointment_date_str}")
     gather.say(f"Great! To confirm you are booked for {appointment_date_str} at {time} and your name is {first_name} {last_name}. Is that correct?")
     response.append(gather)
 
@@ -243,7 +243,7 @@ def final_confirmation(request):
         time_str = request.POST.get('time', '')
         phone_number = get_phone_number(request)
         
-        user = User.objects.get(phone_number=caller_number)
+        user = User.objects.get(phone_number=phone_number)
         userID = user.id
 
         try:
@@ -252,7 +252,7 @@ def final_confirmation(request):
 
             start_datetime = datetime.combine(appointment_date, start_time)
             end_datetime = start_datetime + timedelta(minutes=30)
-            end_time = new_datetime.time()
+            end_time = end_datetime.time()
 
         except ValueError:
             response.say("An error has occurred when attempting to schedule you appointment.")
@@ -268,7 +268,7 @@ def final_confirmation(request):
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         # send sms
     else:
-        reponse.redirect("/answer/")
+        response.redirect("/answer/")
     
     return HttpResponse(str(response), content_type="text/xml") 
 
