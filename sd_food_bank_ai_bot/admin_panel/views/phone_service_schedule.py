@@ -174,6 +174,8 @@ def confirm_request_date_availability(request):
         response.redirect("/request_date_availability/") # Ask for available date again
     else:
         response.redirect("/answer/") # Send user back to the start of loop
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def confirm_available_date(request):
@@ -199,6 +201,8 @@ def confirm_available_date(request):
             response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
     else:
         response.redirect("/request_date_availability/") # Send user back to ask for another day
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def confirm_time_selection(request):
