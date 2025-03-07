@@ -9,7 +9,7 @@ class User(models.Model):
     """Table for storing user information"""
     first_name = models.CharField(max_length=20)
     last_name = models.CharField(max_length=20)
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=16)
     email = models.EmailField(unique=True)
 
 class Tag(models.Model):
