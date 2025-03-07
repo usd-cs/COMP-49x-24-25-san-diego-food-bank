@@ -22,6 +22,6 @@ urlpatterns = [
     path("confirm_account/", views.confirm_account, name="confirm_account"),
     path("request_date_availability/", views.request_date_availability, name="request_date_availability"),
     path("confirm_request_date_availability/", views.confirm_request_date_availability, name="confirm_request_date_availability"),
+    path("confirm_available_date/", views.confirm_available_date, name="confirm_available_date"),
     path("check_for_appointment/", views.check_for_appointment, name="check_for_appointment"),
-    path("find_next_available_time/", views.find_next_available_time, name="find_next_available_time"),
 ]

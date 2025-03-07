@@ -98,17 +98,28 @@ def confirm_request_date_availability(request):
         response.redirect("/prompt_question/") # Send user back to the start of loop
 
 @csrf_exempt
+def confirm_available_date(request):
+    """
+    Asks the caller for a confirmation on whether to reprompt them for another
+    date availability.
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    declaration = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
+
+    if declaration:
+        pass
+        #response.redirect("") TODO: redirect to schedule a time
+    else:
+        response.redirect("/request_date_availability/") # Send user back to ask for another day
+
+@csrf_exempt
 def check_for_appointment(request):
     """
-    Searches appointment table for soonest available appointment on a day then
-    returns the user with that apppointment.
-
-    TODO: Need to add feature where it handles the user asking for a specific time (instead of being
-    put to the soonest available time.)
+    Searches appointment table for an available day that
+    the caller requested.
     """
-    speech_result= request.POST.get('SpeechResult', '').strip().lower()
-
-    today = now().date()
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
     weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
 
     if speech_result not in weekdays:
@@ -118,54 +129,62 @@ def check_for_appointment(request):
         response.append(gather)
         return HttpResponse(str(response), content_type="text/xml")
 
-    # Get the next occurrence of the requested weekday
     target_weekday = weekdays[speech_result]
-    days_ahead = (target_weekday - today.weekday()) % 7
-    if days_ahead == 0:
-        days_ahead = 7  # If today is the same day, schedule for next week
 
-    appointment_date = today + timedelta(days=days_ahead)
-
-    # Retrieve existing appointments for the selected date
-    existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
-
-    # Find the soonest available time slot
-    available_time = find_next_available_time(existing_appointments)
+    # Check if there are time slots on that day
+    is_available, appointment_date, number_available_appointments = check_available_date(target_weekday)
 
     response = VoiceResponse()
-    if available_time:
-        response.say(f"The soonest available appointment on {speech_result.capitalize()} is at {available_time.strftime('%I:%M %p')}. Would you like to book it?")
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_appointment/", method="POST")
-        gather.say("Say yes to confirm or no to choose another time.")
+    if is_available:
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_available_date/", method="POST")
+        gather.say(f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
         response.append(gather)
     else:
-        response.say(f"Sorry, no available times on {speech_result.capitalize()}. Would you like to choose another day?")
+        response.say(f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
         response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def find_next_available_time(existing_appointments):
+def check_available_date(target_weekday):
     """
-    Find the soonest available appointment time on specific day based on existing scheduled appointments.
+    Return if the given date has available timeslots or not.
     """
-    if not existing_appointments:
-        # No appointments exist, return the earliest available time
-        return EARLIEST_TIME
+    today = now().date()
+    max_weeks_ahead = 4 
+    number_available_appointments = 0
 
-    # Start checking from the beginning of the workday
-    current_time = EARLIEST_TIME
+    for week in range(max_weeks_ahead):
+        # Calculate the next occurrence of the requested weekday
+        days_ahead = (target_weekday - today.weekday()) % 7
+        if days_ahead == 0 and week == 0:
+            days_ahead = 7 
 
-    for appointment in existing_appointments:
-        if current_time < appointment.start_time:
-            # Found a gap before this appointment
-            return current_time
-        # Move to the end of the current appointment
-        current_time = appointment.end_time
+        appointment_date = today + timedelta(days=days_ahead + (week * 7))
 
-    # If all appointments are back-to-back, check if there's room at the end of the day
-    if current_time < LATEST_TIME:
-        return current_time
+        # Retrieve existing appointments for this date
+        existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
 
-    return None  # No available slots
+        # For no appointments that day yet
+        if not existing_appointments:
+            number_available_appointments = 4 # TODO: mod by n = fixed appt. length
+            return True, appointment_date, number_available_appointments
+
+        current_time = EARLIEST_TIME
+
+        # Check for time slots in between appointments or after all appointments
+        for appointment in existing_appointments:
+            if current_time < appointment.start_time:
+                number_available_appointments += 1
+            current_time = appointment.end_time
+
+        if current_time < LATEST_TIME:
+            number_available_appointments += 1  # TODO: mod by n = fixed appt. length
+        
+        # If there are available timeslots return True and additional var.
+        if number_available_appointments > 0:
+            return True, appointment_date, number_available_appointments
+
+    # If no available timeslots for the next month on request day return False    
+    return False, None, 0
