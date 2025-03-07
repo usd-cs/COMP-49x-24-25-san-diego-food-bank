@@ -324,11 +324,14 @@ def request_preferred_time_over_three(request):
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
     
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/is_time_available/?date={appointment_date_str}")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
     gather.say("What time would you like?")
 
 @csrf_exempt
-def is_time_available(request):
+def generate_requested_time(request):
+    """
+    Uses GPT to generate a most-likely time that the caller asked for.
+    """
     speech_result = request.POST.get('SpeechResult', '')
     response = VoiceResponse()
     # Extract appointment_date from the request
@@ -348,14 +351,18 @@ def is_time_available(request):
         response_pred = completion.choices[0].message.content
 
         time_encoded = urllib.parse.quote(response_pred)
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/process_requested_time/{time_encoded}/?date={appointment_date_str}")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/find_requested_time/{time_encoded}/?date={appointment_date_str}")
         gather.say(f"Your requested time was {response_pred}. Is that correct?")
         response.append(gather)
     else:
-        response.redirect("/check_account/")
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
 
 @csrf_exempt
-def process_requested_time(request, time_encoded):
+def find_requested_time(request, time_encoded):
+    """
+    Uses the GPT generated time request to find appointments that match exactly
+    or are closest to that time request.
+    """
     speech_result = request.POST.get('SpeechResult', '')
     confirmation = get_response_sentiment(request, speech_result)
     response = VoiceResponse()
@@ -397,7 +404,7 @@ def process_requested_time(request, time_encoded):
             response.append(gather)
     
     else:
-        response.redirect("/request_preferred_time_over_three/")    
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")    
     
     return HttpResponse(str(response), content_type="text/xml")
 
