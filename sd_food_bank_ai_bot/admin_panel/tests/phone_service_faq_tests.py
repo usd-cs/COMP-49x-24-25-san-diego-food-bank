@@ -11,7 +11,8 @@ import json
 
 class TwilioViewsTestCase(TestCase):
     def setUp(self):
-        self.client = Client() 
+        self.client = Client()
+        self.factory = RequestFactory()
     
     def test_answer_call(self):
         """
@@ -21,9 +22,41 @@ class TwilioViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
         # Check for expected greeting and the TwiML tags
-        self.assertIn("Thank you for calling!", content)
+        self.assertIn("Thank you for calling the San Diego Food Bank! Press 1 to\
+         schedule an appointment, press 2 to reschedule an appointment,\
+             press 3 to cancel an appointment, press 4 to ask about specific\
+                inquiries, or press 0 to be forwarded to an operator.", content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
+    
+    def test_answer_call_faq(self):
+        """
+        Test for when the user indicates they wish to ask a question.
+        """
+        request = self.factory.post("/get_question_from_user/", {"Digits": "4"})
+        response = answer_call(request)
+
+        self.assertIn("/prompt_question/", response.content.decode())
+    
+    def test_answer_call_schedule(self):
+        """
+        Test for when the user indicates they wish to schedule an appointment.
+        """
+        request = self.factory.post("/get_question_from_user/", {"Digits": "1"})
+        response = answer_call(request)
+
+        self.assertIn("/check_account/", response.content.decode())
+    
+    def test_answer_call_no_input(self):
+        """
+        Test for when the user gives no input.
+        """
+        request = self.factory.post("/get_question_from_user/", {})
+        response = answer_call(request)
+
+        self.assertNotIn("/check_account/", response.content.decode())
+        self.assertNotIn("/prompt_question/", response.content.decode())
+
 
 class LogModelTestCase(TestCase):
     def setUp(self):
@@ -229,4 +262,31 @@ class PhoneFAQService(TestCase):
         response = get_corresponding_answer(request, question)
 
         answer = "To schedule an appointment, visit calendly.com/sdfb."
-        self.assertEqual(response, answer)    
+        self.assertEqual(response, answer)
+
+    @patch("admin_panel.views.utilities.forward_operator")
+    def test_add_strike_forward_operator(self, mock_forward_operator):
+        """Test strike system for forwarding to an operator when fails too many times"""
+        log_mock = MagicMock()
+        log_mock.add_strike.return_value = True
+
+        strike_system_handler(log_mock)
+        log_mock.add_strike.assert_called_once()
+        mock_forward_operator.assert_called_once()
+
+    def test_add_strike_no_forward_operator(self):
+        """Test strike system management of strikes prior to operator forwarding"""
+        log_mock = MagicMock()
+        log_mock.add_strike.return_value = False
+
+        strike_system_handler(log_mock)
+        
+        log_mock.add_strike.assert_called_once()
+
+    def test_reset_strikes(self):
+        """Test strike system reset"""
+        log_mock = MagicMock()
+
+        strike_system_handler(log_mock, reset = True)
+
+        log_mock.reset_strikes.assert_called_once()

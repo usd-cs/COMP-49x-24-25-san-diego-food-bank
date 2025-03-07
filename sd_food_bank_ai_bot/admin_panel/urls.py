@@ -17,10 +17,17 @@ urlpatterns = [
     path("confirm_question/<str:question>/", views.phone_service_faq.confirm_question, name="confirm_question"),
     path("prompt_question/", views.phone_service_faq.prompt_question, name="prompt_question"),
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
+    # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
     path("confirm_account/", views.confirm_account, name="confirm_account"),
     path("schedule_nearest_available/", views.schedule_nearest_available, name="schedule_nearest_available"),
     path("handle_schedule_response/", views.handle_schedule_response, name="handle_schedule_response"),
     path("handle_schedule_options/", views.handle_schedule_options, name="handle_schedule_options"),
     path("handle_date_input/", views.handle_date_input, name="handle_date_input"),
+    path("get_name/", views.phone_service_schedule.get_name, name="get_name"),
+    path("process_name_confirmation/<str:name_encoded>/", views.phone_service_schedule.process_name_confirmation, name="process_name_confirmation"),
+    path("request_date_availability/", views.request_date_availability, name="request_date_availability"),
+    path("confirm_request_date_availability/", views.confirm_request_date_availability, name="confirm_request_date_availability"),
+    path("confirm_available_date/", views.confirm_available_date, name="confirm_available_date"),
+    path("check_for_appointment/", views.check_for_appointment, name="check_for_appointment"),
 ]
