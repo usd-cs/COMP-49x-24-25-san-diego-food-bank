@@ -135,7 +135,6 @@ class PhoneSchedulingService(TestCase):
         root = ET.fromstring(content)
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
-<<<<<<< HEAD
     
 class SchedulingServiceTests(TestCase):
     def setUp(self):
@@ -273,7 +272,6 @@ class SchedulingServiceTests(TestCase):
         
         gathers = list(root.iter("Gather"))
         self.assertTrue(len(gathers) > 0, "Expected a <Gather> element for confirming the appointment on the provided date.")
-=======
 
 class NameRequestTests(TestCase):
     def setUp(self):
@@ -438,4 +436,3 @@ class AppointmentTests(TestCase):
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
->>>>>>> 0770b6017857a4389007f908e95b57ceba07c74e
