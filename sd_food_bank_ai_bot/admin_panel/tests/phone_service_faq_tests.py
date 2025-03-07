@@ -262,4 +262,31 @@ class PhoneFAQService(TestCase):
         response = get_corresponding_answer(request, question)
 
         answer = "To schedule an appointment, visit calendly.com/sdfb."
-        self.assertEqual(response, answer)    
+        self.assertEqual(response, answer)
+
+    @patch("admin_panel.views.utilities.forward_operator")
+    def test_add_strike_forward_operator(self, mock_forward_operator):
+        """Test strike system for forwarding to an operator when fails too many times"""
+        log_mock = MagicMock()
+        log_mock.add_strike.return_value = True
+
+        strike_system_handler(log_mock)
+        log_mock.add_strike.assert_called_once()
+        mock_forward_operator.assert_called_once()
+
+    def test_add_strike_no_forward_operator(self):
+        """Test strike system management of strikes prior to operator forwarding"""
+        log_mock = MagicMock()
+        log_mock.add_strike.return_value = False
+
+        strike_system_handler(log_mock)
+        
+        log_mock.add_strike.assert_called_once()
+
+    def test_reset_strikes(self):
+        """Test strike system reset"""
+        log_mock = MagicMock()
+
+        strike_system_handler(log_mock, reset = True)
+
+        log_mock.reset_strikes.assert_called_once()

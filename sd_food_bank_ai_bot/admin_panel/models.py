@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from datetime import datetime, timedelta
 
 class Admin(AbstractUser):
     """Table for storing information on admins"""
@@ -29,11 +29,12 @@ class FAQ(models.Model):
 
 class Log(models.Model):
     """Table for storing conversation logs"""
-    phone_number = models.CharField(max_length = 15)
+    phone_number = models.CharField(max_length = 15, null = True)
     transcript = models.JSONField(default = list)
     audio = models.FileField(upload_to = "conversations/")
     time_started = models.DateTimeField(auto_now_add = True)
-    length_of_call = models.DurationField()
+    time_ended = models.DateTimeField(default=datetime.now)
+    length_of_call = models.DurationField(default = timedelta(seconds = 0))
     strikes = models.PositiveIntegerField(default = 0)
     intents = models.JSONField(default = dict)
 
@@ -48,6 +49,11 @@ class Log(models.Model):
         self.strikes += 1
         self.save()
         return self.strikes >= 2 # Failed intent recognition too many times, forward to operator if this returns True
+    
+    def reset_strikes(self):
+        """Bot progressed to another step in the dialogue so reset the strike system"""
+        self.strikes = 0
+        self.save()
     
     def add_transcript(self, speaker, message):
         """Append a new message to the call transcript"""
