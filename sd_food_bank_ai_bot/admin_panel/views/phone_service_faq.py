@@ -9,8 +9,10 @@ from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from openai import OpenAI
 import urllib.parse
 import datetime
-from utilities import strike_system_handler, forward_operator
+from .utilities import strike_system_handler, forward_operator
 
+BOT = "bot"
+CALLER = "caller"
 
 @csrf_exempt
 def answer_call(request):
@@ -21,11 +23,11 @@ def answer_call(request):
     log = Log.objects.create(phone_number = phone_number)
     caller_response = VoiceResponse()
     caller_response.say("Thank you for calling!")
-    log.add_transcript(speaker = "bot", message = "Thank you for calling!")
+    log.add_transcript(speaker = BOT, message = "Thank you for calling!")
 
     gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
     gather.say("What can I help you with?")
-    log.add_transcript(speaker = "bot", message = "What can I help you with?")
+    log.add_transcript(speaker = BOT, message = "What can I help you with?")
     caller_response.append(gather)
 
     return HttpResponse(str(caller_response), content_type='text/xml')
@@ -60,9 +62,12 @@ def prompt_question(request):
     """
     Used to prompt the user for a question. Main use is to loop till end of call.
     """
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
     gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
     gather.say("What can I help you with?")
+    log.add_transcript(speaker = BOT, message = "What can I help you with?")
     caller_response.append(gather)
     
     return HttpResponse(str(caller_response), content_type='text/xml')
@@ -75,22 +80,25 @@ def get_question_from_user(request):
     speech_result = request.POST.get('SpeechResult', '')
     phone_number = request.POST.get('From')
     log = Log.objects.filter(phone_number=phone_number).last()
-    log.add_transcript(speaker = "caller", message = speech_result)
+    log.add_transcript(speaker = CALLER, message = speech_result)
     caller_response = VoiceResponse()
     if speech_result:
-        question = get_matching_question(request, speech_result) # Log interpreted question?
+        question = get_matching_question(request, speech_result)
         if question:
             question_encoded = urllib.parse.quote(question)
             gather = Gather(input="speech", timeout=5, action=f"/confirm_question/{question_encoded}/")
             gather.say(f"You asked: {question} Is this correct?")
+            log.add_transcript(speaker = BOT, message = f"You asked: {question} Is this correct?")
             caller_response.append(gather)
         else: # No matching question found
             # Add a strike
             strike_system_handler(log)
             caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+            log.add_transcript(speaker = BOT, message = "Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
             caller_response.redirect("/prompt_question/")
     else:
-        caller_response.say("Sorry, I couldn't understand that.") 
+        caller_response.say("Sorry, I couldn't understand that.")
+        log.add_transcript(speaker = BOT, message = "Sorry, I couldn't understand that.")
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -103,6 +111,7 @@ def confirm_question(request, question):
     phone_number = request.POST.get('From')
     log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
+    log.add_transcript(speaker = CALLER, message = speech_result)
 
     if speech_result:
         # Query GPT for intent
@@ -120,20 +129,23 @@ def confirm_question(request, question):
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
-                return forward_operator()
+                return forward_operator(log)
 
             answer = get_corresponding_answer(request, question)
             
             caller_response.say(answer)
+            log.add_transcript(speaker = BOT, message = answer)
 
             caller_response.redirect("/prompt_question/")
         else: # If caller has indicated unsatisfactory response, add a string and retry
             # Add a strike
             strike_system_handler(log)
             caller_response.say("Sorry about that. Please try asking again or rephrasing.")
+            log.add_transcript(speaker = BOT, message = "Sorry about that. Please try asking again or rephrasing.")
             caller_response.redirect("/prompt_question/")
     else:
         caller_response.say("Sorry, I couldn't understand that. Please try again.")
+        log.add_transcript(speaker = BOT, message = "Sorry, I couldn't understand that. Please try again.")
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')

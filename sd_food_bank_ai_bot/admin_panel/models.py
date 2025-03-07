@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from datetime import datetime
 
 class Admin(AbstractUser):
     """Table for storing information on admins"""
@@ -27,7 +27,7 @@ class Log(models.Model):
     transcript = models.JSONField(default = list)
     audio = models.FileField(upload_to = "conversations/")
     time_started = models.DateTimeField(auto_now_add = True)
-    time_ended = time_started = models.DateTimeField()
+    time_ended = models.DateTimeField(default=datetime.now)
     length_of_call = models.DurationField()
     strikes = models.PositiveIntegerField(default = 0)
     intents = models.JSONField(default = dict)
