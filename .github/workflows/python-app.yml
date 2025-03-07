@@ -36,6 +36,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Load Twilio Secrete
+        run: |
+          echo "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" >> $GITHUB_ENV
+          echo "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" >> $GITHUB_ENV
+          echo "TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}" >> $GITHUB_ENV
       - name: Set up Database
         env:
           DATABASE_URL: postgres://admin_user:admin_321@localhost:5432/sd_foodbank_db

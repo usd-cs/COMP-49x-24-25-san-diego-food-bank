@@ -26,6 +26,9 @@ services:
       - db
     environment:
       DATABASE_URL: "postgres://admin_user:admin_321@db:5432/sd_foodbank_db"
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
     env_file:
       - gpt.env
       - twilio.env
