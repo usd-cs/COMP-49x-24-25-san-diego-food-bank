@@ -5,6 +5,12 @@ from datetime import datetime, timedelta
 class Admin(AbstractUser):
     """Table for storing information on admins"""
 
+class User(models.Model): 
+    """Table for storing user information"""
+    first_name = models.CharField(max_length=20)
+    last_name = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=15)
+    email = models.EmailField(unique=True)
 
 class Tag(models.Model):
     """Table for storing tags to assign to FAQs"""
@@ -53,3 +59,12 @@ class Log(models.Model):
         """Append a new message to the call transcript"""
         self.transcript.append({"speaker": speaker, "message": message})
         self.save()
+
+class AppointmentTable(models.Model):
+    "Table for storing appointment data"
+    userID = models.IntegerField()
+    appointmentID = models.IntegerField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    location = models.TextField()
+    date = models.DateTimeField()

@@ -2,7 +2,7 @@ from django.shortcuts import redirect
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from ..models import FAQ, Log
+from ..models import FAQ, Log, User
 import json
 from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
@@ -13,22 +13,42 @@ from .utilities import strike_system_handler, forward_operator, write_to_log
 
 BOT = "bot"
 CALLER = "caller"
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt
 def answer_call(request):
     """
-    Brief greeting upon answering incoming phone calls.
+    Brief greeting upon answering incoming phone calls and prompt menu options.
     """
     phone_number = request.POST.get('From')
     log = Log.objects.create(phone_number = phone_number)
     caller_response = VoiceResponse()
-    caller_response.say("Thank you for calling!")
-    write_to_log(log, BOT, "Thank you for calling!")
 
-    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
-    gather.say("What can I help you with?")
-    write_to_log(log, BOT, "What can I help you with?")
+    digit_input = request.POST.get('Digits', '')
+    if digit_input:
+        if digit_input == "1":
+            caller_response.redirect("/check_account/")
+        elif digit_input == "4":
+            caller_response.redirect("/prompt_question/")
+        else:
+            caller_response.say("Sorry, that feature has not been added yet")
+        
+
+    gather = Gather(num_digits=1)
+    gather.say("Thank you for calling the San Diego Food Bank! Press 1 to\
+         schedule an appointment, press 2 to reschedule an appointment,\
+             press 3 to cancel an appointment, press 4 to ask about specific\
+                inquiries, or press 0 to be forwarded to an operator.")
+    
+    write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank! Press 1 to\
+         schedule an appointment, press 2 to reschedule an appointment,\
+             press 3 to cancel an appointment, press 4 to ask about specific\
+                inquiries, or press 0 to be forwarded to an operator.")
+
     caller_response.append(gather)
+
+    # If no input, repeat process
+    caller_response.redirect("/answer/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -65,7 +85,7 @@ def prompt_question(request):
     phone_number = request.POST.get('From')
     log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
-    gather = Gather(input="speech", timeout=5, action="/get_question_from_user/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_question_from_user/")
     gather.say("What can I help you with?")
     write_to_log(log, BOT, "What can I help you with?")
     caller_response.append(gather)
@@ -86,7 +106,7 @@ def get_question_from_user(request):
         question = get_matching_question(request, speech_result)
         if question:
             question_encoded = urllib.parse.quote(question)
-            gather = Gather(input="speech", timeout=5, action=f"/confirm_question/{question_encoded}/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_question/{question_encoded}/")
             gather.say(f"You asked: {question} Is this correct?")
             write_to_log(log, BOT, f"You asked: {question} Is this correct?")
             caller_response.append(gather)
@@ -114,18 +134,8 @@ def confirm_question(request, question):
     write_to_log(log, CALLER, speech_result)
 
     if speech_result:
-        # Query GPT for intent
-        client = OpenAI()
-        system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": speech_result}
-            ]
-        )   
-        response_pred = completion.choices[0].message.content
-        if response_pred.upper() == "AFFIRMATIVE":
+        sentiment = get_response_sentiment(request, speech_result)
+        if sentiment:
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
@@ -149,6 +159,27 @@ def confirm_question(request, question):
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
+
+@csrf_exempt
+def get_response_sentiment(request, sentence):
+    """
+    Returns True if the given sentence is affirmative
+    """
+    # Query GPT for intent
+    client = OpenAI()
+    system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )   
+    response_pred = completion.choices[0].message.content
+
+    if response_pred.upper() == "AFFIRMATIVE":
+        return True
+    return False
 
 @csrf_exempt
 def get_matching_question(request, question):
