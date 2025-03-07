@@ -10,7 +10,7 @@ from openai import OpenAI
 import urllib.parse
 import datetime
 
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt
 def answer_call(request):
@@ -112,7 +112,7 @@ def confirm_question(request, question):
     caller_response = VoiceResponse()
 
     if speech_result:
-        sentiment = get_response_sentiment(speech_result)
+        sentiment = get_response_sentiment(request, speech_result)
         if sentiment:
             question = urllib.parse.unquote(question)
 

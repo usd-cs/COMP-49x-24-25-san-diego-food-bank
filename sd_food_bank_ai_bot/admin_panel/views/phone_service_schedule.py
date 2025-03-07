@@ -7,7 +7,7 @@ from openai import OpenAI
 import re
 
 
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt
 def get_phone_number(request):
@@ -69,3 +69,10 @@ def confirm_account(request):
         response.say("I'm sorry, please try again.")
     
     return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def get_caller_name(request):
+    """
+    Get's the users name for use with account registration.
+    """
+    pass
