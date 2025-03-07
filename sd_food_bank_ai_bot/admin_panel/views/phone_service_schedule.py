@@ -100,7 +100,7 @@ def get_name(request):
         response_pred = completion.choices[0].message.content
 
         name_encoded = urllib.parse.quote(response_pred)
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/process_name_confirmation/{name_encoded}")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/process_name_confirmation/{name_encoded}/")
         gather.say(f"Your name is {response_pred}. Is that correct?")
         response.append(gather)
     else:
@@ -108,6 +108,7 @@ def get_name(request):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+@csrf_exempt
 def process_name_confirmation(request, name_encoded):
     """
     Based on confirmation of name, routes the flow of the conversation.
