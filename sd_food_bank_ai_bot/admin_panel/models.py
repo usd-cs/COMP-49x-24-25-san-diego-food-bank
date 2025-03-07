@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Admin(AbstractUser):
     """Table for storing information on admins"""
@@ -23,12 +23,12 @@ class FAQ(models.Model):
 
 class Log(models.Model):
     """Table for storing conversation logs"""
-    phone_number = models.CharField(max_length = 15)
+    phone_number = models.CharField(max_length = 15, null = True)
     transcript = models.JSONField(default = list)
     audio = models.FileField(upload_to = "conversations/")
     time_started = models.DateTimeField(auto_now_add = True)
     time_ended = models.DateTimeField(default=datetime.now)
-    length_of_call = models.DurationField()
+    length_of_call = models.DurationField(default = timedelta(seconds = 0))
     strikes = models.PositiveIntegerField(default = 0)
     intents = models.JSONField(default = dict)
 
