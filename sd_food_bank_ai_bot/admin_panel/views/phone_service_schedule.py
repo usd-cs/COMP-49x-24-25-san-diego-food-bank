@@ -91,7 +91,7 @@ def schedule_nearest_available(request):
 
     response = VoiceResponse()
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/handle_schedule_response/")
-    gather.say(f"The nearest available appointment is at {available_slot}. Would you like to schedule this appointment?")
+    gather.say(f"Our nearest appointment slot is {available_slot}. Does that work for you?")
     response.append(gather)
 
     response.redirect("/schedule_nearest_available/") # Reprompt if no response
