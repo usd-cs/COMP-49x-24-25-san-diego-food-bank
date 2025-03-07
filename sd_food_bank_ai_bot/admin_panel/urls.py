@@ -17,6 +17,11 @@ urlpatterns = [
     path("confirm_question/<str:question>/", views.phone_service_faq.confirm_question, name="confirm_question"),
     path("prompt_question/", views.phone_service_faq.prompt_question, name="prompt_question"),
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
+    # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
     path("confirm_account/", views.confirm_account, name="confirm_account"),
+    path("request_date_availability/", views.request_date_availability, name="request_date_availability"),
+    path("confirm_request_date_availability/", views.confirm_request_date_availability, name="confirm_request_date_availability"),
+    path("check_for_appointment/", views.check_for_appointment, name="check_for_appointment"),
+    path("find_next_available_time/", views.find_next_available_time, name="find_next_available_time"),
 ]
