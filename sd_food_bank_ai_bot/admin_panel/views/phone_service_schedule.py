@@ -9,8 +9,7 @@ import calendar
 from django.utils.timezone import now
 import re
 
-
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
 
