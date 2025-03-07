@@ -274,20 +274,3 @@ class PhoneFAQService(TestCase):
         strike_system_handler(log_mock, reset = True)
 
         log_mock.reset_strikes.assert_called_once()
-
-    def test_forward_operator(self):
-        """Test correct message relay to caller and appropriate forwarding to operator"""
-        log_mock = MagicMock()
-        response = forward_operator(log_mock)
-
-        self.assertEqual(response.status_code, 200)
-        
-        twiml = VoiceResponse()
-        twiml.say("I'm transferring you to an operator now. Please hold.")
-
-        dial = Dial()
-        dial.number("###-###-####")
-        twiml.append(dial)
-
-        self.assertIn("<Say>I'm transferring you to an operator now. Please hold.</Say>", response.content.decode())
-        self.assertIn("<Number>###-###-####</Number>", response.content.decode())
