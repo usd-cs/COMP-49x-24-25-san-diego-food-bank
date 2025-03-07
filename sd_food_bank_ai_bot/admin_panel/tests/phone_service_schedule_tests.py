@@ -143,7 +143,7 @@ class SchedulingServiceTests(TestCase):
         gathers = list(root.iter("Gather"))
         self.assertTrue(len(gathers) > 0, "No <Gather> element found.")
         gather_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
-        self.assertIn("The nearest available appointment is at", gather_text)
+        self.assertIn("Our nearest appointment slot is 3:15 PM. Does that work for you?", gather_text)
 
     def test_handle_schedule_response_yes(self):
         """
