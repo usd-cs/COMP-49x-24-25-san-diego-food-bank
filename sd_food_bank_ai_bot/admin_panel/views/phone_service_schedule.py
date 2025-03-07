@@ -7,7 +7,7 @@ from openai import OpenAI
 import re
 
 
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt
 def get_phone_number(request):

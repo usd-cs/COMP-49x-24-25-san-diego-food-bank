@@ -10,19 +10,36 @@ from openai import OpenAI
 import urllib.parse
 import datetime
 
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt
 def answer_call(request):
     """
-    Brief greeting upon answering incoming phone calls.
+    Brief greeting upon answering incoming phone calls and prompt menu options.
     """
     caller_response = VoiceResponse()
-    caller_response.say("Thank you for calling!")
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_question_from_user/")
-    gather.say("What can I help you with?")
+    digit_input = request.POST.get('Digits', '')
+    if digit_input:
+        if digit_input == "1":
+            caller_response.redirect("/check_account/")
+        elif digit_input == "4":
+            caller_response.redirect("/prompt_question/")
+        else:
+            caller_response.say("Sorry, that feature has not been added yet")
+        
+
+    gather = Gather(num_digits=1)
+    gather.say("Thank you for calling the San Diego Food Bank! Press 1 to\
+         schedule an appointment, press 2 to reschedule an appointment,\
+             press 3 to cancel an appointment, press 4 to ask about specific\
+                inquiries, or press 0 to be forwarded to an operator.")
+
+
     caller_response.append(gather)
+
+    # If no input, repeat process
+    caller_response.redirect("/answer/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -95,7 +112,7 @@ def confirm_question(request, question):
     caller_response = VoiceResponse()
 
     if speech_result:
-        sentiment = get_response_sentiment(speech_result)
+        sentiment = get_response_sentiment(request, speech_result)
         if sentiment:
             question = urllib.parse.unquote(question)
 
