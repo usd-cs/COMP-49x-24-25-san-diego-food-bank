@@ -30,5 +30,5 @@ urlpatterns = [
     path("request_preferred_time_under_four/", views.request_preferred_time_under_four, name="request_preferred_time_under_four"),
     path("request_preferred_time_over_three/", views.request_preferred_time_over_three, name="request_preferred_time_over_three"),
     path("generate_requested_time/", views.generate_requested_time, name="generate_requested_time"),
-    path("find_requested_time/", views.find_requested_time, name="find_requested_time"),
+    path("find_requested_time/<str:time_encoded>/", views.find_requested_time, name="find_requested_time"),
 ]

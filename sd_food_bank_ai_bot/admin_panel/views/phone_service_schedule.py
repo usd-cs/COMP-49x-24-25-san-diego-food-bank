@@ -202,7 +202,7 @@ def confirm_available_date(request):
 
 @csrf_exempt
 def confirm_time_selection(request):
-    #TODO
+    #TODO: kieran's function delete if not needed
     pass
 
 @csrf_exempt
@@ -323,9 +323,13 @@ def request_preferred_time_over_three(request):
     """
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
+    response = VoiceResponse()
     
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
     gather.say("What time would you like?")
+    response.append(gather)
+
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def generate_requested_time(request):
@@ -356,6 +360,8 @@ def generate_requested_time(request):
         response.append(gather)
     else:
         response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def find_requested_time(request, time_encoded):
@@ -396,6 +402,7 @@ def find_requested_time(request, time_encoded):
             response.say(f"Your appointment has been scheduled for {appointment_date.strftime('%B %d, %Y')} at {requested_time.strftime('%I:%M %p')}.")
             # TODO: Save the appointment in the database here
         else:
+            # TODO: the lines below handles nearest appointment time, potentially put in its own separate function?
             nearest_time = min(available_times, key=lambda t: abs(datetime.combine(appointment_date, t) - datetime.combine(appointment_date, requested_time)))
 
             response.say(f"Our nearest appointment slot is {nearest_time.strftime('%I:%M %p')}. Does that work for you?")

@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from django.utils.timezone import now
-from datetime import timedelta, time
+from datetime import timedelta, time, datetime
 from ..models import User, AppointmentTable
 import urllib.parse
 
@@ -299,3 +299,82 @@ class AppointmentTests(TestCase):
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
+
+class AppointmentSchedulingTests(TestCase):
+    def setUp(self):
+        """Setup test data for scheduling appointments"""
+        self.client = Client()
+        self.factory = RequestFactory()
+        self.today = now().date()
+        self.target_weekday = 1  # Tuesday
+        self.EARLIEST_TIME = time(9, 0)
+        self.LATEST_TIME = time(17, 0)
+
+        # Sample appointment times
+        self.appointment_times = [time(10, 0), time(14, 30), time(16, 45)]
+
+        # Generate appointment dates for next 4 weeks on Tuesday
+        self.appointment_dates = [
+            self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7))
+            for week in range(4)
+        ]
+
+        # Create sample appointments in the database
+        for date in self.appointment_dates:
+            for appt_time in self.appointment_times:
+                AppointmentTable.objects.create(
+                    userID=1, appointmentID=101, start_time=appt_time, end_time=(datetime.combine(date, appt_time) + timedelta(minutes=30)).time(),
+                    location="Office", date=date
+                )
+
+    def test_request_preferred_time_under_four(self):
+        """Tests if available times are correctly listed when ≤ 3 slots exist."""
+        url = reverse('request_preferred_time_under_four') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Here are the available times", response.content.decode())
+
+    def test_request_preferred_time_over_three(self):
+        """Tests if prompt correctly asks for a preferred time when >3 slots exist."""
+        url = reverse('request_preferred_time_over_three') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("What time would you like?", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_generate_requested_time(self, mock_openai):
+        """Tests if the system correctly extracts time using GPT."""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="2:45 PM"))]
+        )
+
+        url = reverse('generate_requested_time') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url, {"SpeechResult": "Can I come at 2:45 PM?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Your requested time was 2:45 PM", response.content.decode())
+
+    def test_find_requested_time_exact_match(self):
+        """Tests if find_requested_time correctly finds an exact time match."""
+        time_encoded = urllib.parse.quote("02:30 PM")
+        url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url, {"SpeechResult": "yes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Our nearest appointment slot is", response.content.decode())
+
+    def test_find_requested_time_nearest_match(self):
+        """Tests if find_requested_time suggests the closest available time."""
+        time_encoded = urllib.parse.quote("3:00 PM")  # Not available in list
+        url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url, {"SpeechResult": "yes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Your appointment has been scheduled", response.content.decode())
+
+    def test_get_available_times_for_date(self):
+        """Tests if available times are correctly retrieved."""
+        available_times = get_available_times_for_date(self.appointment_dates[0])
+        self.assertEqual(len(available_times), 3)
+        self.assertIn(time(9, 0), available_times)
+        self.assertIn(time(10, 30), available_times)
+        self.assertIn(time(15, 0), available_times)
