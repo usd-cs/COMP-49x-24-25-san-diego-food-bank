@@ -6,7 +6,6 @@ from django.http import HttpResponse
 from openai import OpenAI
 import re
 
-
 TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
 
 @csrf_exempt

@@ -44,9 +44,7 @@ def answer_call(request):
          schedule an appointment, press 2 to reschedule an appointment,\
              press 3 to cancel an appointment, press 4 to ask about specific\
                 inquiries, or press 0 to be forwarded to an operator.")
-
     caller_response.append(gather)
-
     # If no input, repeat process
     caller_response.redirect("/answer/")
 

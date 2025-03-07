@@ -8,3 +8,4 @@ dj-database-url==2.3.0
 black==25.1.0
 twilio==6.0.0
 openai==1.63.2
+django-environ==0.12.0

@@ -1,5 +1,7 @@
 from twilio.twiml.voice_response import VoiceResponse, Dial
 from django.http import HttpResponse
+from twilio.rest import Client
+from django.conf import settings
 
 def strike_system_handler(log, reset = False):
     """Updates strikes within the log object associated with call as conversation progresses"""
@@ -24,5 +26,18 @@ def forward_operator(log):
     return HttpResponse(str(caller_response), content_type="text/xml")
 
 def write_to_log(log, speaker, message):
+    """Log conversation as conversation progresses attributing each dialogue to a specific party"""
     if log:
         log.add_transcript(speaker = speaker, message = message)
+
+def send_sms(phone_number_to, message_to_send):
+    """Send confirmation details via sms to caller"""
+    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+    try:
+        message = client.messages.create(
+            body=message_to_send,
+            from_=settings.TWILIO_PHONE_NUMBER,
+            to=phone_number_to)
+        return message
+    except Exception as e:
+        return None
