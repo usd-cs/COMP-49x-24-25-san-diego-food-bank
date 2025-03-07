@@ -90,11 +90,12 @@ def confirm_request_date_availability(request):
     """
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     declaration = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
 
     if declaration:
-        request_date_availability(request) # Ask for available date again
+        response.redirect("/request_date_availability/") # Ask for available date again
     else:
-        prompt_question(request) # Send user back to the start of loop
+        response.redirect("/prompt_question/") # Send user back to the start of loop
 
 @csrf_exempt
 def check_for_appointment(request):
@@ -112,7 +113,7 @@ def check_for_appointment(request):
 
     if speech_result not in weekdays:
         response = VoiceResponse()
-        response.say("I didn't recognize that day. Can you say a weekday like Monday or Friday?")
+        response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
         response.append(gather)
         return HttpResponse(str(response), content_type="text/xml")
