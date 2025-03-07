@@ -77,7 +77,7 @@ def confirm_account(request):
 
     if declaration:
         response.say("Great! Your account has been confirmed!")
-        response.redirect("/prompt_question/") # Replace with get_date later
+        response.redirect("/request_date_availability/")
     else:
         response.say("I'm sorry, please try again.")
     
@@ -144,7 +144,7 @@ def process_name_confirmation(request, name_encoded):
         )
 
         # Send to get_date function
-        response.say("Rerouting to get date.") # Place holder
+        response.redirect("/request_date_availability/")
     else:
         # Add a strike
         response.say("I'm sorry, please try again.")
