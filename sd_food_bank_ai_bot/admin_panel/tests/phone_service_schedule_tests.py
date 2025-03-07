@@ -355,7 +355,8 @@ class AppointmentSchedulingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Your requested time was 2:45 PM", response.content.decode())
 
-    def test_find_requested_time_exact_match(self):
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    def test_find_requested_time_exact_match(self, mock_get_response_sentiment):
         """Tests if find_requested_time correctly finds an exact time match."""
         time_encoded = urllib.parse.quote("02:30 PM")
         url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
@@ -363,7 +364,8 @@ class AppointmentSchedulingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Our nearest appointment slot is", response.content.decode())
 
-    def test_find_requested_time_nearest_match(self):
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    def test_find_requested_time_nearest_match(self, mock_get_response_sentiment):
         """Tests if find_requested_time suggests the closest available time."""
         time_encoded = urllib.parse.quote("3:00 PM")  # Not available in list
         url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
