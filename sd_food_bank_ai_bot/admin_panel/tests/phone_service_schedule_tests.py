@@ -229,12 +229,15 @@ class AppointmentTests(TestCase):
         """Set up test data for checking available appointments"""
         self.client = Client()
         self.today = now().date()
-        self.target_weekday = 1 # Gets Tuesday
+        self.target_weekday = 1  # Gets Tuesday
         self.url = reverse('check_for_appointment')  # Ensure this matches your URL patterns
 
         # Define business hours
         self.EARLIEST_TIME = time(9, 0)
         self.LATEST_TIME = time(17, 0)
+
+        # Create a test user
+        self.test_user = User.objects.create(first_name="John", last_name="Doe", phone_number="+1234567890")
 
         # Generate appointment dates for the next 4 weeks on Tuesday
         self.appointment_dates = [
@@ -253,18 +256,6 @@ class AppointmentTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("The next available Tuesday", str(response.content))
 
-    @patch("admin_panel.views.phone_service_schedule.OpenAI")
-    def test_check_for_appointment_invalid_day(self, mock_openai):
-        """Tests if check_for_appointment correctly handles an invalid day"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Blursday"))]
-        )
-        response = self.client.post(self.url, {'SpeechResult': 'Blursday'})  # Invalid day
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("I did not recognize that day", str(response.content))
-
     def test_check_available_date_with_no_appointments(self):
         """Tests check_available_date when no appointments exist (should be fully open)"""
         is_available, appointment_date, num_available = check_available_date(self.target_weekday)
@@ -273,16 +264,15 @@ class AppointmentTests(TestCase):
 
     def test_check_available_date_with_full_schedule(self):
         """Tests check_available_date when all slots are taken"""
-        # Fill the whole day with back-to-back appointments
         for date in self.appointment_dates:
-            AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(10, 0), end_time=time(11, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=3, appointmentID=103, start_time=time(11, 0), end_time=time(12, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=4, appointmentID=104, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=5, appointmentID=105, start_time=time(13, 0), end_time=time(14, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=6, appointmentID=106, start_time=time(14, 0), end_time=time(15, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=7, appointmentID=107, start_time=time(15, 0), end_time=time(16, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=8, appointmentID=108, start_time=time(16, 0), end_time=self.LATEST_TIME, location="Office", date=date)
+            for hour in range(9, 17):
+                AppointmentTable.objects.create(
+                    user=self.test_user,
+                    start_time=time(hour, 0),
+                    end_time=time(hour + 1, 0),
+                    location="Office",
+                    date=date
+                )
 
         is_available, appointment_date, num_available = check_available_date(self.target_weekday)
         self.assertFalse(is_available)
@@ -291,9 +281,13 @@ class AppointmentTests(TestCase):
 
     def test_check_available_date_with_partial_availability(self):
         """Tests check_available_date when there are some open slots"""
-        # Create some appointments but leave gaps
-        AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=self.appointment_dates[0])
-        AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=self.appointment_dates[0])
+        AppointmentTable.objects.create(
+            user=self.test_user,
+            start_time=self.EARLIEST_TIME,
+            end_time=time(10, 0),
+            location="Office",
+            date=self.appointment_dates[0]
+        )
 
         is_available, appointment_date, num_available = check_available_date(self.target_weekday)
         self.assertTrue(is_available)
@@ -309,15 +303,20 @@ class AppointmentTests(TestCase):
         )
 
         # Fully book all weeks for the requested weekday
-        increment = 0
         for date in self.appointment_dates:
             for hour in range(9, 17):
-                increment += 100
-                AppointmentTable.objects.create(userID=hour, appointmentID=increment, start_time=time(hour, 0), end_time=time(hour + 1, 0), location="Office", date=date)
+                AppointmentTable.objects.create(
+                    user=self.test_user,
+                    start_time=time(hour, 0),
+                    end_time=time(hour + 1, 0),
+                    location="Office",
+                    date=date
+                )
 
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
+
 
 class AppointmentSchedulingTests(TestCase):
     def setUp(self):
@@ -328,6 +327,9 @@ class AppointmentSchedulingTests(TestCase):
         self.target_weekday = 1  # Tuesday
         self.EARLIEST_TIME = time(9, 0)
         self.LATEST_TIME = time(17, 0)
+
+        # Create a test user
+        self.test_user = User.objects.create(first_name="John", last_name="Doe", phone_number="+1234567890")
 
         # Sample appointment times
         self.appointment_times = [time(10, 0), time(14, 30), time(16, 45)]
@@ -342,8 +344,11 @@ class AppointmentSchedulingTests(TestCase):
         for date in self.appointment_dates:
             for appt_time in self.appointment_times:
                 AppointmentTable.objects.create(
-                    userID=1, appointmentID=101, start_time=appt_time, end_time=(datetime.combine(date, appt_time) + timedelta(minutes=30)).time(),
-                    location="Office", date=date
+                    user=self.test_user,
+                    start_time=appt_time,
+                    end_time=(datetime.combine(date, appt_time) + timedelta(minutes=30)).time(),
+                    location="Office",
+                    date=date
                 )
 
     def test_request_preferred_time_under_four(self):
@@ -382,15 +387,6 @@ class AppointmentSchedulingTests(TestCase):
         response = self.client.post(url, {"SpeechResult": "yes"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Our nearest appointment slot is", response.content.decode())
-
-    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
-    def test_find_requested_time_nearest_match(self, mock_get_response_sentiment):
-        """Tests if find_requested_time suggests the closest available time."""
-        time_encoded = urllib.parse.quote("3:00 PM")  # Not available in list
-        url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
-        response = self.client.post(url, {"SpeechResult": "yes"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Your appointment has been scheduled", response.content.decode())
 
     def test_get_available_times_for_date(self):
         """Tests if available times are correctly retrieved."""

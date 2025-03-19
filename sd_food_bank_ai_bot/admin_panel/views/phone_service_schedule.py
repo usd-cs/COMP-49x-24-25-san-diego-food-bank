@@ -427,19 +427,20 @@ def check_available_date(target_weekday):
             number_available_appointments = 4 # TODO: mod by n = fixed appt. length
             return True, appointment_date, number_available_appointments
 
-        current_time = datetime.combine(appointment_date, EARLIEST_TIME)
+        current_time = EARLIEST_TIME
 
         # Check for time slots before appointments until the latest appointment
         for appointment in existing_appointments:
-            while current_time.time() < appointment.start_time:
+            while current_time < appointment.start_time:
                 number_available_appointments += 1
-                current_time += FIXED_APPT_DURATION
+                # Increment by fixed appt time
+                current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
             current_time = appointment.end_time
 
         # Checks for time slots after last appointment is iterated in the for loop above
-        while current_time.time() < LATEST_TIME:
+        while current_time < LATEST_TIME:
             number_available_appointments += 1
-            current_time += FIXED_APPT_DURATION
+            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
         
         # If there are available timeslots return True and additional var.
         if number_available_appointments > 0:
@@ -590,18 +591,19 @@ def get_available_times_for_date(appointment_date):
     existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
     available_times = []
 
-    current_time = datetime.combine(appointment_date, EARLIEST_TIME)
+    current_time = EARLIEST_TIME
     
     # Adds timeslots between appointments
     for appointment in existing_appointments:
-        if current_time.time() < appointment.start_time:
-            available_times.append(current_time.time())
-            current_time += FIXED_APPT_DURATION
+        if current_time < appointment.start_time:
+            available_times.append(current_time)
+            # Increment by fixed appt time
+            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
         current_time = appointment.end_time
 
     # Adds timeslots after the latest iterated appointment
-    while current_time.time() < LATEST_TIME:
-        available_times.append(current_time.time())
-        current_time += FIXED_APPT_DURATION
+    while current_time < LATEST_TIME:
+        available_times.append(current_time)
+        current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
 
     return available_times
