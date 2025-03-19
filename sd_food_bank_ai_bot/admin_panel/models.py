@@ -62,8 +62,7 @@ class Log(models.Model):
 
 class AppointmentTable(models.Model):
     "Table for storing appointment data"
-    userID = models.IntegerField()
-    appointmentID = models.IntegerField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
     location = models.TextField()

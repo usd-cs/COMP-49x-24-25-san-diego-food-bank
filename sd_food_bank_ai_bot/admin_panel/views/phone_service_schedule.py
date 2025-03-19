@@ -13,7 +13,7 @@ import re
 TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
-# FIXED_APPT_DURATION = TODO
+FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
 
 @csrf_exempt
 def get_phone_number(request):
@@ -427,16 +427,19 @@ def check_available_date(target_weekday):
             number_available_appointments = 4 # TODO: mod by n = fixed appt. length
             return True, appointment_date, number_available_appointments
 
-        current_time = EARLIEST_TIME
+        current_time = datetime.combine(appointment_date, EARLIEST_TIME)
 
-        # Check for time slots in between appointments or after all appointments
+        # Check for time slots before appointments until the latest appointment
         for appointment in existing_appointments:
-            if current_time < appointment.start_time:
+            while current_time.time() < appointment.start_time:
                 number_available_appointments += 1
+                current_time += FIXED_APPT_DURATION
             current_time = appointment.end_time
 
-        if current_time < LATEST_TIME:
-            number_available_appointments += 1  # TODO: mod by n = fixed appt. length
+        # Checks for time slots after last appointment is iterated in the for loop above
+        while current_time.time() < LATEST_TIME:
+            number_available_appointments += 1
+            current_time += FIXED_APPT_DURATION
         
         # If there are available timeslots return True and additional var.
         if number_available_appointments > 0:
@@ -587,13 +590,18 @@ def get_available_times_for_date(appointment_date):
     existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
     available_times = []
 
-    current_time = EARLIEST_TIME
+    current_time = datetime.combine(appointment_date, EARLIEST_TIME)
+    
+    # Adds timeslots between appointments
     for appointment in existing_appointments:
-        if current_time < appointment.start_time:
-            available_times.append(current_time)
+        if current_time.time() < appointment.start_time:
+            available_times.append(current_time.time())
+            current_time += FIXED_APPT_DURATION
         current_time = appointment.end_time
 
-    if current_time < LATEST_TIME:
-        available_times.append(current_time) #TODO: add timeslots mod by fixed appt. time
+    # Adds timeslots after the latest iterated appointment
+    while current_time.time() < LATEST_TIME:
+        available_times.append(current_time.time())
+        current_time += FIXED_APPT_DURATION
 
     return available_times
