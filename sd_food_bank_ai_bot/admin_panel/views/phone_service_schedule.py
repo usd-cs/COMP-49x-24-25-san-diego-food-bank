@@ -298,7 +298,7 @@ def get_time_response(request):
         response_pred = completion.choices[0].message.content
 
         time_encoded = urllib.parse.quote(response_pred)
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/given_time_response/?time={time_encoded}&date={appointment_date_str}")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
         gather.say(f"Your requested time was {response_pred}. Is that correct?")
         response.append(gather)
     else:
@@ -307,23 +307,21 @@ def get_time_response(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def given_time_response(request):
+def given_time_response(request, time_encoded, date):
     """
     Get's the users response for the given times and see's if it is satisfactory.
     Determines the path of the conversation based on the users response.
     """
     response = VoiceResponse()
-    appointment_date_str = request.GET.get('date', '')
-    time = request.GET.get('time', '')
-
     speech_result = request.POST.get('SpeechResult', '')
     declaration = get_response_sentiment(request, speech_result)
+
     if declaration:
         # Confirm appointment time
-        response.redirect(f"/confirm_time_selection/?date={appointment_date_str}&time={time}")
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/") # update functions
     else:
         # Ask for a different time
-        response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
+        response.redirect(f"/request_preferred_time_under_four/{date}") # update functions
 
     return HttpResponse(str(response), content_type="text/xml")
 

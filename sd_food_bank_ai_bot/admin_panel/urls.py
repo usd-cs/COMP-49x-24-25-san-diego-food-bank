@@ -33,7 +33,7 @@ urlpatterns = [
     path("find_requested_time/<str:time_encoded>/", views.find_requested_time, name="find_requested_time"),
     path("suggested_time_response/", views.suggested_time_response, name="suggested_time_response"),
     path("get_time_response/", views.get_time_response, name="get_time_response"),
-    path("given_time_response/", views.given_time_response, name="given_time_response"),
-    path("confirm_time_selection/", views.confirm_time_selection, name="confirm_time_selection"),
+    path("given_time_response/<str:time_encoded>/<str:date>/", views.given_time_response, name="given_time_response"),
+    path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/", views.final_confirmation, name="final_confirmation"),
 ]
