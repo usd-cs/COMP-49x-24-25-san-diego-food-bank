@@ -35,5 +35,5 @@ urlpatterns = [
     path("get_time_response/", views.get_time_response, name="get_time_response"),
     path("given_time_response/<str:time_encoded>/<str:date>/", views.given_time_response, name="given_time_response"),
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
-    path("final_confirmation/", views.final_confirmation, name="final_confirmation"),
+    path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
 ]

@@ -209,27 +209,44 @@ def confirm_available_date(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def confirm_time_selection(request):
+def confirm_time_selection(request, time_encoded, date):
     """
     Confirm appointment details
     """
     response = VoiceResponse()
-    appointment_date_str = request.GET.get('date', '')
-    time = request.GET.get('time', '')
 
     phone_number = get_phone_number(request)
     user = User.objects.get(phone_number=phone_number)
     first_name = user.first_name
     last_name = user.last_name
+    time = time_encoded
+    time_encoded = urllib.parse.quote(time_encoded)
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/?time={time}&date={appointment_date_str}")
-    gather.say(f"Great! To confirm you are booked for {appointment_date_str} at {time} and your name is {first_name} {last_name}. Is that correct?")
+    # format date correctly
+    date_obj = datetime.strptime(date, "%Y-%m-%d")
+    date_format = date_obj.strftime("%A, %B %d")
+    if 11 <= date_obj.day <= 13:
+        suffix = "th"
+    else:
+        last = date_obj.day % 10
+        if last == 1:
+            suffix = "st"
+        elif last == 2:
+            suffix = "nd"
+        elif last == 3:
+            suffix = "rd"
+        else:
+            suffix = "th"
+    date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
+
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
+    gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?") # FIX THIS
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def final_confirmation(request):
+def final_confirmation(request, time_encoded, date):
     """
     If yes, books appointment. If no sends back to main menu.
     """
@@ -239,15 +256,14 @@ def final_confirmation(request):
     declaration = get_response_sentiment(request, speech_result)
     if declaration:
         #book appointment
-        appointment_date_str = request.password_validation.get('date', '')
-        time_str = request.POST.get('time', '')
+        time_str = time_encoded
         phone_number = get_phone_number(request)
         
         user = User.objects.get(phone_number=phone_number)
         userID = user.id
 
         try:
-            appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
+            appointment_date = datetime.strptime(date, '%Y-%m-%d').date()
             start_time = datetime.strptime(time_str, '%I:%M %p').time()
 
             start_datetime = datetime.combine(appointment_date, start_time)
@@ -259,7 +275,7 @@ def final_confirmation(request):
             return HttpResponse(str(response), content_type="text/xml")
 
         new_appointment = AppointmentTable.objects.create(
-            userID=userID,
+            user=user,
             start_time=start_time,
             end_time=end_time,
             date=appointment_date
@@ -315,6 +331,8 @@ def given_time_response(request, time_encoded, date):
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
     declaration = get_response_sentiment(request, speech_result)
+
+    time_encoded = urllib.parse.quote(time_encoded)
 
     if declaration:
         # Confirm appointment time
