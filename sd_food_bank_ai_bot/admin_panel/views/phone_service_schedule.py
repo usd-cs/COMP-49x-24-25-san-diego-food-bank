@@ -240,7 +240,7 @@ def confirm_time_selection(request, time_encoded, date):
     date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
-    gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?") # FIX THIS
+    gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -336,30 +336,30 @@ def given_time_response(request, time_encoded, date):
 
     if declaration:
         # Confirm appointment time
-        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/") # update functions
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
     else:
         # Ask for a different time
-        response.redirect(f"/request_preferred_time_under_four/{date}") # update functions
+        response.redirect(f"/request_preferred_time_under_four/{date}")
 
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def suggested_time_response(request):
+def suggested_time_response(request, time_encoded, date):
     """
     Get's the users response for the suggested time and see's if it is satisfactory.
     Determines the path of the conversation based on the users response.
     """
     response = VoiceResponse()
-    appointment_date_str = request.GET.get('date', '')
 
     speech_result = request.POST.get('SpeechResult', '')
     declaration = get_response_sentiment(request, speech_result)
     if declaration:
         # Confirm appointment time
-        response.redirect(f"/confirm_time_selection/?date={appointment_date_str}&time={time}")
+        time_encoded = urllib.parse.quote(time_encoded)
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
     else:
         # Ask for a different time
-        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
+        response.redirect(f"/request_preferred_time_over_three/?date={date}")
 
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -583,14 +583,13 @@ def find_requested_time(request, time_encoded):
             return HttpResponse(str(response), content_type="text/xml")
 
         if requested_time in available_times:
-            response.say(f"Your appointment has been scheduled for {appointment_date.strftime('%B %d, %Y')} at {requested_time.strftime('%I:%M %p')}.")
-            # TODO: Save the appointment in the database here
+            response.redirect(f"/confirm_time_selection/{time_encoded}/{appointment_date_str}")
         else:
             # TODO: the lines below handles nearest appointment time, potentially put in its own separate function?
             nearest_time = min(available_times, key=lambda t: abs(datetime.combine(appointment_date, t) - datetime.combine(appointment_date, requested_time)))
 
             response.say(f"Our nearest appointment slot is {nearest_time.strftime('%I:%M %p')}. Does that work for you?")
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/suggested_time_response/?date={appointment_date_str}&time={urllib.parse.quote(nearest_time.strftime('%I:%M %p'))}", method="POST")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/suggested_time_response/{urllib.parse.quote(nearest_time.strftime('%I:%M %p'))}/{appointment_date_str}/", method="POST")
             gather.say("Please say yes to confirm or no to select another time.")
             response.append(gather)
     
