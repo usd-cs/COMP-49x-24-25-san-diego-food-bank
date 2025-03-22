@@ -136,6 +136,7 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
 
+
 class NameRequestTests(TestCase):
     def setUp(self):
         """Setup a request factory for use during tests"""
@@ -223,6 +224,7 @@ class NameRequestTests(TestCase):
         self.assertFalse(User.objects.filter(phone_number="+16294968156").exists())
         self.assertIn("I'm sorry, please try again.", response.content.decode())
         self.assertIn("check_account", response.content.decode())
+
 
 class AppointmentTests(TestCase):
     def setUp(self):
@@ -395,3 +397,162 @@ class AppointmentSchedulingTests(TestCase):
         self.assertIn(time(9, 0), available_times)
         self.assertIn(time(10, 30), available_times)
         self.assertIn(time(15, 0), available_times)
+    
+
+class AppointmentConfirmationTests(TestCase):
+    
+    def setUp(self):
+        """Set up resources for tests"""
+        self.client = Client()
+
+        new_user1 = User.objects.create(
+                first_name="Billy",
+                last_name="Bob",
+                phone_number="+16191234567",
+                email=None
+        )
+
+        new_user2 = User.objects.create(
+                first_name="Yilly",
+                last_name="Yob",
+                phone_number="+16197654321",
+                email=None
+        )
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_given_time_response_affirmative(self, mock_get_response_sentiment):
+        """Tests an affirmative response to the given time"""
+        mock_get_response_sentiment.return_value = True
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is correct."}
+        response = self.client.post(f"/given_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/request_preferred_time_under_four/?date={date_encoded}</Redirect>", content)
+        self.assertIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_given_time_response_negative(self, mock_get_response_sentiment):
+        """Tests a negative response to the given time"""
+        mock_get_response_sentiment.return_value = False
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is incorrect."}
+        response = self.client.post(f"/given_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+        
+        self.assertNotIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+        self.assertIn(f"<Redirect>/request_preferred_time_under_four/?date={date_encoded}</Redirect>", content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_suggested_time_response_affirmative(self, mock_get_response_sentiment):
+        """Tests an affirmative response to the suggested time"""
+        mock_get_response_sentiment.return_value = True
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is correct."}
+        response = self.client.post(f"/suggested_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/request_preferred_time_over_three/?date={date_encoded}</Redirect>", content)
+        self.assertIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_suggested_time_response_negative(self, mock_get_response_sentiment):
+        """Tests a negative response to the suggested time"""
+        mock_get_response_sentiment.return_value = False
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "No."}
+        response = self.client.post(f"/suggested_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+        self.assertIn(f"<Redirect>/request_preferred_time_over_three/?date={date_encoded}</Redirect>", content)
+    
+    def test_confirm_time_selection_th(self):
+        """Tests proper message is sent for give user, date, and time"""
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+
+        date_encoded = "2025-03-04"
+        expected_date_str = "Tuesday, March 04th"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/confirm_time_selection/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn(f"Great! To confirm you are booked for {expected_date_str} at {time_request} and your name is Billy Bob. Is that correct?", content)
+        self.assertIn(f'action="/final_confirmation/{time_request_encoded}/{date_encoded}/"', content)
+    
+    def test_confirm_time_selection_st(self):
+        """Tests proper message is sent for give user, date, and time"""
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+
+        date_encoded = "2025-03-01"
+        expected_date_str = "Saturday, March 01st"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/confirm_time_selection/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn(f"Great! To confirm you are booked for {expected_date_str} at {time_request} and your name is Billy Bob. Is that correct?", content)
+        self.assertIn(f'action="/final_confirmation/{time_request_encoded}/{date_encoded}/"', content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_final_confirmation_affirmative(self, mock_get_response_sentiment):
+        """Test giving an affirmative response to the final confirmation"""
+        mock_get_response_sentiment.return_value = True
+        
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-01"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/final_confirmation/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        user = User.objects.get(phone_number="+16191234567")
+        date_obj = datetime.strptime(date_encoded, '%Y-%m-%d').date()
+        start = datetime.strptime(time_request, '%I:%M %p').time()
+        end = datetime.strptime("12:00 PM", '%I:%M %p').time()
+
+        self.assertTrue(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
+        self.assertIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
+    
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_final_confirmation_negative(self, mock_get_response_sentiment):
+        """Test giving an negative response to the final confirmation"""
+        mock_get_response_sentiment.return_value = False
+        
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-01"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/final_confirmation/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        user = User.objects.get(phone_number="+16191234567")
+        date_obj = datetime.strptime(date_encoded, '%Y-%m-%d').date()
+        start = datetime.strptime(time_request, '%I:%M %p').time()
+        end = datetime.strptime("12:00 PM", '%I:%M %p').time()
+
+        self.assertFalse(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
+        self.assertNotIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
+        self.assertIn("<Redirect>/answer/</Redirect>", content)

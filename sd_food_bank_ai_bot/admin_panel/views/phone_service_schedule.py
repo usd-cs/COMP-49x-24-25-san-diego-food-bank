@@ -141,6 +141,7 @@ def process_name_confirmation(request, name_encoded):
                 first_name=first_name,
                 last_name=last_name,
                 phone_number=caller_number,
+                email=None
         )
 
         # Send to get_date function
@@ -260,7 +261,6 @@ def final_confirmation(request, time_encoded, date):
         phone_number = get_phone_number(request)
         
         user = User.objects.get(phone_number=phone_number)
-        userID = user.id
 
         try:
             appointment_date = datetime.strptime(date, '%Y-%m-%d').date()
@@ -271,7 +271,7 @@ def final_confirmation(request, time_encoded, date):
             end_time = end_datetime.time()
 
         except ValueError:
-            response.say("An error has occurred when attempting to schedule you appointment.")
+            response.say("An error has occurred when attempting to schedule you appointment.") # Forward to operator
             return HttpResponse(str(response), content_type="text/xml")
 
         new_appointment = AppointmentTable.objects.create(
@@ -339,7 +339,7 @@ def given_time_response(request, time_encoded, date):
         response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
     else:
         # Ask for a different time
-        response.redirect(f"/request_preferred_time_under_four/{date}")
+        response.redirect(f"/request_preferred_time_under_four/?date={date}")
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -360,7 +360,6 @@ def suggested_time_response(request, time_encoded, date):
     else:
         # Ask for a different time
         response.redirect(f"/request_preferred_time_over_three/?date={date}")
-
 
     return HttpResponse(str(response), content_type="text/xml")
 
