@@ -26,4 +26,13 @@ urlpatterns = [
     path("confirm_request_date_availability/", views.confirm_request_date_availability, name="confirm_request_date_availability"),
     path("confirm_available_date/", views.confirm_available_date, name="confirm_available_date"),
     path("check_for_appointment/", views.check_for_appointment, name="check_for_appointment"),
+    path("request_preferred_time_under_four/", views.request_preferred_time_under_four, name="request_preferred_time_under_four"),
+    path("request_preferred_time_over_three/", views.request_preferred_time_over_three, name="request_preferred_time_over_three"),
+    path("generate_requested_time/", views.generate_requested_time, name="generate_requested_time"),
+    path("find_requested_time/<str:time_encoded>/", views.find_requested_time, name="find_requested_time"),
+    path("suggested_time_response/<str:time_encoded>/<str:date>/", views.suggested_time_response, name="suggested_time_response"),
+    path("get_time_response/", views.get_time_response, name="get_time_response"),
+    path("given_time_response/<str:time_encoded>/<str:date>/", views.given_time_response, name="given_time_response"),
+    path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
+    path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
 ]

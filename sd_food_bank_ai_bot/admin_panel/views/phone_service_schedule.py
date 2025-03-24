@@ -10,9 +10,10 @@ from django.utils.timezone import now
 import urllib.parse
 import re
 
-TIMEOUT_LENGTH = 3 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
+FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
 
 @csrf_exempt
 def get_phone_number(request):
@@ -76,7 +77,7 @@ def confirm_account(request):
 
     if declaration:
         response.say("Great! Your account has been confirmed!")
-        response.redirect("/prompt_question/") # Replace with get_date later
+        response.redirect("/request_date_availability/")
     else:
         response.say("I'm sorry, please try again.")
     
@@ -140,10 +141,11 @@ def process_name_confirmation(request, name_encoded):
                 first_name=first_name,
                 last_name=last_name,
                 phone_number=caller_number,
+                email=None
         )
 
         # Send to get_date function
-        response.say("Rerouting to get date.") # Place holder
+        response.redirect("/request_date_availability/")
     else:
         # Add a strike
         response.say("I'm sorry, please try again.")
@@ -156,8 +158,12 @@ def request_date_availability(request):
     """
     Ask the caller what day they would like to schedule an appointment.
     """
+    response = VoiceResponse()
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
     gather.say("What day are you available for your appointment?")
+    response.append(gather)
+
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def confirm_request_date_availability(request):
@@ -172,7 +178,9 @@ def confirm_request_date_availability(request):
     if declaration:
         response.redirect("/request_date_availability/") # Ask for available date again
     else:
-        response.redirect("/prompt_question/") # Send user back to the start of loop
+        response.redirect("/answer/") # Send user back to the start of loop
+    
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
 def confirm_available_date(request):
@@ -183,12 +191,194 @@ def confirm_available_date(request):
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     declaration = get_response_sentiment(request, speech_result)
     response = VoiceResponse()
+    appointment_date_str = request.GET.get('date', '')  # Extract appointment date from URL
+    number_of_appointments = request.GET.get('num', '0')  # Extract number of available appointments
+
+    try:
+        number_of_appointments = int(number_of_appointments)
+    except ValueError:
+        number_of_appointments = 0
 
     if declaration:
-        pass
-        #response.redirect("") TODO: redirect to schedule a time
+        if number_of_appointments > 3:
+            response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
+        else: 
+            response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
     else:
         response.redirect("/request_date_availability/") # Send user back to ask for another day
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def confirm_time_selection(request, time_encoded, date):
+    """
+    Confirm appointment details
+    """
+    response = VoiceResponse()
+
+    phone_number = get_phone_number(request)
+    user = User.objects.get(phone_number=phone_number)
+    first_name = user.first_name
+    last_name = user.last_name
+    time = time_encoded
+    time_encoded = urllib.parse.quote(time_encoded)
+
+    # format date correctly
+    date_obj = datetime.strptime(date, "%Y-%m-%d")
+    date_format = date_obj.strftime("%A, %B %d")
+    if 11 <= date_obj.day <= 13:
+        suffix = "th"
+    else:
+        last = date_obj.day % 10
+        if last == 1:
+            suffix = "st"
+        elif last == 2:
+            suffix = "nd"
+        elif last == 3:
+            suffix = "rd"
+        else:
+            suffix = "th"
+    date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
+
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
+    gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
+    response.append(gather)
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def final_confirmation(request, time_encoded, date):
+    """
+    If yes, books appointment. If no sends back to main menu.
+    """
+    response = VoiceResponse()
+    speech_result = request.POST.get('SpeechResult', '')
+
+    declaration = get_response_sentiment(request, speech_result)
+    if declaration:
+        #book appointment
+        time_str = time_encoded
+        phone_number = get_phone_number(request)
+        
+        user = User.objects.get(phone_number=phone_number)
+
+        try:
+            appointment_date = datetime.strptime(date, '%Y-%m-%d').date()
+            start_time = datetime.strptime(time_str, '%I:%M %p').time()
+
+            start_datetime = datetime.combine(appointment_date, start_time)
+            end_datetime = start_datetime + timedelta(minutes=30)
+            end_time = end_datetime.time()
+
+        except ValueError:
+            response.say("An error has occurred when attempting to schedule you appointment.") # Forward to operator
+            return HttpResponse(str(response), content_type="text/xml")
+
+        new_appointment = AppointmentTable.objects.create(
+            user=user,
+            start_time=start_time,
+            end_time=end_time,
+            date=appointment_date
+        )
+
+        response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
+        # send sms
+    else:
+        response.redirect("/answer/")
+    
+    return HttpResponse(str(response), content_type="text/xml") 
+
+@csrf_exempt
+def get_time_response(request):
+    """
+    Get's the users time response to the available times listed
+    """
+    appointment_date_str = request.GET.get('date', '')
+    time_list_encoded = request.GET.get('time_list', '')
+    time_list = urllib.parse.unquote(time_list_encoded)
+
+    speech_result = request.POST.get('SpeechResult', '')
+    response = VoiceResponse()
+    
+    if speech_result:
+        # Query GPT for time to be able to cover statement variations
+        client = OpenAI()
+        system_prompt = f"Please give the most likely intended time from the following message. Consider the options given were {time_list}"
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": speech_result}
+            ]
+        )   
+        response_pred = completion.choices[0].message.content
+
+        time_encoded = urllib.parse.quote(response_pred)
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
+        gather.say(f"Your requested time was {response_pred}. Is that correct?")
+        response.append(gather)
+    else:
+        response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def given_time_response(request, time_encoded, date):
+    """
+    Get's the users response for the given times and see's if it is satisfactory.
+    Determines the path of the conversation based on the users response.
+    """
+    response = VoiceResponse()
+    speech_result = request.POST.get('SpeechResult', '')
+    declaration = get_response_sentiment(request, speech_result)
+
+    time_encoded = urllib.parse.quote(time_encoded)
+
+    if declaration:
+        # Confirm appointment time
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
+    else:
+        # Ask for a different time
+        response.redirect(f"/request_preferred_time_under_four/?date={date}")
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def suggested_time_response(request, time_encoded, date):
+    """
+    Get's the users response for the suggested time and see's if it is satisfactory.
+    Determines the path of the conversation based on the users response.
+    """
+    response = VoiceResponse()
+
+    speech_result = request.POST.get('SpeechResult', '')
+    declaration = get_response_sentiment(request, speech_result)
+    if declaration:
+        # Confirm appointment time
+        time_encoded = urllib.parse.quote(time_encoded)
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
+    else:
+        # Ask for a different time
+        response.redirect(f"/request_preferred_time_over_three/?date={date}")
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+def get_day(request, speech_result):
+    """
+    Extracts the day of the week from a given message. Only returns the day or NONE.
+    """
+    client = OpenAI()
+    system_prompt = "Please extract the day of the week from the following message. Only respond with the day of the week or NONE if one is not said."
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": speech_result}
+        ]
+    )   
+    response_pred = completion.choices[0].message.content
+    
+    return response_pred
 
 @csrf_exempt
 def check_for_appointment(request):
@@ -197,6 +387,9 @@ def check_for_appointment(request):
     the caller requested.
     """
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    speech_result = get_day(request, speech_result)
+    speech_result = speech_result.lower()
+
     weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
 
     if speech_result not in weekdays:
@@ -213,7 +406,8 @@ def check_for_appointment(request):
 
     response = VoiceResponse()
     if is_available:
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_available_date/", method="POST")
+        action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
         gather.say(f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
         response.append(gather)
     else:
@@ -250,14 +444,18 @@ def check_available_date(target_weekday):
 
         current_time = EARLIEST_TIME
 
-        # Check for time slots in between appointments or after all appointments
+        # Check for time slots before appointments until the latest appointment
         for appointment in existing_appointments:
-            if current_time < appointment.start_time:
+            while current_time < appointment.start_time:
                 number_available_appointments += 1
+                # Increment by fixed appt time
+                current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
             current_time = appointment.end_time
 
-        if current_time < LATEST_TIME:
-            number_available_appointments += 1  # TODO: mod by n = fixed appt. length
+        # Checks for time slots after last appointment is iterated in the for loop above
+        while current_time < LATEST_TIME:
+            number_available_appointments += 1
+            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
         
         # If there are available timeslots return True and additional var.
         if number_available_appointments > 0:
@@ -265,3 +463,161 @@ def check_available_date(target_weekday):
 
     # If no available timeslots for the next month on request day return False    
     return False, None, 0
+
+@csrf_exempt
+def request_preferred_time_under_four(request):
+    """
+    Ask the caller what time they would like to schedule if there are
+    <= 3 available times.
+    """
+    response = VoiceResponse()
+    
+    # Extract appointment_date from the request
+    appointment_date_str = request.GET.get('date', '')
+
+    try:
+        appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        response.say("There was an issue retrieving the appointment date. Please try again.")
+        response.redirect("/request_date_availability/")
+        return HttpResponse(str(response), content_type="text/xml")
+    
+    available_times = get_available_times_for_date(appointment_date)
+
+    if available_times:
+        formatted_times = [t.strftime('%I:%M %p') for t in available_times]
+        time_list_text = ', '.join(formatted_times[:-1]) + f", and {formatted_times[-1]}" if len(formatted_times) > 1 else formatted_times[0]
+        time_list_encoded = urllib.parse.quote(time_list_text)
+
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/get_time_response/?date={appointment_date_str}&time_list={time_list_encoded}", method="POST")
+        gather.say(f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?")
+        response.append(gather)
+    else:
+        response.say("There are no available times on this day. Would you like to choose another day?")
+        response.redirect("/request_date_availability/")
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def request_preferred_time_over_three(request):
+    """
+    Ask the caller what time they would like to schedule if there are
+    > 3 available times.
+    """
+    # Extract appointment_date from the request
+    appointment_date_str = request.GET.get('date', '')
+    response = VoiceResponse()
+    
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
+    gather.say("What time would you like?")
+    response.append(gather)
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def generate_requested_time(request):
+    """
+    Uses GPT to generate a most-likely time that the caller asked for.
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    response = VoiceResponse()
+    # Extract appointment_date from the request
+    appointment_date_str = request.GET.get('date', '')
+    
+    if speech_result:
+        # Query GPT for time to be able to cover statement variations
+        client = OpenAI()
+        system_prompt = "Please give the most likely intended time from the following message. Consider that business hours are during 9:00 AM and 5:00 PM. Make sure it is in a format like 4:59 PM."
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": speech_result}
+            ]
+        )   
+        response_pred = completion.choices[0].message.content
+
+        time_encoded = urllib.parse.quote(response_pred)
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/find_requested_time/{time_encoded}/?date={appointment_date_str}")
+        gather.say(f"Your requested time was {response_pred}. Is that correct?")
+        response.append(gather)
+    else:
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def find_requested_time(request, time_encoded):
+    """
+    Uses the GPT generated time request to find appointments that match exactly
+    or are closest to that time request.
+    """
+    speech_result = request.POST.get('SpeechResult', '')
+    confirmation = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
+    # Extract appointment_date from the request
+    appointment_date_str = request.GET.get('date', '')
+
+    try:
+        appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        response.say("There was an issue retrieving the appointment date. Please try again.")
+        response.redirect("/request_date_availability/")
+        return HttpResponse(str(response), content_type="text/xml")
+
+    if confirmation:
+        requested_time_str = urllib.parse.unquote(time_encoded)
+        available_times = get_available_times_for_date(appointment_date)
+
+        try:
+            requested_time = datetime.strptime(requested_time_str, '%I:%M %p').time()
+        except ValueError:
+            response.say("There was an issue understanding your requested time. Please try again.")
+            response.redirect("/request_preferred_time_over_three/")
+            return HttpResponse(str(response), content_type="text/xml")
+        
+        if not available_times:
+            response.say(f"Sorry, there are no available appointments on {appointment_date.strftime('%B %d, %Y')}.")
+            response.redirect("/request_date_availability/")
+            return HttpResponse(str(response), content_type="text/xml")
+
+        if requested_time in available_times:
+            response.redirect(f"/confirm_time_selection/{time_encoded}/{appointment_date_str}")
+        else:
+            # TODO: the lines below handles nearest appointment time, potentially put in its own separate function?
+            nearest_time = min(available_times, key=lambda t: abs(datetime.combine(appointment_date, t) - datetime.combine(appointment_date, requested_time)))
+
+            response.say(f"Our nearest appointment slot is {nearest_time.strftime('%I:%M %p')}. Does that work for you?")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/suggested_time_response/{urllib.parse.quote(nearest_time.strftime('%I:%M %p'))}/{appointment_date_str}/", method="POST")
+            gather.say("Please say yes to confirm or no to select another time.")
+            response.append(gather)
+    
+    else:
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")    
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def get_available_times_for_date(appointment_date):
+    """
+    Retrieve available appointment times for a given date.
+    """
+    existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
+    available_times = []
+
+    current_time = EARLIEST_TIME
+    
+    # Adds timeslots between appointments
+    for appointment in existing_appointments:
+        if current_time < appointment.start_time:
+            available_times.append(current_time)
+            # Increment by fixed appt time
+            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
+        current_time = appointment.end_time
+
+    # Adds timeslots after the latest iterated appointment
+    while current_time < LATEST_TIME:
+        available_times.append(current_time)
+        current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
+
+    return available_times

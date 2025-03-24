@@ -10,7 +10,7 @@ class User(models.Model):
     first_name = models.CharField(max_length=20)
     last_name = models.CharField(max_length=20)
     phone_number = models.CharField(max_length=16)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, null=True)
 
 class Tag(models.Model):
     """Table for storing tags to assign to FAQs"""
@@ -62,8 +62,7 @@ class Log(models.Model):
 
 class AppointmentTable(models.Model):
     "Table for storing appointment data"
-    userID = models.IntegerField()
-    appointmentID = models.IntegerField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     start_time = models.TimeField()
     end_time = models.TimeField()
     location = models.TextField()

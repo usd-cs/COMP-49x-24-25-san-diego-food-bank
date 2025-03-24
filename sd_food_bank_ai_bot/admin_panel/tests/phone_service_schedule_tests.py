@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from django.utils.timezone import now
-from datetime import timedelta, time
+from datetime import timedelta, time, datetime
 from ..models import User, AppointmentTable
 import urllib.parse
 
@@ -136,6 +136,7 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
 
+
 class NameRequestTests(TestCase):
     def setUp(self):
         """Setup a request factory for use during tests"""
@@ -181,7 +182,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968157").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_process_name_confirmation_valid_with_middle(self, mock_get_response_sentiment):
@@ -194,7 +195,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968156", first_name="Billy", last_name="Bob").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
 
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
@@ -208,7 +209,7 @@ class NameRequestTests(TestCase):
         response = process_name_confirmation(request, name_encoded)
 
         self.assertTrue(User.objects.filter(phone_number="+16294968155", first_name="Billy").exists())
-        self.assertIn("Rerouting to get date.", response.content.decode())
+        self.assertIn("request_date_availability", response.content.decode())
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_process_name_confirmation_invalid(self, mock_get_response_sentiment):
@@ -224,34 +225,38 @@ class NameRequestTests(TestCase):
         self.assertIn("I'm sorry, please try again.", response.content.decode())
         self.assertIn("check_account", response.content.decode())
 
+
 class AppointmentTests(TestCase):
     def setUp(self):
         """Set up test data for checking available appointments"""
         self.client = Client()
         self.today = now().date()
-        self.target_weekday = 1 # Gets Tuesday
+        self.target_weekday = 1  # Gets Tuesday
         self.url = reverse('check_for_appointment')  # Ensure this matches your URL patterns
 
         # Define business hours
         self.EARLIEST_TIME = time(9, 0)
         self.LATEST_TIME = time(17, 0)
 
+        # Create a test user
+        self.test_user = User.objects.create(first_name="John", last_name="Doe", phone_number="+1234567890")
+
         # Generate appointment dates for the next 4 weeks on Tuesday
         self.appointment_dates = [
             self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
         ]
 
-    def test_check_for_appointment_valid_day(self):
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_check_for_appointment_valid_day(self, mock_openai):
         """Tests if check_for_appointment correctly identifies available days"""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
+        )
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("The next available Tuesday", str(response.content))
-
-    def test_check_for_appointment_invalid_day(self):
-        """Tests if check_for_appointment correctly handles an invalid day"""
-        response = self.client.post(self.url, {'SpeechResult': 'Blursday'})  # Invalid day
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("I did not recognize that day", str(response.content))
 
     def test_check_available_date_with_no_appointments(self):
         """Tests check_available_date when no appointments exist (should be fully open)"""
@@ -261,16 +266,15 @@ class AppointmentTests(TestCase):
 
     def test_check_available_date_with_full_schedule(self):
         """Tests check_available_date when all slots are taken"""
-        # Fill the whole day with back-to-back appointments
         for date in self.appointment_dates:
-            AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(10, 0), end_time=time(11, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=3, appointmentID=103, start_time=time(11, 0), end_time=time(12, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=4, appointmentID=104, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=5, appointmentID=105, start_time=time(13, 0), end_time=time(14, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=6, appointmentID=106, start_time=time(14, 0), end_time=time(15, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=7, appointmentID=107, start_time=time(15, 0), end_time=time(16, 0), location="Office", date=date)
-            AppointmentTable.objects.create(userID=8, appointmentID=108, start_time=time(16, 0), end_time=self.LATEST_TIME, location="Office", date=date)
+            for hour in range(9, 17):
+                AppointmentTable.objects.create(
+                    user=self.test_user,
+                    start_time=time(hour, 0),
+                    end_time=time(hour + 1, 0),
+                    location="Office",
+                    date=date
+                )
 
         is_available, appointment_date, num_available = check_available_date(self.target_weekday)
         self.assertFalse(is_available)
@@ -279,23 +283,276 @@ class AppointmentTests(TestCase):
 
     def test_check_available_date_with_partial_availability(self):
         """Tests check_available_date when there are some open slots"""
-        # Create some appointments but leave gaps
-        AppointmentTable.objects.create(userID=1, appointmentID=101, start_time=self.EARLIEST_TIME, end_time=time(10, 0), location="Office", date=self.appointment_dates[0])
-        AppointmentTable.objects.create(userID=2, appointmentID=102, start_time=time(12, 0), end_time=time(13, 0), location="Office", date=self.appointment_dates[0])
+        AppointmentTable.objects.create(
+            user=self.test_user,
+            start_time=self.EARLIEST_TIME,
+            end_time=time(10, 0),
+            location="Office",
+            date=self.appointment_dates[0]
+        )
 
         is_available, appointment_date, num_available = check_available_date(self.target_weekday)
         self.assertTrue(is_available)
         self.assertGreater(num_available, 0)
 
-    def test_check_for_appointment_no_available_dates(self):
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_check_for_appointment_no_available_dates(self, mock_openai):
         """Tests if check_for_appointment correctly handles fully booked schedules"""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
+        )
+
         # Fully book all weeks for the requested weekday
-        increment = 0
         for date in self.appointment_dates:
             for hour in range(9, 17):
-                increment += 100
-                AppointmentTable.objects.create(userID=hour, appointmentID=increment, start_time=time(hour, 0), end_time=time(hour + 1, 0), location="Office", date=date)
+                AppointmentTable.objects.create(
+                    user=self.test_user,
+                    start_time=time(hour, 0),
+                    end_time=time(hour + 1, 0),
+                    location="Office",
+                    date=date
+                )
 
         response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
+
+
+class AppointmentSchedulingTests(TestCase):
+    def setUp(self):
+        """Setup test data for scheduling appointments"""
+        self.client = Client()
+        self.factory = RequestFactory()
+        self.today = now().date()
+        self.target_weekday = 1  # Tuesday
+        self.EARLIEST_TIME = time(9, 0)
+        self.LATEST_TIME = time(17, 0)
+
+        # Create a test user
+        self.test_user = User.objects.create(first_name="John", last_name="Doe", phone_number="+1234567890")
+
+        # Sample appointment times
+        self.appointment_times = [time(10, 0), time(14, 30), time(16, 45)]
+
+        # Generate appointment dates for next 4 weeks on Tuesday
+        self.appointment_dates = [
+            self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7))
+            for week in range(4)
+        ]
+
+        # Create sample appointments in the database
+        for date in self.appointment_dates:
+            for appt_time in self.appointment_times:
+                AppointmentTable.objects.create(
+                    user=self.test_user,
+                    start_time=appt_time,
+                    end_time=(datetime.combine(date, appt_time) + timedelta(minutes=30)).time(),
+                    location="Office",
+                    date=date
+                )
+
+    def test_request_preferred_time_under_four(self):
+        """Tests if available times are correctly listed when ≤ 3 slots exist."""
+        url = reverse('request_preferred_time_under_four') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Here are the available times", response.content.decode())
+
+    def test_request_preferred_time_over_three(self):
+        """Tests if prompt correctly asks for a preferred time when >3 slots exist."""
+        url = reverse('request_preferred_time_over_three') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("What time would you like?", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    def test_generate_requested_time(self, mock_openai):
+        """Tests if the system correctly extracts time using GPT."""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="2:45 PM"))]
+        )
+
+        url = reverse('generate_requested_time') + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url, {"SpeechResult": "Can I come at 2:45 PM?"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Your requested time was 2:45 PM", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    def test_find_requested_time_exact_match(self, mock_get_response_sentiment):
+        """Tests if find_requested_time correctly finds an exact time match."""
+        time_encoded = urllib.parse.quote("02:30 PM")
+        url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
+        response = self.client.post(url, {"SpeechResult": "yes"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Our nearest appointment slot is", response.content.decode())
+
+    def test_get_available_times_for_date(self):
+        """Tests if available times are correctly retrieved."""
+        available_times = get_available_times_for_date(self.appointment_dates[0])
+        self.assertEqual(len(available_times), 3)
+        self.assertIn(time(9, 0), available_times)
+        self.assertIn(time(10, 30), available_times)
+        self.assertIn(time(15, 0), available_times)
+    
+
+class AppointmentConfirmationTests(TestCase):
+    
+    def setUp(self):
+        """Set up resources for tests"""
+        self.client = Client()
+
+        new_user1 = User.objects.create(
+                first_name="Billy",
+                last_name="Bob",
+                phone_number="+16191234567",
+                email=None
+        )
+
+        new_user2 = User.objects.create(
+                first_name="Yilly",
+                last_name="Yob",
+                phone_number="+16197654321",
+                email=None
+        )
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_given_time_response_affirmative(self, mock_get_response_sentiment):
+        """Tests an affirmative response to the given time"""
+        mock_get_response_sentiment.return_value = True
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is correct."}
+        response = self.client.post(f"/given_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/request_preferred_time_under_four/?date={date_encoded}</Redirect>", content)
+        self.assertIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_given_time_response_negative(self, mock_get_response_sentiment):
+        """Tests a negative response to the given time"""
+        mock_get_response_sentiment.return_value = False
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is incorrect."}
+        response = self.client.post(f"/given_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+        
+        self.assertNotIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+        self.assertIn(f"<Redirect>/request_preferred_time_under_four/?date={date_encoded}</Redirect>", content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_suggested_time_response_affirmative(self, mock_get_response_sentiment):
+        """Tests an affirmative response to the suggested time"""
+        mock_get_response_sentiment.return_value = True
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "That is correct."}
+        response = self.client.post(f"/suggested_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/request_preferred_time_over_three/?date={date_encoded}</Redirect>", content)
+        self.assertIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_suggested_time_response_negative(self, mock_get_response_sentiment):
+        """Tests a negative response to the suggested time"""
+        mock_get_response_sentiment.return_value = False
+
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-04"
+        
+        content = {"SpeechResult": "No."}
+        response = self.client.post(f"/suggested_time_response/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertNotIn(f"<Redirect>/confirm_time_selection/{time_request_encoded}/{date_encoded}/</Redirect>", content)
+        self.assertIn(f"<Redirect>/request_preferred_time_over_three/?date={date_encoded}</Redirect>", content)
+    
+    def test_confirm_time_selection_th(self):
+        """Tests proper message is sent for give user, date, and time"""
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+
+        date_encoded = "2025-03-04"
+        expected_date_str = "Tuesday, March 04th"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/confirm_time_selection/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn(f"Great! To confirm you are booked for {expected_date_str} at {time_request} and your name is Billy Bob. Is that correct?", content)
+        self.assertIn(f'action="/final_confirmation/{time_request_encoded}/{date_encoded}/"', content)
+    
+    def test_confirm_time_selection_st(self):
+        """Tests proper message is sent for give user, date, and time"""
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+
+        date_encoded = "2025-03-01"
+        expected_date_str = "Saturday, March 01st"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/confirm_time_selection/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn(f"Great! To confirm you are booked for {expected_date_str} at {time_request} and your name is Billy Bob. Is that correct?", content)
+        self.assertIn(f'action="/final_confirmation/{time_request_encoded}/{date_encoded}/"', content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_final_confirmation_affirmative(self, mock_get_response_sentiment):
+        """Test giving an affirmative response to the final confirmation"""
+        mock_get_response_sentiment.return_value = True
+        
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-01"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/final_confirmation/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        user = User.objects.get(phone_number="+16191234567")
+        date_obj = datetime.strptime(date_encoded, '%Y-%m-%d').date()
+        start = datetime.strptime(time_request, '%I:%M %p').time()
+        end = datetime.strptime("12:00 PM", '%I:%M %p').time()
+
+        self.assertTrue(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
+        self.assertIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
+    
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_final_confirmation_negative(self, mock_get_response_sentiment):
+        """Test giving an negative response to the final confirmation"""
+        mock_get_response_sentiment.return_value = False
+        
+        time_request = "11:30 AM"
+        time_request_encoded = urllib.parse.quote(time_request)
+        date_encoded = "2025-03-01"
+
+        content = {"From": "+16191234567"}
+        response = self.client.post(f"/final_confirmation/{time_request_encoded}/{date_encoded}/", content)
+        content = response.content.decode("utf-8")
+
+        user = User.objects.get(phone_number="+16191234567")
+        date_obj = datetime.strptime(date_encoded, '%Y-%m-%d').date()
+        start = datetime.strptime(time_request, '%I:%M %p').time()
+        end = datetime.strptime("12:00 PM", '%I:%M %p').time()
+
+        self.assertFalse(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
+        self.assertNotIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
+        self.assertIn("<Redirect>/answer/</Redirect>", content)
