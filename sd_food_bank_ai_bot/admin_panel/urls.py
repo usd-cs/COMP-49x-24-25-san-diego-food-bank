@@ -36,4 +36,5 @@ urlpatterns = [
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
+    path("reroute_caller_with_no_account", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
 ]
