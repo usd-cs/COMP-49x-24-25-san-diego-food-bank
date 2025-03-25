@@ -58,9 +58,10 @@ def check_account(request):
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
         # User does not exist to being registration process
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
-        gather.say("Can I get your first and last name please?")
-        response.append(gather)
+        # gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+        # gather.say("Can I get your first and last name please?")
+        # response.append(gather)
+        response.redirect("/reroute_caller_with_no_account/")
     
     return HttpResponse(str(response), content_type="text/xml")
 
