@@ -631,12 +631,12 @@ def cancel_appointment(request):
     response = VoiceResponse()
     user = User.objects.get(phone_number=phone_number)
     # Find upcoming appointment
-    upcoming_appt = AppointmentTable.objects.filter(user=user, date_gte=now().date).order_by('date').first()
+    upcoming_appt = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
     if not upcoming_appt:
         response.say("You do not have any scheduled appointments to cancel.")
         return HttpResponse(str(response), content_type="text/xml")
     
-    appt_date = upcoming_appt.date.strftie("%A, %B %d, %Y") # format with a string like "Monday, January 05, 2025"
+    appt_date = upcoming_appt.date.strftime("%A, %B %d, %Y") # format with a string like "Monday, January 05, 2025"
     appt_time = upcoming_appt.start_time.strftime("%I:%M %p") # format with a string like "02:30 PM"
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_cancellation/")
