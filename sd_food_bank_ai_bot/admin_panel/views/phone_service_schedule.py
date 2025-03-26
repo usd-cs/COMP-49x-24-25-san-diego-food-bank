@@ -39,6 +39,9 @@ def check_account(request):
     # Have twilio send the caller's number using 'From'
     caller_number = get_phone_number(request)
     response = VoiceResponse()
+
+    action = request.GET.get("action", "schedule").lower()
+
     try: 
         if caller_number:
             # Query the User table for phone number and relay saved name.
@@ -57,12 +60,22 @@ def check_account(request):
             response.say("Sorry, we are unable to help you at this time.")
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
+        if action == "schedule":
+
         # User does not exist to being registration process
-        # gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
-        # gather.say("Can I get your first and last name please?")
-        # response.append(gather)
-        response.redirect("/reroute_caller_with_no_account/")
-    
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            gather.say("Can I get your first and last name please?")
+            response.append(gather)
+
+        elif action == "cancel":
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
+            response.append(gather)
+        else:
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            gather.say("Can I get your first and last name please?")
+            response.append(gather)
+            
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
