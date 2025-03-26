@@ -62,6 +62,7 @@ def check_account(request):
             # Phone number is invalid
             response.say("Sorry, we are unable to help you at this time.")
             write_to_log(log, BOT, "Sorry, we are unable to help you at this time.")
+            forward_operator(log)
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
         # User does not exist to being registration process
@@ -92,6 +93,7 @@ def confirm_account(request):
         write_to_log(log, BOT, "Great! Your account has been confirmed!")
         response.redirect("/request_date_availability/")
     else:
+        strike_system_handler(log)
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
     
@@ -128,6 +130,7 @@ def get_name(request):
         write_to_log(log, BOT, f"Your name is {response_pred}. Is that correct?")
         response.append(gather)
     else:
+        strike_system_handler(log)
         response.redirect("/check_account/")
     
     return HttpResponse(str(response), content_type="text/xml")
@@ -139,6 +142,7 @@ def process_name_confirmation(request, name_encoded):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
+    strike_system_handler(log, reset = True)
 
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
@@ -171,6 +175,7 @@ def process_name_confirmation(request, name_encoded):
         response.redirect("/request_date_availability/")
     else:
         # Add a strike
+        strike_system_handler(log)
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
         response.redirect("/check_account/")
@@ -184,6 +189,7 @@ def request_date_availability(request):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
+    strike_system_handler(log, reset = True)
     response = VoiceResponse()
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
     gather.say("What day are you available for your appointment?")
@@ -221,7 +227,7 @@ def confirm_available_date(request):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
-
+    strike_system_handler(log, reset = True)
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     write_to_log(log, CALLER, speech_result)
     declaration = get_response_sentiment(request, speech_result)
@@ -252,6 +258,7 @@ def confirm_time_selection(request, time_encoded, date):
     response = VoiceResponse()
 
     phone_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=phone_number).last()
     user = User.objects.get(phone_number=phone_number)
     first_name = user.first_name
     last_name = user.last_name
@@ -277,6 +284,7 @@ def confirm_time_selection(request, time_encoded, date):
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
     gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
+    write_to_log(log, BOT, f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -286,8 +294,11 @@ def final_confirmation(request, time_encoded, date):
     """
     If yes, books appointment. If no sends back to main menu.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
 
     declaration = get_response_sentiment(request, speech_result)
     if declaration:
@@ -306,7 +317,9 @@ def final_confirmation(request, time_encoded, date):
             end_time = end_datetime.time()
 
         except ValueError:
-            response.say("An error has occurred when attempting to schedule you appointment.") # Forward to operator
+            response.say("An error has occurred when attempting to schedule your appointment.") # Forward to operator
+            write_to_log(log, BOT, "An error has occurred when attempting to schedule your appointment.")
+            forward_operator(log)
             return HttpResponse(str(response), content_type="text/xml")
 
         new_appointment = AppointmentTable.objects.create(
@@ -317,6 +330,7 @@ def final_confirmation(request, time_encoded, date):
         )
 
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
+        write_to_log(log, BOT, "Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         # send sms
     else:
         response.redirect("/answer/")
@@ -328,11 +342,14 @@ def get_time_response(request):
     """
     Get's the users time response to the available times listed
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     appointment_date_str = request.GET.get('date', '')
     time_list_encoded = request.GET.get('time_list', '')
     time_list = urllib.parse.unquote(time_list_encoded)
 
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
     
     if speech_result:
@@ -351,6 +368,7 @@ def get_time_response(request):
         time_encoded = urllib.parse.quote(response_pred)
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
         gather.say(f"Your requested time was {response_pred}. Is that correct?")
+        write_to_log(log, BOT, f"Your requested time was {response_pred}. Is that correct?")
         response.append(gather)
     else:
         response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
@@ -363,8 +381,11 @@ def given_time_response(request, time_encoded, date):
     Get's the users response for the given times and see's if it is satisfactory.
     Determines the path of the conversation based on the users response.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     declaration = get_response_sentiment(request, speech_result)
 
     time_encoded = urllib.parse.quote(time_encoded)
@@ -384,9 +405,12 @@ def suggested_time_response(request, time_encoded, date):
     Get's the users response for the suggested time and see's if it is satisfactory.
     Determines the path of the conversation based on the users response.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
 
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     declaration = get_response_sentiment(request, speech_result)
     if declaration:
         # Confirm appointment time
@@ -425,13 +449,14 @@ def check_for_appointment(request):
     log = Log.objects.filter(phone_number=caller_number).last()
 
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    write_to_log(log, CALLER, speech_result)
     speech_result = get_day(request, speech_result)
     speech_result = speech_result.lower()
 
-    write_to_log(log, CALLER, speech_result)
     weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
 
     if speech_result not in weekdays:
+        strike_system_handler(log)
         response = VoiceResponse()
         response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
         write_to_log(log, BOT, "I did not recognize that day. Can you say a weekday like Monday or Friday?")
@@ -443,7 +468,7 @@ def check_for_appointment(request):
 
     # Check if there are time slots on that day
     is_available, appointment_date, number_available_appointments = check_available_date(target_weekday)
-
+    strike_system_handler(log, reset = True)
     response = VoiceResponse()
     if is_available:
         action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
@@ -452,6 +477,7 @@ def check_for_appointment(request):
         write_to_log(log, BOT, f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
         response.append(gather)
     else:
+        strike_system_handler(log)
         response.say(f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         write_to_log(log, BOT, f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
@@ -512,6 +538,8 @@ def request_preferred_time_under_four(request):
     Ask the caller what time they would like to schedule if there are
     <= 3 available times.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     
     # Extract appointment_date from the request
@@ -520,7 +548,9 @@ def request_preferred_time_under_four(request):
     try:
         appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
     except ValueError:
+        strike_system_handler(log)
         response.say("There was an issue retrieving the appointment date. Please try again.")
+        write_to_log(log, BOT, "There was an issue retrieving the appointment date. Please try again.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
     
@@ -533,9 +563,11 @@ def request_preferred_time_under_four(request):
 
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/get_time_response/?date={appointment_date_str}&time_list={time_list_encoded}", method="POST")
         gather.say(f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?")
+        write_to_log(log, BOT, f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?")
         response.append(gather)
     else:
         response.say("There are no available times on this day. Would you like to choose another day?")
+        write_to_log(log, BOT, "There are no available times on this day. Would you like to choose another day?")
         response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -546,12 +578,15 @@ def request_preferred_time_over_three(request):
     Ask the caller what time they would like to schedule if there are
     > 3 available times.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
     response = VoiceResponse()
     
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
     gather.say("What time would you like?")
+    write_to_log(log, BOT, "What time would you like?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -561,7 +596,10 @@ def generate_requested_time(request):
     """
     Uses GPT to generate a most-likely time that the caller asked for.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
@@ -582,6 +620,7 @@ def generate_requested_time(request):
         time_encoded = urllib.parse.quote(response_pred)
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/find_requested_time/{time_encoded}/?date={appointment_date_str}")
         gather.say(f"Your requested time was {response_pred}. Is that correct?")
+        write_to_log(log, BOT, f"Your requested time was {response_pred}. Is that correct?")
         response.append(gather)
     else:
         response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
@@ -594,7 +633,10 @@ def find_requested_time(request, time_encoded):
     Uses the GPT generated time request to find appointments that match exactly
     or are closest to that time request.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     confirmation = get_response_sentiment(request, speech_result)
     response = VoiceResponse()
     # Extract appointment_date from the request
@@ -604,6 +646,7 @@ def find_requested_time(request, time_encoded):
         appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
     except ValueError:
         response.say("There was an issue retrieving the appointment date. Please try again.")
+        write_to_log(log, BOT, "There was an issue retrieving the appointment date. Please try again.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
 
@@ -615,11 +658,13 @@ def find_requested_time(request, time_encoded):
             requested_time = datetime.strptime(requested_time_str, '%I:%M %p').time()
         except ValueError:
             response.say("There was an issue understanding your requested time. Please try again.")
+            write_to_log(log, BOT, "There was an issue understanding your requested time. Please try again.")
             response.redirect("/request_preferred_time_over_three/")
             return HttpResponse(str(response), content_type="text/xml")
         
         if not available_times:
             response.say(f"Sorry, there are no available appointments on {appointment_date.strftime('%B %d, %Y')}.")
+            write_to_log(log, BOT, f"Sorry, there are no available appointments on {appointment_date.strftime('%B %d, %Y')}.")
             response.redirect("/request_date_availability/")
             return HttpResponse(str(response), content_type="text/xml")
 
@@ -630,8 +675,10 @@ def find_requested_time(request, time_encoded):
             nearest_time = min(available_times, key=lambda t: abs(datetime.combine(appointment_date, t) - datetime.combine(appointment_date, requested_time)))
 
             response.say(f"Our nearest appointment slot is {nearest_time.strftime('%I:%M %p')}. Does that work for you?")
+            write_to_log(log, BOT, f"Our nearest appointment slot is {nearest_time.strftime('%I:%M %p')}. Does that work for you?")
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/suggested_time_response/{urllib.parse.quote(nearest_time.strftime('%I:%M %p'))}/{appointment_date_str}/", method="POST")
             gather.say("Please say yes to confirm or no to select another time.")
+            write_to_log(log, BOT, "Please say yes to confirm or no to select another time.")
             response.append(gather)
     
     else:
