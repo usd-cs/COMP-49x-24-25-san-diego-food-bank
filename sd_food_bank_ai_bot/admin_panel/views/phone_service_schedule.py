@@ -632,7 +632,7 @@ def cancel_appointment(request, appointment_id):
     appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
     appt_to_cancel.delete()
 
-    response.say("Your appointment has been canceled.")
+    response.say("Your appointment has been canceled. You will receive a confirmation message via SMS. Have a great day!")
     response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")    
