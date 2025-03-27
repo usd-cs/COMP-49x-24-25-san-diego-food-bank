@@ -640,3 +640,69 @@ class CancelAppointmentFlowTests(TestCase):
 
         say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
         self.assertIn("Your appointment has been canceled", say_text)
+
+class RescheduleAppointmentTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create(
+            first_name="Brendan",
+            last_name="Bost",
+            phone_number="+1234567890"
+        )
+        tomorrow = now().date() + timedelta(days=1)
+        start_time = time(10, 0)
+
+        end_time = (datetime.combine(date.today(), start_time) + timedelta(minutes=30)).time()
+        self.appointment = AppointmentTable.objects.create(
+            user=self.user,
+            date=tomorrow,
+            start_time=start_time,
+            end_time=end_time,
+            location="Foodbank"
+        )
+    
+    def parse_twiML(self, twiml_str):
+        """Parse TwiML XML"""
+        return ET.fromstring(twiml_str)
+    
+    def test_reschedule_with_existing_appointment(self):
+        """
+        When caller has an appointment, reschedule_appointment should cancel it and 
+        redirect to the scheduling flow.
+        """
+        url = reverse("reschedule_appointment")
+        response = self.client.post(url, {"From": self.user.phone_number})
+        self.assertFalse(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
+
+        twiml = response.content.decode("utf-8")
+        root = self.parse_twiML(twiml)
+
+        say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
+        self.assertIn("Your current appointment has been canceled.", say_text)
+        self.assertIn("Let's schedule a new appointment.", say_text)
+        # Make sure there's a redirect to the scheduling flow.
+        redirect_elem = root.find("Redirect")
+        self.assertIsNotNone(redirect_elem)
+        self.assertEqual(redirect_elem.text, "/request_date_availability/")
+
+    def test_reschedule_without_existing_appointment(self):
+        """
+        When the caller doesn't have an appointment, the response should indicate
+        that no appointment is scheduled and then route to scheduling a new appointment.
+        """
+        # Delete the appointment to simulate there isn't a scheduled appointment.
+        self.appointment.delete()
+        url = reverse("reschedule_appointment")
+        response = self.client.post(url, {"From": self.user.phone_number})
+
+        self.assertEqual(response.status_code, 200)
+
+        twiml = response.content.decode("utf-8")
+        root = self.parse_twiML(twiml)
+        say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
+        
+        self.assertIn("You do not have an appointment scheduled.", say_text)
+        self.assertIn("Let's schedule a new appointment.", say_text)
+        redirect_elem = root.find("Redirect")
+        self.assertIsNotNone(redirect_elem)
+        self.assertEqual(redirect_elem.text, "/request_date_availability/")
