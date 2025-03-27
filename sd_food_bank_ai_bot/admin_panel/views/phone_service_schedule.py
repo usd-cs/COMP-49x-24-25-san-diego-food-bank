@@ -641,7 +641,6 @@ def get_available_times_for_date(appointment_date):
     return available_times
 
 @csrf_exempt
-cancel-appointment
 def cancel_appointment(request, appointment_id):
     """
     Cancels the caller's appointment and informs them their appointment has been canceled.
@@ -697,5 +696,3 @@ def no_account_reroute(request):
         response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
-
-main
