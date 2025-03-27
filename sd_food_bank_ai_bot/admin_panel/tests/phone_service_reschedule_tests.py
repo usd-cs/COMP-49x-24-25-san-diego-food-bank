@@ -45,7 +45,7 @@ class Confirm_Account_CancelRescheduleTests(TestCase):
         request = self.factory.post("/confirm_account_cancel_reschedule/", data={"SpeechResult": "yes"})
         response = confirm_account_cancel_reschedule(request)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"You do not have any appointments scheduled", response.content)
+        self.assertIn(b"We do not have an appointment registered with your number. Would you like to go back to the main menu?", response.content)
 
     @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment", return_value=False)
     @patch("admin_panel.views.phone_service_reschedule.get_phone_number")
