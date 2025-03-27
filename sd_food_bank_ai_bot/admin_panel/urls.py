@@ -39,4 +39,5 @@ urlpatterns = [
     # Reschedule
     path("check_account_cancel_reschedule/", views.check_account_cancel_reschedule, name="check_account_cancel_reschedule"),
     path("confirm_account_cancel_reschedule/", views.confirm_account_cancel_reschedule, name="confirm_account_cancel_reschedule"),
+    path("confirm_main_menu/", views.confirm_main_menu, name="confirm_main_menu"),
 ]

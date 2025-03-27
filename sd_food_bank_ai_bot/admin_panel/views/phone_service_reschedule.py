@@ -61,9 +61,26 @@ def confirm_account_cancel_reschedule(request):
         if appointments.exists():
             response.redirect("/request_date_availability/")
         else:
-            response.say("You do not have any appointments scheduled.")
-            response.redirect("/answer/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_main_menu/")
+            gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
+            response.append(gather)
     else:
         response.say("I'm sorry, please try again.")
     
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def confirm_main_menu(request):
+    """
+    Redirects user to main menu based on YES or NO
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    declaration = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
+
+    if declaration:
+        response.redirect("/answer/")
+    else:
+        response.hangup()
+
     return HttpResponse(str(response), content_type="text/xml")
