@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from ..models import User, AppointmentTable
-from .phone_service_cancel_reschedule_tests import *
+from .phone_service_cancel_tests import *
+from unittest.mock import patch
 from datetime import datetime
 import urllib.parse
 
@@ -61,3 +62,16 @@ class CancelInitialRoutingTests(TestCase):
         content = response.content.decode("utf-8")
 
         self.assertIn("/INSERT_URL_TO_ASKING_FOR_APPOINTMENT/", content)
+    
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_confirm_account_with_cancel(self, mock_get_response_sentiment):
+        """
+        Test that the call is properly routed in confirm account with the cancel option
+        """
+        mock_get_response_sentiment.return_value = True
+        
+        content = {"SpeechResult": "Yes, that is correct."}
+        response = self.client.post("/confirm_account/?action=cancel", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("/cancel_initial_routing/", content)
