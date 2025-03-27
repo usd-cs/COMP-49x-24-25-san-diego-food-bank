@@ -136,6 +136,51 @@ class PhoneSchedulingService(TestCase):
         say_text = " ".join(elem.text for elem in root.iter("Say") if elem.text)
         self.assertIn("I'm sorry, please try again.", say_text)
 
+    def parse_twiml(self, content):
+        """Helper method to parse TwiML response and return the root element"""
+        return ET.fromstring(content)
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    def test_no_account_reroute_yes(self, mock_get_response_sentiment):
+        """
+        If the user says 'yes', they should be rerouted to the main menu (/answer/)
+        """
+        mock_get_response_sentiment.return_value = True
+        response = self.client.post(
+            reverse("no_account_reroute"),
+            {"SpeechResult": "yes"}  
+        )
+        self.assertEqual(response.status_code, 200)
+        # Parse the TwiML response
+        root = self.parse_twiml(response.content.decode("utf-8"))
+
+        say_elems = root.findall(".//Say")
+        self.assertTrue(any("Returning you to the main menu" in (elem.text or "") for elem in say_elems))
+
+        # Check for <Redirect> to /answer/
+        redirect_elem = root.find("Redirect")
+        self.assertIsNotNone(redirect_elem, "Expected a <Redirect> element when user says yes.")
+        self.assertEqual(redirect_elem.text, "/answer/")
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
+    
+    def test_no_account_reroute_no(self, mock_get_response_sentiment):
+        """
+        If user says 'no', the call should be hung up.
+        """
+        mock_get_response_sentiment.return_value = False
+        response = self.client.post(
+            reverse("no_account_reroute"),
+            {"SpeechResult": "no"}  
+        )
+        self.assertEqual(response.status_code, 200)
+
+        root = self.parse_twiml(response.content.decode("utf-8"))
+        say_elems = root.findall(".//Say")
+        self.assertTrue(any("Goodbye" in (elem.text or "") for elem in say_elems))
+
+        # Check for a <Hangup> element
+        hangup_elem = root.find("Hangup")
+        self.assertIsNotNone(hangup_elem, "Expected a <Hangup> element when user says no.")
 
 class NameRequestTests(TestCase):
     def setUp(self):
