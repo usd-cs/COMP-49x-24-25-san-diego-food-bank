@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from django.utils.timezone import now
-from datetime import timedelta, time, datetime
+from datetime import timedelta, time, datetime, date
 from ..models import User, AppointmentTable
 import urllib.parse
 
@@ -601,3 +601,42 @@ class AppointmentConfirmationTests(TestCase):
         self.assertFalse(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
         self.assertNotIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
         self.assertIn("<Redirect>/answer/</Redirect>", content)
+
+class CancelAppointmentFlowTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create(
+            first_name="Billy",
+            last_name="Bob",
+            phone_number="+1234567890"
+        )
+        self.appointment = AppointmentTable.objects.create(
+            user=self.user, 
+            date=now().date() + timedelta(days=1),
+            start_time=time(9,0),
+            end_time=time(9,30),
+            location="Foodbank"
+        )
+    
+    def parse_twiML(self, twiml_str):
+        """
+        Helper to parse the TwiML XMl
+        """
+        return ET.fromstring(twiml_str)
+
+    def test_cancel_appointment_valid(self):
+        """
+        Test that a valid appointment_id is deleted and the caller is informed that 
+        the appointment has been canceled.
+        """
+        url = reverse("cancel_appointment", args=[self.appointment.pk])
+        response = self.client.post(url, {"From": self.user.phone_number})
+        self.assertEqual(response.status_code, 200)
+
+        self.assertFalse(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
+        
+        content = response.content.decode("utf-8")
+        root = self.parse_twiML(content)
+
+        say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
+        self.assertIn("Your appointment has been canceled", say_text)

@@ -720,6 +720,20 @@ def get_available_times_for_date(appointment_date):
     return available_times
 
 @csrf_exempt
+def cancel_appointment(request, appointment_id):
+    """
+    Cancels the caller's appointment and informs them their appointment has been canceled.
+    """
+    response = VoiceResponse()
+    # Get the appointment and delete it 
+    appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
+    appt_to_cancel.delete()
+
+    response.say("Your appointment has been canceled. You will receive a confirmation message via SMS. Have a great day!")
+    response.hangup()
+
+    return HttpResponse(str(response), content_type="text/xml")    
+
 def reroute_caller_with_no_account(request):
     """
     Check the User table for phone number to check if the account exists. If it doesn't, 
@@ -761,4 +775,3 @@ def no_account_reroute(request):
         response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
-
