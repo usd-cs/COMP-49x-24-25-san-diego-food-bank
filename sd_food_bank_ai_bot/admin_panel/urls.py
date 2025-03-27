@@ -40,4 +40,6 @@ urlpatterns = [
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
     path("cancel_initial_routing/", views.cancel_initial_routing, name="cancel_initial_routing"),
+    # Phone service rescheduling
+    path("reschedule_appointment/", views.reschedule_appointment, name="reschedule_appointment"),
 ]
