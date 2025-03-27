@@ -36,6 +36,5 @@ urlpatterns = [
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
     # Phone service cancellation
-    path("cancel_appointment/", views.cancel_appointment, name="cancel_appointment"),
-    path("process_cancellation/", views.process_cancellation, name="process_cancellation"),
+    path("cancel_appointment/<int:appointment_id>/", views.cancel_appointment, name="cancel_appointment"),
 ]

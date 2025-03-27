@@ -623,58 +623,16 @@ def get_available_times_for_date(appointment_date):
     return available_times
 
 @csrf_exempt
-def cancel_appointment(request):
+def cancel_appointment(request, appointment_id):
     """
-    Cancels the caller's appointment.
+    Cancels the caller's appointment and informs them their appointment has been canceled.
     """
-    phone_number = get_phone_number(request)
     response = VoiceResponse()
-    user = User.objects.get(phone_number=phone_number)
-    # Find upcoming appointment
-    upcoming_appt = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
-    if not upcoming_appt:
-        response.say("You do not have any scheduled appointments to cancel.")
-        return HttpResponse(str(response), content_type="text/xml")
-    
-    appt_date = upcoming_appt.date.strftime("%A, %B %d, %Y") # format with a string like "Monday, January 05, 2025"
-    appt_time = upcoming_appt.start_time.strftime("%I:%M %p") # format with a string like "02:30 PM"
+    # Get the appointment and delete it 
+    appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
+    appt_to_cancel.delete()
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_cancellation/")
-    gather.say(f"You have an appointment scheduled for {appt_date} at {appt_time}. Do you want to cancel this appointment? PLease say yes or no.")
-    response.append(gather)
+    response.say("Your appointment has been canceled.")
+    response.hangup()
 
-    response.redirect("/cancel_appointment/") # Repeat the prompt if no answer from caller
-
-    return HttpResponse(str(response), content_type="text/xml")
-
-@csrf_exempt
-def process_cancellation(request):
-    """
-    Processes the cancellation confirmation. If the caller confirms, cancels the appointment 
-    and informs the caller, otherwise inform them the appointment remains unchanged.
-    """
-    speech_result = request.POST.get("SpeechResult", "").strip().lower()
-    response = VoiceResponse()
-    
-    if get_response_sentiment(request, speech_result):
-        phone_number = get_phone_number(request)
-        try:
-            user = User.objects.get(phone_number=phone_number)
-        except User.DoesNotExist:
-            response.say("No account found. Returning to main menu.")
-            response.redirect("/reroute_caller_with_no_account/")
-            return HttpResponse(str(response), content_type="text/xml")
-        
-        # Find the upcoming appointment again
-        upcoming_appt = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
-        if upcoming_appt:
-            upcoming_appt.delete()
-            response.say("Your appointment has been cancelled.")
-        else:
-            response.say("We could not find an appointment to cancel.")
-        response.hangup()
-    else:
-        response.say("Okay, your appointment remains unchanged.")
-        response.hangup()
-    
-    return HttpResponse(str(response), content_type="text/xml")
+    return HttpResponse(str(response), content_type="text/xml")    
