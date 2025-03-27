@@ -1,6 +1,6 @@
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
-from .phone_service_faq import get_response_sentiment, prompt_question
-from .utilities import appointment_count
+from .phone_service_faq import prompt_question
+from .utilities import appointment_count, get_response_sentiment, get_phone_number
 from django.views.decorators.csrf import csrf_exempt
 from ..models import User, AppointmentTable
 from django.http import HttpResponse
@@ -9,27 +9,11 @@ from datetime import time, datetime, timedelta
 import calendar
 from django.utils.timezone import now
 import urllib.parse
-import re
 
 TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
 FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
-
-@csrf_exempt
-def get_phone_number(request):
-    """
-    Gets the user phone number from the post header
-    """
-    caller_number = request.POST.get('From', '')
-
-    #regex check
-    expression = "^\+[1-9]\d{1,14}$" # E.164 compliant phone numbers
-    valid = re.match(expression, caller_number)
-    
-    if valid:
-        return caller_number
-    return None
 
 @csrf_exempt
 def check_account(request):

@@ -110,7 +110,7 @@ class PhoneSchedulingService(TestCase):
         """
         mock_get_response_sentiment.return_value = True
         response = self.client.post(
-            reverse("confirm_account"),
+            reverse("confirm_account", args=["schedule"]),
             {"SpeechResult": "Yes, that's correct"}
         )
         self.assertEqual(response.status_code, 200)
@@ -127,7 +127,7 @@ class PhoneSchedulingService(TestCase):
         """
         mock_get_response_sentiment.return_value = False
         response = self.client.post(
-            reverse("confirm_account"),
+            reverse("confirm_account", args=["schedule"]),
             {"SpeechResult": "No, that's not right"}
         )
         self.assertEqual(response.status_code, 200)

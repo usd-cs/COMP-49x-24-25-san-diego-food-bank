@@ -9,7 +9,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from openai import OpenAI
 import urllib.parse
 import datetime
-from .utilities import strike_system_handler, forward_operator, write_to_log
+from .utilities import strike_system_handler, forward_operator, write_to_log, get_response_sentiment
 
 BOT = "bot"
 CALLER = "caller"
@@ -161,27 +161,6 @@ def confirm_question(request, question):
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
-def get_response_sentiment(request, sentence):
-    """
-    Returns True if the given sentence is affirmative
-    """
-    # Query GPT for intent
-    client = OpenAI()
-    system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": sentence}
-        ]
-    )   
-    response_pred = completion.choices[0].message.content
-
-    if response_pred.upper() == "AFFIRMATIVE":
-        return True
-    return False
 
 @csrf_exempt
 def get_matching_question(request, question):

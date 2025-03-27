@@ -8,6 +8,7 @@ urlpatterns = [
     # Utilities
     path("return_main_menu/", views.return_main_menu, name="return_main_menu"),
     
+    # Admin Panel FAQ
     path("", lambda request: redirect('login/'), name="default"),
     path("faqs/", views.admin_panel_faq.faq_page_view, name="faq_page"),
     path("login/", views.admin_panel_faq.login_view, name="login"),
@@ -20,7 +21,8 @@ urlpatterns = [
     path("confirm_question/<str:question>/", views.phone_service_faq.confirm_question, name="confirm_question"),
     path("prompt_question/", views.phone_service_faq.prompt_question, name="prompt_question"),
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
-    # Phone Service Schedule
+   
+   # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
     path("confirm_account/<str:action>/", views.confirm_account, name="confirm_account"),
     path("get_name/", views.phone_service_schedule.get_name, name="get_name"),
@@ -39,9 +41,9 @@ urlpatterns = [
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
     
-    # Reschedule
+    # Phone Service Reschedule
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
-    path("check_account_cancel_reschedule/", views.check_account_cancel_reschedule, name="check_account_cancel_reschedule"),
-    path("confirm_account_cancel_reschedule/", views.confirm_account_cancel_reschedule, name="confirm_account_cancel_reschedule"),
+    # path("check_account_cancel_reschedule/", views.check_account_cancel_reschedule, name="check_account_cancel_reschedule"),
+    # path("confirm_account_cancel_reschedule/", views.confirm_account_cancel_reschedule, name="confirm_account_cancel_reschedule"),
 ]

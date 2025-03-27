@@ -1,9 +1,10 @@
 from twilio.twiml.voice_response import VoiceResponse, Dial
-from .phone_service_schedule import get_response_sentiment, get_phone_number
 from ..models import User, AppointmentTable
 from django.http import HttpResponse
 from twilio.rest import Client
 from django.conf import settings
+from openai import OpenAI
+import re
 
 def strike_system_handler(log, reset = False):
     """Updates strikes within the log object associated with call as conversation progresses"""
@@ -14,6 +15,40 @@ def strike_system_handler(log, reset = False):
             
             if log.add_strike():
                 forward_operator()
+
+def get_phone_number(request):
+    """
+    Gets the user phone number from the post header
+    """
+    caller_number = request.POST.get('From', '')
+
+    #regex check
+    expression = "^\+[1-9]\d{1,14}$" # E.164 compliant phone numbers
+    valid = re.match(expression, caller_number)
+    
+    if valid:
+        return caller_number
+    return None
+
+def get_response_sentiment(request, sentence):
+    """
+    Returns True if the given sentence is affirmative
+    """
+    # Query GPT for intent
+    client = OpenAI()
+    system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )   
+    response_pred = completion.choices[0].message.content
+
+    if response_pred.upper() == "AFFIRMATIVE":
+        return True
+    return False
 
 def return_main_menu(request):
     """
