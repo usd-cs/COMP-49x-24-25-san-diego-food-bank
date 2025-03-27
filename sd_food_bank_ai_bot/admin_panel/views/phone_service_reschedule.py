@@ -1,0 +1,69 @@
+from .phone_service_schedule import *
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say
+
+@csrf_exempt
+def check_account_cancel_reschedule(request):
+    """
+    Check the User table for phone number to check if the account exists. If it does, 
+    relay the information such as the saved name to confirm the account.
+
+    In addition, this will return the user to the main menu if there is no appointment scheduled
+    in their account (checks in the confirm_account_cancel_reschedule function)
+    """
+    # Have twilio send the caller's number using 'From'
+    caller_number = get_phone_number(request)
+    response = VoiceResponse()
+    
+    try: 
+        if caller_number:
+            # Query the User table for phone number and relay saved name.
+            user = User.objects.get(phone_number=caller_number)
+            response.say(f"Hello, {user.first_name} {user.last_name}.")
+
+            # Confirm the account with the caller 
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")
+            gather.say("Is this your account? Please say yes or no.")
+            response.append(gather)
+
+            # Repeat the prompt if no input received
+            response.redirect("/check_account_cancel_reschedule/")
+        else:
+            # Phone number is invalid
+            response.say("Sorry, we are unable to help you at this time.")
+    # Inform caller that there wasn't an account found
+    except User.DoesNotExist:
+        # User does not exist to being registration process
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+        gather.say("Can I get your first and last name please?")
+        response.append(gather)
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def confirm_account_cancel_reschedule(request):
+    """
+    Process the caller's response. If they say yes, the account is confirmed, otherwise
+    they will be prompted to try again.
+
+    In addition, this will return the user to the main menu if there is no appointment scheduled
+    in their account.
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    response = VoiceResponse()
+    caller_number = get_phone_number(request)
+
+    declaration = get_response_sentiment(request, speech_result)
+    user = User.objects.get(phone_number=caller_number)
+    appointments = AppointmentTable.objects.filter(user=user)
+    
+    if declaration:
+        response.say("Great! Your account has been confirmed!")
+        if appointments.exists():
+            response.redirect("/request_date_availability/")
+        else:
+            response.say("You do not have any appointments scheduled.")
+            response.redirect("/answer/")
+    else:
+        response.say("I'm sorry, please try again.")
+    
+    return HttpResponse(str(response), content_type="text/xml")

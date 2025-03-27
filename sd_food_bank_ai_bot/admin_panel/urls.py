@@ -35,4 +35,8 @@ urlpatterns = [
     path("given_time_response/<str:time_encoded>/<str:date>/", views.given_time_response, name="given_time_response"),
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
+    
+    # Reschedule
+    path("check_account_cancel_reschedule/", views.check_account_cancel_reschedule, name="check_account_cancel_reschedule"),
+    path("confirm_account_cancel_reschedule/", views.confirm_account_cancel_reschedule, name="confirm_account_cancel_reschedule"),
 ]
