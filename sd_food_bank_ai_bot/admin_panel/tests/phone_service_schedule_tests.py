@@ -633,7 +633,7 @@ class CancelAppointmentFlowTests(TestCase):
         )
         self.assertEqual(response2.status_code, 200)
         twiml2 = response2.content.decode("utf-8")
-        self.assertIn("Your appointment remains unchanged", twiml2)
+        self.assertIn("your appointment remains unchanged", twiml2)
         
         # Assert the appointment still exists.
         self.assertTrue(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
