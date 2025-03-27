@@ -24,7 +24,7 @@ urlpatterns = [
    
    # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
-    path("confirm_account/<str:action>/", views.confirm_account, name="confirm_account"),
+    path("confirm_account/", views.confirm_account, name="confirm_account"),
     path("get_name/", views.phone_service_schedule.get_name, name="get_name"),
     path("process_name_confirmation/<str:name_encoded>/", views.phone_service_schedule.process_name_confirmation, name="process_name_confirmation"),
     path("request_date_availability/", views.request_date_availability, name="request_date_availability"),

@@ -79,7 +79,7 @@ def check_account(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def confirm_account(request, action):
+def confirm_account(request):
     """
     Process the caller's response. If they say yes, the account is confirmed, otherwise
     they will be prompted to try again.
@@ -100,8 +100,6 @@ def confirm_account(request, action):
 
         if action == "cancel":
             response.redirect("/cancel_initial_routing/")
-        else:
-            response.redirect("/request_date_availability/")
         
         if action == "reschedule":
             if appointment_count(request) > 1:
@@ -115,7 +113,8 @@ def confirm_account(request, action):
                 gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
                 response.append(gather)
         
-        response.redirect("/request_date_availability/")
+        else:
+            response.redirect("/request_date_availability/")
     else:
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
