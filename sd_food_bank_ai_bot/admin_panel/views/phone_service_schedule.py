@@ -9,7 +9,7 @@ import calendar
 from django.utils.timezone import now
 import urllib.parse
 import re
-from .utilities import strike_system_handler, forward_operator, write_to_log
+from .utilities import forward_operator, write_to_log
 
 BOT = "bot"
 CALLER = "caller"
@@ -93,7 +93,6 @@ def confirm_account(request):
         write_to_log(log, BOT, "Great! Your account has been confirmed!")
         response.redirect("/request_date_availability/")
     else:
-        strike_system_handler(log)
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
     
@@ -130,7 +129,6 @@ def get_name(request):
         write_to_log(log, BOT, f"Your name is {response_pred}. Is that correct?")
         response.append(gather)
     else:
-        strike_system_handler(log)
         response.redirect("/check_account/")
     
     return HttpResponse(str(response), content_type="text/xml")
@@ -142,7 +140,6 @@ def process_name_confirmation(request, name_encoded):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
-    strike_system_handler(log, reset = True)
 
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
@@ -175,7 +172,6 @@ def process_name_confirmation(request, name_encoded):
         response.redirect("/request_date_availability/")
     else:
         # Add a strike
-        strike_system_handler(log)
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
         response.redirect("/check_account/")
@@ -189,7 +185,6 @@ def request_date_availability(request):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
-    strike_system_handler(log, reset = True)
     response = VoiceResponse()
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
     gather.say("What day are you available for your appointment?")
@@ -227,7 +222,6 @@ def confirm_available_date(request):
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
-    strike_system_handler(log, reset = True)
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     write_to_log(log, CALLER, speech_result)
     declaration = get_response_sentiment(request, speech_result)
@@ -456,7 +450,6 @@ def check_for_appointment(request):
     weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
 
     if speech_result not in weekdays:
-        strike_system_handler(log)
         response = VoiceResponse()
         response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
         write_to_log(log, BOT, "I did not recognize that day. Can you say a weekday like Monday or Friday?")
@@ -468,7 +461,6 @@ def check_for_appointment(request):
 
     # Check if there are time slots on that day
     is_available, appointment_date, number_available_appointments = check_available_date(target_weekday)
-    strike_system_handler(log, reset = True)
     response = VoiceResponse()
     if is_available:
         action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
@@ -477,7 +469,6 @@ def check_for_appointment(request):
         write_to_log(log, BOT, f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
         response.append(gather)
     else:
-        strike_system_handler(log)
         response.say(f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         write_to_log(log, BOT, f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
@@ -548,7 +539,6 @@ def request_preferred_time_under_four(request):
     try:
         appointment_date = datetime.strptime(appointment_date_str, '%Y-%m-%d').date()
     except ValueError:
-        strike_system_handler(log)
         response.say("There was an issue retrieving the appointment date. Please try again.")
         write_to_log(log, BOT, "There was an issue retrieving the appointment date. Please try again.")
         response.redirect("/request_date_availability/")
