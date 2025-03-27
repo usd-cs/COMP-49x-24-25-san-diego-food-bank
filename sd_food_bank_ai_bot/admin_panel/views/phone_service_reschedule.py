@@ -13,29 +13,22 @@ def check_account_cancel_reschedule(request):
     # Have twilio send the caller's number using 'From'
     caller_number = get_phone_number(request)
     response = VoiceResponse()
-    
-    try: 
-        if caller_number:
-            # Query the User table for phone number and relay saved name.
-            user = User.objects.get(phone_number=caller_number)
-            response.say(f"Hello, {user.first_name} {user.last_name}.")
 
-            # Confirm the account with the caller 
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")
-            gather.say("Is this your account? Please say yes or no.")
-            response.append(gather)
+    if caller_number:
+        # Query the User table for phone number and relay saved name.
+        user = User.objects.get(phone_number=caller_number)
+        response.say(f"Hello, {user.first_name} {user.last_name}.")
 
-            # Repeat the prompt if no input received
-            response.redirect("/check_account_cancel_reschedule/")
-        else:
-            # Phone number is invalid
-            response.say("Sorry, we are unable to help you at this time.")
-    # Inform caller that there wasn't an account found
-    except User.DoesNotExist:
-        # User does not exist to being registration process
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
-        gather.say("Can I get your first and last name please?")
+        # Confirm the account with the caller 
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")
+        gather.say("Is this your account? Please say yes or no.")
         response.append(gather)
+
+        # Repeat the prompt if no input received
+        response.redirect("/check_account_cancel_reschedule/")
+    else:
+        # Phone number is invalid
+        response.say("Sorry, we are unable to help you at this time.")
     
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -59,7 +52,7 @@ def confirm_account_cancel_reschedule(request):
     if declaration:
         response.say("Great! Your account has been confirmed!")
         if appointments.exists():
-            response.redirect("/request_date_availability/")
+            response.redirect("/prompt_reschedule_appointment/")
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_main_menu/")
             gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
@@ -84,3 +77,11 @@ def confirm_main_menu(request):
         response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def prompt_reschedule_appointment(request):
+    """
+    Asks the user what appointment they would like to reschedule
+    """
+    response = VoiceResponse()
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")

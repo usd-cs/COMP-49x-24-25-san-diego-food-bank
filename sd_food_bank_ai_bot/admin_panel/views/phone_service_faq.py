@@ -29,7 +29,7 @@ def answer_call(request):
         if digit_input == "1":
             caller_response.redirect("/check_account/?action=schedule")
         elif digit_input == "2": # Reschedule
-            caller_response.redirect("/check_account/")
+            caller_response.redirect("/check_account/?action=reschedule")
         elif digit_input == "3": # Cancel
             caller_response.redirect("/check_account/?action=cancel")
         elif digit_input == "4": # FAQs 

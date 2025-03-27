@@ -66,6 +66,11 @@ def check_account(request):
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
             gather.say("Can I get your first and last name please?")
             response.append(gather)
+            
+        elif action == "reschedule":
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
+            response.append(gather)
 
         elif action == "cancel":
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
