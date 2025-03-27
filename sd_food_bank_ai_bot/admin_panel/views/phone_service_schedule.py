@@ -674,7 +674,7 @@ def no_account_reroute(request):
         response.redirect("/answer/")
     else:
         # If user said no (or another negative response), hang up
-        response.say("Thank you for calling, goodbye.")
+        response.say("Thank you for calling, Goodbye.")
         response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
