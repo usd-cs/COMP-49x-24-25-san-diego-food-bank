@@ -34,6 +34,8 @@ def answer_call(request):
             caller_response.redirect("/check_account/?action=cancel")
         elif digit_input == "4": # FAQs 
             caller_response.redirect("/prompt_question/")
+        elif digit_input == "0":
+            forward_operator(log)
         else:
             caller_response.say("Sorry, that feature has not been added yet")
         
