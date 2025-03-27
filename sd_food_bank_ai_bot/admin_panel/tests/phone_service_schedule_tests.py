@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import xml.etree.ElementTree as ET
 from django.urls import reverse
 from django.utils.timezone import now
-from datetime import timedelta, time, datetime
+from datetime import timedelta, time, datetime, date
 from ..models import User, AppointmentTable
 import urllib.parse
 
@@ -556,3 +556,98 @@ class AppointmentConfirmationTests(TestCase):
         self.assertFalse(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
         self.assertNotIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
         self.assertIn("<Redirect>/answer/</Redirect>", content)
+
+class CancelAppointmentFlowTests(TestCase):
+    def setUp(self):
+        """
+        create test data to cancel appointment.
+        """
+        self.client = Client()
+        # test user with a known phone number.
+        self.test_user = User.objects.create(
+            first_name="John",
+            last_name="Doe",
+            phone_number="+1234567890",
+            email="john@example.com"
+        )
+        tomorrow = now().date() + timedelta(days=1)
+        start_time = datetime.strptime("10:00 AM", "%I:%M %p").time()
+        end_time = (datetime.combine(date.today(), start_time) + timedelta(minutes=30)).time()
+        self.appointment = AppointmentTable.objects.create(
+            user=self.test_user,
+            date=tomorrow,
+            start_time=start_time,
+            end_time=end_time,
+            location="Foodbank"
+        )
+
+    def parse_twiml(self, content):
+        """Helper function to parse the TwiML XML response."""
+        return ET.fromstring(content)
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    def test_cancel_appointment_affirmative(self, mock_get_response_sentiment):
+        """
+        Simulate a caller with an existing account who selects cancellation,
+        then confirms cancellation; the appointment should be deleted.
+        """
+        response = self.client.post(
+            reverse("cancel_appointment"),
+            {"From": self.test_user.phone_number}
+        )
+        self.assertEqual(response.status_code, 200)
+        twiml = response.content.decode("utf-8")
+        # Ensure the prompt for cancellation confirmation is in the response
+        self.assertIn("Do you want to cancel this appointment", twiml)
+        
+        # Simulate an affirmative response
+        response2 = self.client.post(
+            reverse("process_cancellation"),
+            {"From": self.test_user.phone_number, "SpeechResult": "yes"}
+        )
+        self.assertEqual(response2.status_code, 200)
+        twiml2 = response2.content.decode("utf-8")
+        self.assertIn("Your appointment has been cancelled", twiml2)
+        
+        # Assert the appointment is removed from the database
+        self.assertFalse(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=False)
+    def test_cancel_appointment_negative(self, mock_get_response_sentiment):
+        """
+        Simulate a caller with an existing account who selects cancellation,
+        then declines cancellation; the appointment should remain.
+        """
+        response = self.client.post(
+            reverse("cancel_appointment"),
+            {"From": self.test_user.phone_number}
+        )
+        self.assertEqual(response.status_code, 200)
+        twiml = response.content.decode("utf-8")
+        self.assertIn("Do you want to cancel this appointment", twiml)
+        
+        # Simulate a negative response 
+        response2 = self.client.post(
+            reverse("process_cancellation"),
+            {"From": self.test_user.phone_number, "SpeechResult": "no"}
+        )
+        self.assertEqual(response2.status_code, 200)
+        twiml2 = response2.content.decode("utf-8")
+        self.assertIn("Your appointment remains unchanged", twiml2)
+        
+        # Assert the appointment still exists.
+        self.assertTrue(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
+
+    def test_cancel_appointment_no_appointment(self):
+        """
+        Simulate a cancellation request when no appointment exists.
+        The bot should inform the caller that no appointment is scheduled.
+        """
+        self.appointment.delete()
+        response = self.client.post(
+            reverse("cancel_appointment"),
+            {"From": self.test_user.phone_number}
+        )
+        self.assertEqual(response.status_code, 200)
+        twiml = response.content.decode("utf-8")
+        self.assertIn("You do not have any scheduled appointments to cancel", twiml)
