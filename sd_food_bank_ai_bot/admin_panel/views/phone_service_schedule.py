@@ -54,7 +54,7 @@ def check_account(request):
             write_to_log(log, BOT, f"Hello, {user.first_name} {user.last_name}.")
 
             # Confirm the account with the caller 
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_account/?action={action}")
             gather.say("Is this your account? Please say yes or no.")
             write_to_log(log, BOT, "Is this your account? Please say yes or no.")
             response.append(gather)
@@ -97,6 +97,7 @@ def confirm_account(request):
     log = Log.objects.filter(phone_number=caller_number).last()
 
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    action = request.GET.get("action", "schedule").lower()
     response = VoiceResponse()
     write_to_log(log, CALLER, speech_result)
 
@@ -105,7 +106,10 @@ def confirm_account(request):
     if declaration:
         response.say("Great! Your account has been confirmed!")
         write_to_log(log, BOT, "Great! Your account has been confirmed!")
-        response.redirect("/request_date_availability/")
+        if action == "cancel":
+            response.redirect("/cancel_initial_routing/")
+        else:
+            response.redirect("/request_date_availability/")
     else:
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
