@@ -39,6 +39,9 @@ def check_account(request):
     # Have twilio send the caller's number using 'From'
     caller_number = get_phone_number(request)
     response = VoiceResponse()
+
+    action = request.GET.get("action", "schedule").lower()
+
     try: 
         if caller_number:
             # Query the User table for phone number and relay saved name.
@@ -57,11 +60,22 @@ def check_account(request):
             response.say("Sorry, we are unable to help you at this time.")
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
+        if action == "schedule":
+
         # User does not exist to being registration process
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
-        gather.say("Can I get your first and last name please?")
-        response.append(gather)
-    
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            gather.say("Can I get your first and last name please?")
+            response.append(gather)
+
+        elif action == "cancel":
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
+            response.append(gather)
+        else:
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            gather.say("Can I get your first and last name please?")
+            response.append(gather)
+            
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
@@ -621,3 +635,47 @@ def get_available_times_for_date(appointment_date):
         current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
 
     return available_times
+
+@csrf_exempt
+def reroute_caller_with_no_account(request):
+    """
+    Check the User table for phone number to check if the account exists. If it doesn't, 
+    reroute the caller to main menu or hang up according to their response
+    """
+    # Have twilio send the caller's number using 'From'
+    caller_number = get_phone_number(request)
+    response = VoiceResponse()
+
+    if not caller_number:
+        # Phone number is invalid 
+        response.say("Sorry, we are unable to help you at this time.")
+        return HttpResponse(str(response), content_type="text/xml")
+
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+    gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
+    response.append(gather)
+    
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def no_account_reroute(request):
+    """
+    Helper function for reroute_caller_with_no_account to handle response from caller.
+    If the response is yes, reroute to the main menu. 
+    If the response is no, hang up the call.
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    response = VoiceResponse()
+    declaration = get_response_sentiment(request, speech_result)
+
+    if declaration:
+        # If user said yes, redirect to main menu (in this example /answer/)
+        response.say("Returning you to the main menu.")
+        response.redirect("/answer/")
+    else:
+        # If user said no (or another negative response), hang up
+        response.say("Thank you for calling, Goodbye.")
+        response.hangup()
+
+    return HttpResponse(str(response), content_type="text/xml")
+

@@ -27,8 +27,12 @@ def answer_call(request):
     digit_input = request.POST.get('Digits', '')
     if digit_input:
         if digit_input == "1":
+            caller_response.redirect("/check_account/?action=schedule")
+        elif digit_input == "2": # Reschedule
             caller_response.redirect("/check_account/")
-        elif digit_input == "4":
+        elif digit_input == "3": # Cancel
+            caller_response.redirect("/check_account/?action=cancel")
+        elif digit_input == "4": # FAQs 
             caller_response.redirect("/prompt_question/")
         else:
             caller_response.say("Sorry, that feature has not been added yet")
