@@ -5,6 +5,9 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
+    # Utilities
+    path("return_main_menu/", views.return_main_menu, name="return_main_menu"),
+    
     path("", lambda request: redirect('login/'), name="default"),
     path("faqs/", views.admin_panel_faq.faq_page_view, name="faq_page"),
     path("login/", views.admin_panel_faq.login_view, name="login"),
@@ -19,7 +22,7 @@ urlpatterns = [
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
     # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
-    path("confirm_account/", views.confirm_account, name="confirm_account"),
+    path("confirm_account/<str:action>/", views.confirm_account, name="confirm_account"),
     path("get_name/", views.phone_service_schedule.get_name, name="get_name"),
     path("process_name_confirmation/<str:name_encoded>/", views.phone_service_schedule.process_name_confirmation, name="process_name_confirmation"),
     path("request_date_availability/", views.request_date_availability, name="request_date_availability"),
@@ -41,5 +44,4 @@ urlpatterns = [
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
     path("check_account_cancel_reschedule/", views.check_account_cancel_reschedule, name="check_account_cancel_reschedule"),
     path("confirm_account_cancel_reschedule/", views.confirm_account_cancel_reschedule, name="confirm_account_cancel_reschedule"),
-    path("confirm_main_menu/", views.confirm_main_menu, name="confirm_main_menu"),
 ]

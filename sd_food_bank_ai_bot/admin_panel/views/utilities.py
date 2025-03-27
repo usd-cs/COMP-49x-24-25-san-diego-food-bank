@@ -1,4 +1,6 @@
 from twilio.twiml.voice_response import VoiceResponse, Dial
+from .phone_service_schedule import get_response_sentiment, get_phone_number
+from ..models import User, AppointmentTable
 from django.http import HttpResponse
 from twilio.rest import Client
 from django.conf import settings
@@ -12,6 +14,31 @@ def strike_system_handler(log, reset = False):
             
             if log.add_strike():
                 forward_operator()
+
+def return_main_menu(request):
+    """
+    Redirects user to main menu based on YES or NO sentiment
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    declaration = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
+
+    if declaration:
+        response.redirect("/answer/")
+    else:
+        response.hangup()
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+def appointment_count(request):
+    """
+    Returns the appointment count of user
+    """
+    caller_number = get_phone_number(request)
+    user = User.objects.get(phone_number=caller_number)
+    appointment_count = AppointmentTable.objects.filter(user=user).count()
+
+    return appointment_count
 
 def forward_operator(log):
     """Relays info to and forwards caller to operator because requested or failed strike system"""

@@ -1,5 +1,6 @@
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 from .phone_service_faq import get_response_sentiment, prompt_question
+from .utilities import appointment_count
 from django.views.decorators.csrf import csrf_exempt
 from ..models import User, AppointmentTable
 from django.http import HttpResponse
@@ -49,7 +50,7 @@ def check_account(request):
             response.say(f"Hello, {user.first_name} {user.last_name}.")
 
             # Confirm the account with the caller 
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_account/{action}")
             gather.say("Is this your account? Please say yes or no.")
             response.append(gather)
 
@@ -66,7 +67,7 @@ def check_account(request):
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
             gather.say("Can I get your first and last name please?")
             response.append(gather)
-            
+
         elif action == "reschedule":
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
             gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
@@ -84,7 +85,7 @@ def check_account(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def confirm_account(request):
+def confirm_account(request, action):
     """
     Process the caller's response. If they say yes, the account is confirmed, otherwise
     they will be prompted to try again.
@@ -96,7 +97,21 @@ def confirm_account(request):
 
     if declaration:
         response.say("Great! Your account has been confirmed!")
+        
+        if action == "reschedule":
+            if appointment_count(request) > 1:
+                # redirect to handle appt > 1 path
+                pass
+            elif appointment_count(request) == 1:
+                # redirect to handle appt == 1 path
+                pass
+            else: # return to main menu if no appointments associated with account
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu/")
+                gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
+                response.append(gather)
+        
         response.redirect("/request_date_availability/")
+    
     else:
         response.say("I'm sorry, please try again.")
     
