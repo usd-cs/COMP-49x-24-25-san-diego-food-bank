@@ -32,8 +32,86 @@ def cancel_initial_routing(request):
 
         response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
     else:
-        response.redirect("/INSERT_URL_TO_ASKING_FOR_APPOINTMENT/")
+        response.redirect("/ask_appointment_to_cancel/")
 
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def ask_appointment_to_cancel(request):
+    """
+    Ask the user which appointment they want to cancel when multiple are scheduled
+    """
+    caller_number = get_phone_number(request)
+    response = VoiceResponse()
+    user = User.objects.get(phone_number=caller_number)
+    appointments = AppointmentTable.objects.filter(user = user)
+
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_appointment_selection")
+
+    appointments_formatted = []
+    for appointment in appointments:
+        time_str = appointment.start_time.strftime('%I:%M %p')
+        date_str = format_date_for_response(appointment.date)
+        appointments_formatted.append(f"{date_str} at {time_str}")
+
+    gather.say("Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
+
+    response.append(gather)
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def process_appointment_selection(request):
+    """
+    Process the user's response about which appointment to cancel
+    """
+    caller_number = get_phone_number(request)
+    response = VoiceResponse()
+    user = User.objects.get(phone_number=caller_number)
+    appointments = AppointmentTable.objects.filter(user = user)
+
+    speech_result = request.POST.get('SpeechResult', '')
+
+    appointments_formatted = []
+    for appointment in appointments:
+        time_str = appointment.start_time.strftime('%I:%M %p')
+        date_str = format_date_for_response(appointment.date)
+        appointments_formatted.append(f"{date_str} at {time_str}")
+
+    appointment_options = "\n".join(appt for appt in appointments_formatted)
+
+    if speech_result:
+        # Query GPT for which appointment best aligns with the user's choice
+        client = OpenAI()
+        system_prompt = (f"The user said: '{speech_result}'.\n"
+                         f"Here are the available appointments:\n{appointment_options}\n"
+                         "Based on what the user said, which appointment do they most likely want to cancel."
+                         "Respond with a single number, 0 for the first appointment, 1 for the second appointment, and so on."
+                         "If you are unsure, respond only with UNCERTAIN")
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": system_prompt}
+            ]
+        )   
+        response_pred = completion.choices[0].message.content.strip()
+
+        if response_pred.upper() == "UNCERTAIN":
+            response.say("I didn't catch that. Please try again.")
+            response.redirect("/ask_appointment_to_cancel/")
+        else:
+            try:
+                index = int(response_pred)
+                if 0 <= index < len(appointments):
+                    appointment_id = appointments[index].id
+
+                    response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
+                else:
+                    raise ValueError
+            except ValueError:
+                response.say("I didn't catch that. Please try again.")
+                response.redirect("/ask_appointment_to_cancel/")
+        
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
