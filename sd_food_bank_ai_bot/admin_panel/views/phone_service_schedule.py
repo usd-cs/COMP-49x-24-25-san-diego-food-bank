@@ -786,7 +786,7 @@ def reschedule_appointment(request, date_encoded=None):
     num_appts = len(upcoming_appts)
     if num_appts == 0:
         response.say("You do not have an appointment scheduled.")
-        response.say("Let's schedyle a new appointment.")
+        response.say("Let's schedule a new appointment.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
     
