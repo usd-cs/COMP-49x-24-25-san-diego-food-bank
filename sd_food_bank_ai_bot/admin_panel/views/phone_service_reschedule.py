@@ -8,12 +8,14 @@ def prompt_reschedule_appointment_over_one(request):
     Asks the user what appointment they would like to reschedule if they have over one appointment
     """
     caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user=user)
 
     response = VoiceResponse()
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/generate_requested_date/")
     gather.say("Which appointment would you like to reschedule?")
+    write_to_log(log, BOT, "Which appointment would you like to reschedule?")
     response.append(gather)
 
     requested_date = generate_requested_date(request)
@@ -25,7 +27,10 @@ def generate_requested_date(request):
     """
     Uses GPT to generate a most-likely date that the caller asked for.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
     
     if speech_result:
@@ -47,6 +52,7 @@ def generate_requested_date(request):
 
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_requested_date/{date_encoded}/")
         gather.say(f"Your requested day was {response_pred}. Is that correct?")
+        write_to_log(log, BOT, f"Your requested day was {response_pred}. Is that correct?")
         response.append(gather)
     else:
         response.redirect("/prompt_reschedule_appointment_over_one/")
@@ -60,8 +66,10 @@ def confirm_requested_date(request, date_encoded):
     that the appointment is in their appointment list
     """
     caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     user = User.objects.get(phone_number=caller_number)
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
     declaration = get_response_sentiment(request, speech_result)
 
@@ -70,6 +78,7 @@ def confirm_requested_date(request, date_encoded):
         requested_date = datetime.strptime(requested_date_str, "%Y-%m-%d").date() # From str to date
     except (ValueError, TypeError):
         response.say("Sorry, we could not understand the date. Let's try again.")
+        write_to_log(log, BOT, "Sorry, we could not understand the date. Let's try again.")
         response.redirect("/prompt_reschedule_appointment_over_one/")
         return HttpResponse(str(response), content_type="text/xml")
     
@@ -78,8 +87,10 @@ def confirm_requested_date(request, date_encoded):
         if appointment_exists:
             date_encoded_url = urllib.parse.quote(date_encoded)
             response.redirect(f"/reschedule_appointment/{date_encoded_url}/") # Send to rescheduling
+
         else:
             response.say("Sorry, this is not in your appointments.")
+            write_to_log(log, BOT, "Sorry, this is not in your appointments.")
             response.redirect("/prompt_reschedule_appointment_over_one")
             return HttpResponse(str(response), content_type="text/xml")
     else:

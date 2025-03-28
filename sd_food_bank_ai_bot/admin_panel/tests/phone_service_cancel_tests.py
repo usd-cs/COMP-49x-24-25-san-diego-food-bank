@@ -277,3 +277,60 @@ class AppointmentCancelSelectionTests(TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertIn(f'/prompt_cancellation_confirmation/{self.appointment1.id}/', response.content.decode("utf-8"))
+
+    @patch("admin_panel.views.phone_service_cancel.OpenAI")
+    def test_process_appointment_selection_response_uncertain(self, mock_openai):
+        """
+        Test processing of invalid appointment selection choice
+        """
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="UNCERTAIN"))]
+        )
+
+        response = self.client.post(reverse("process_appointment_selection"), 
+                                    {'From': self.user_phone_number, 
+                                     'SpeechResult': 'March 27th'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("I didn't catch that. Please try again.", response.content.decode("utf-8"))
+        self.assertIn("/ask_appointment_to_cancel/", response.content.decode("utf-8"))
+
+    @patch("admin_panel.views.phone_service_cancel.OpenAI")
+    def test_process_appointment_selection_response_wrong_date(self, mock_openai):
+        """
+        Test processing of invalid appointment selection choice
+        """
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="NONE"))]
+        )
+
+        response = self.client.post(reverse("process_appointment_selection"), 
+                                    {'From': self.user_phone_number, 
+                                     'SpeechResult': 'March 27th'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Sorry, we don't have you scheduled for that. Please try again.", response.content.decode("utf-8"))
+        self.assertIn("/ask_appointment_to_cancel/", response.content.decode("utf-8"))
+
+    @patch("admin_panel.views.phone_service_cancel.OpenAI")
+    def test_process_appointment_selection_response_out_of_bounds(self, mock_openai):
+        """
+        Test processing of invalid appointment selection choice
+        """
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="3"))]
+        )
+
+        response = self.client.post(reverse("process_appointment_selection"), 
+                                    {'From': self.user_phone_number, 
+                                     'SpeechResult': 'March 27th'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("I didn't catch that. Please try again.", response.content.decode("utf-8"))
+        self.assertIn("/ask_appointment_to_cancel/", response.content.decode("utf-8"))
