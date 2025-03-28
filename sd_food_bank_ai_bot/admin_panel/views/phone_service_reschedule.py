@@ -30,7 +30,8 @@ def prompt_reschedule_appointment_one(request):
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")
     gather.say("What day would you like to reschedule to?")
     response.append(gather)
-    # TODO: redirect to reschedule/schedule
+
+    response.redirect("URL_TO_RESCHEDULE") # TODO: redirect to reschedule/schedule
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -90,7 +91,7 @@ def confirm_requested_date(request, date_encoded):
     if declaration:
         appointment_exists = AppointmentTable.objects.filter(user=user, date__date=requested_date).exists()
         if appointment_exists:
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/URL_TO_RESCHEDULE/") #TODO: Send to reschedule/schedule
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/URL_TO_RESCHEDULE/{date_encoded}") #TODO: Send to reschedule/schedule
             gather.say("What day would you like to reschedule to?")
             response.append(gather)
         else:
