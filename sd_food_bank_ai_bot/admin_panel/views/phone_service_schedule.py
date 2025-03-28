@@ -104,10 +104,10 @@ def confirm_account(request):
         if action == "reschedule":
             if appointment_count(request) > 1:
                 # redirect to handle appt > 1 path
-                pass
+                response.redirect("/prompt_reschedule_appointment_over_one/")
             elif appointment_count(request) == 1:
                 # redirect to handle appt == 1 path
-                pass
+                response.redirect("/prompt_reschedule_appointment_one/")
             else: # return to main menu if no appointments associated with account
                 gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu/")
                 gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
