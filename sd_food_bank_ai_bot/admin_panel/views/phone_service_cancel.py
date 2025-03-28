@@ -100,8 +100,8 @@ def process_appointment_selection(request):
         if response_pred.upper() == "UNCERTAIN":
             response.say("I didn't catch that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
-        if response_pred.upper() == "NONE":
-            response.say("Sorry, we do not have you scheduled for that day. Please try again.")
+        elif response_pred.upper() == "NONE":
+            response.say("Sorry, we don't have you scheduled for that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         else:
             try:
