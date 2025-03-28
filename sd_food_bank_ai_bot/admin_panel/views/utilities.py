@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from twilio.rest import Client
 from django.conf import settings
 from openai import OpenAI
+from django.views.decorators.csrf import csrf_exempt
 import re
 
 def strike_system_handler(log, reset = False):
@@ -50,6 +51,7 @@ def get_response_sentiment(request, sentence):
         return True
     return False
 
+@csrf_exempt
 def return_main_menu(request):
     """
     Redirects user to main menu based on YES or NO sentiment
