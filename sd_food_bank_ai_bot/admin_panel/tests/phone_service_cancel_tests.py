@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from ..models import User, AppointmentTable
 from .phone_service_cancel_tests import *
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from datetime import datetime
 import urllib.parse
 
@@ -241,8 +241,6 @@ class AppointmentCancelSelectionTests(TestCase):
         response = self.client.post("/ask_appointment_to_cancel/", content)
         content = response.content.decode("utf-8")
 
-        # response = self.client.get(reverse('ask_appointment_to_cancel'))
-
         self.assertEqual(response.status_code, 200)
 
         self.assertIn("Which appointment would you like to cancel?", content)
@@ -253,6 +251,17 @@ class AppointmentCancelSelectionTests(TestCase):
     @patch("admin_panel.views.phone_service_schedule.OpenAI")
     def test_process_appointment_selection_valid(self, mock_openai):
         """
-        
+        Test processing of valid appointment selection choice
         """
-        pass
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="0"))]
+        )
+
+        response = self.client.post(reverse("process_appointment_selection"), 
+                                    {'From': self.user_phone_number, 
+                                     'SpeechResult': 'March 27th'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'/prompt_cancellation_confirmation/{self.appointment1.id}/', response.content.decode("utf-8"))
