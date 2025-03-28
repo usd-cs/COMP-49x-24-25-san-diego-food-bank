@@ -1,7 +1,8 @@
 from django.test import TestCase, Client
+from django.urls import reverse
 from ..models import User, AppointmentTable
 from .phone_service_cancel_tests import *
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from datetime import datetime
 import urllib.parse
 
@@ -61,7 +62,7 @@ class CancelInitialRoutingTests(TestCase):
         response = self.client.post("/cancel_initial_routing/", content)
         content = response.content.decode("utf-8")
 
-        self.assertIn("/INSERT_URL_TO_ASKING_FOR_APPOINTMENT/", content)
+        self.assertIn("/ask_appointment_to_cancel/", content)
     
     def test_reroute_no_appointment(self):
         """
@@ -211,3 +212,68 @@ class CancelConfirmationTests(TestCase):
         mock_get_response_sentiment.assert_not_called()
         self.assertIn("Would you like to go back to the main menu?", content)
         self.assertIn("/return_main_menu_response/", content)
+
+class AppointmentCancelSelectionTests(TestCase):
+    def setUp(self):
+        
+        self.client = Client()
+        self.user_phone_number = "+1234567890"
+
+        self.user = User.objects.create(
+            first_name="Billy",
+            last_name="Bob",
+            phone_number=self.user_phone_number,
+            email="billybob@email.com"
+        )
+        # Create tester appointments
+        self.appointment1 = AppointmentTable.objects.create(
+            user=self.user,
+            start_time=datetime.strptime("10:00 AM", '%I:%M %p').time(),
+            end_time=datetime.strptime("10:30 AM", '%I:%M %p').time(),
+            date=datetime.strptime("2025-03-27", '%Y-%m-%d').date()
+        )
+        self.appointment2 = AppointmentTable.objects.create(
+            user=self.user,
+            start_time=datetime.strptime("1:30 PM", '%I:%M %p').time(),
+            end_time=datetime.strptime("2:00 PM", '%I:%M %p').time(),
+            date=datetime.strptime("2025-03-28", '%Y-%m-%d').date()
+        )
+        self.appointment3 = AppointmentTable.objects.create(
+            user=self.user,
+            start_time=datetime.strptime("4:00 PM", '%I:%M %p').time(),
+            end_time=datetime.strptime("4:30 PM", '%I:%M %p').time(),
+            date=datetime.strptime("2025-03-29", '%Y-%m-%d').date()
+        )
+
+    def test_ask_appointment_to_cancel(self):
+        """
+        Test UI verbalizing scheduled appointment options to user
+        """
+        content = {"From": self.user_phone_number}
+        response = self.client.post("/ask_appointment_to_cancel/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn("Which appointment would you like to cancel?", content)
+        self.assertIn("Thursday, March 27th at 10:00 AM", content)
+        self.assertIn("Friday, March 28th at 01:30 PM", content)
+        self.assertIn("Saturday, March 29th at 04:00 PM", content)
+
+    @patch("admin_panel.views.phone_service_cancel.OpenAI")
+    def test_process_appointment_selection_valid(self, mock_openai):
+        """
+        Test processing of valid appointment selection choice
+        """
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="0"))]
+        )
+
+        response = self.client.post(reverse("process_appointment_selection"), 
+                                    {'From': self.user_phone_number, 
+                                     'SpeechResult': 'March 27th'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'/prompt_cancellation_confirmation/{self.appointment1.id}/', response.content.decode("utf-8"))
