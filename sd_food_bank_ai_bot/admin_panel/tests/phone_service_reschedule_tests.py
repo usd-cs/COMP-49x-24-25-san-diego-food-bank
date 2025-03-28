@@ -72,14 +72,18 @@ class PhoneServiceRescheduleTests(TestCase):
     def test_confirm_requested_date_valid(self, mock_sentiment):
         date_str = self.appt_date.strftime("%Y-%m-%d")
         encoded = urllib.parse.quote(date_str)
+
         request = self.factory.post(f"/confirm_requested_date/{encoded}/", {
             "From": self.user.phone_number,
             "SpeechResult": "Yes"
         })
+
         response = confirm_requested_date(request, encoded)
         self.assertEqual(response.status_code, 200)
-        root = self.parse_twiml(response)
-        self.assertIn("What day would you like to reschedule to?", [say.text for say in root.iter("Say")])
+
+        decoded_xml = response.content.decode()
+        self.assertIn(f"/reschedule_appointment/{encoded}/", decoded_xml)
+        self.assertIn("<Redirect>", decoded_xml)
 
     @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment", return_value=True)
     def test_confirm_requested_date_not_in_user_appointments(self, mock_sentiment):
