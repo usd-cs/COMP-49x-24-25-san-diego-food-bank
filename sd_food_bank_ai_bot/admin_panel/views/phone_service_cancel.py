@@ -11,7 +11,7 @@ from .utilities import format_date_for_response, write_to_log
 import urllib.parse
 # Not sure how many of these ^ we will actually need 
 
-TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 
 @csrf_exempt
 def cancel_initial_routing(request):

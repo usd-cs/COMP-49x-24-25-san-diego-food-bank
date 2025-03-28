@@ -13,7 +13,7 @@ from .utilities import forward_operator, write_to_log, format_date_for_response
 
 BOT = "bot"
 CALLER = "caller"
-TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
 FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
