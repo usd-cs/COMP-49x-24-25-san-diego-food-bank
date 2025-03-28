@@ -678,7 +678,7 @@ class RescheduleAppointmentTests(TestCase):
         root = self.parse_twiML(twiml)
 
         say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
-        self.assertIn("Your current appointment has been canceled.", say_text)
+        self.assertIn("Your appointment has been canceled.", say_text)
         self.assertIn("Let's schedule a new appointment.", say_text)
         # Make sure there's a redirect to the scheduling flow.
         redirect_elem = root.find("Redirect")
