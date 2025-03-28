@@ -47,6 +47,8 @@ urlpatterns = [
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
     path("cancel_initial_routing/", views.cancel_initial_routing, name="cancel_initial_routing"),
+    # Phone service rescheduling
+    path("reschedule_appointment/<str:date_encoded>/", views.reschedule_appointment, name="reschedule_appointment"),
     path("prompt_cancellation_confirmation/<int:appointment_id>/", views.prompt_cancellation_confirmation, name="prompt_cancellation_confirmation"),
     path("cancellation_confirmation/<int:appointment_id>/", views.cancellation_confirmation, name="cancellation_confirmation"),
     path("return_main_menu_response/", views.return_main_menu_response, name="return_main_menu_response"),
