@@ -1,8 +1,11 @@
 from twilio.twiml.voice_response import VoiceResponse, Dial
+from ..models import User, AppointmentTable
 from django.http import HttpResponse
 from twilio.rest import Client
 from django.conf import settings
-from datetime import datetime
+from openai import OpenAI
+from django.views.decorators.csrf import csrf_exempt
+import re
 
 def strike_system_handler(log, reset = False):
     """Updates strikes within the log object associated with call as conversation progresses"""
@@ -13,6 +16,66 @@ def strike_system_handler(log, reset = False):
             
             if log.add_strike():
                 forward_operator()
+
+def get_phone_number(request):
+    """
+    Gets the user phone number from the post header
+    """
+    caller_number = request.POST.get('From', '')
+
+    #regex check
+    expression = "^\+[1-9]\d{1,14}$" # E.164 compliant phone numbers
+    valid = re.match(expression, caller_number)
+    
+    if valid:
+        return caller_number
+    return None
+
+def get_response_sentiment(request, sentence):
+    """
+    Returns True if the given sentence is affirmative
+    """
+    # Query GPT for intent
+    client = OpenAI()
+    system_prompt = "Based on the following message, respond if it is AFFIRMATIVE or NEGATIVE."
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )   
+    response_pred = completion.choices[0].message.content
+
+    if response_pred.upper() == "AFFIRMATIVE":
+        return True
+    return False
+
+@csrf_exempt
+def return_main_menu(request):
+    """
+    Redirects user to main menu based on YES or NO sentiment
+    """
+    speech_result = request.POST.get('SpeechResult', '').strip().lower()
+    declaration = get_response_sentiment(request, speech_result)
+    response = VoiceResponse()
+
+    if declaration:
+        response.redirect("/answer/")
+    else:
+        response.hangup()
+
+    return HttpResponse(str(response), content_type="text/xml")
+
+def appointment_count(request):
+    """
+    Returns the appointment count of user
+    """
+    caller_number = get_phone_number(request)
+    user = User.objects.get(phone_number=caller_number)
+    appointment_count = AppointmentTable.objects.filter(user=user).count()
+
+    return appointment_count
 
 def forward_operator(log):
     """Relays info to and forwards caller to operator because requested or failed strike system"""
