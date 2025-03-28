@@ -45,4 +45,5 @@ urlpatterns = [
     path("return_main_menu_response/", views.return_main_menu_response, name="return_main_menu_response"),
     path("ask_appointment_to_cancel/", views.ask_appointment_to_cancel, name="ask_appointment_to_cancel"),
     path("process_appointment_selection/", views.process_appointment_selection, name="process_appointment_selection"),
+    path("reroute_no_appointment/", views.reroute_no_appointment, name="reroute_no_appointment"),
 ]
