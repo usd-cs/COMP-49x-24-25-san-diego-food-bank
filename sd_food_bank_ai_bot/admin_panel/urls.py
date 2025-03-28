@@ -42,6 +42,7 @@ urlpatterns = [
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
 
     # Phone service cancellation
+    path("reroute_no_appointment/", views.reroute_no_appointment, name="reroute_no_appointment"),
     path("cancel_appointment/<int:appointment_id>/", views.cancel_appointment, name="cancel_appointment"),
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
@@ -55,4 +56,5 @@ urlpatterns = [
     path("prompt_reschedule_appointment_one", views.prompt_reschedule_appointment_one, name="prompt_reschedule_appointment_one"),
     path("generate_requested_date", views.generate_requested_date, name="generate_requested_date"),
     path("confirm_requested_date/<str:date_encoded>/", views.confirm_requested_date, name="confirm_requested_date"),
+
 ]
