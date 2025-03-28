@@ -24,7 +24,7 @@ class CancelInitialRoutingTests(TestCase):
         response = self.client.post("/cancel_initial_routing/", content)
         content = response.content.decode("utf-8")
 
-        self.assertIn("/INSERT_URL_TO_REROUTE_NO_APPOINTEMNT/", content)
+        self.assertIn("/reroute_no_appointment/", content)
     
     def test_cancel_initial_routing_one_appointment(self):
         """Test routed correctly when the user has one appointment"""
@@ -62,6 +62,18 @@ class CancelInitialRoutingTests(TestCase):
         content = response.content.decode("utf-8")
 
         self.assertIn("/INSERT_URL_TO_ASKING_FOR_APPOINTMENT/", content)
+    
+    def test_reroute_no_appointment(self):
+        """
+        Test that the user is properly prompted and redirected.
+        """
+        content = {"From": self.test_user_phone_number}
+        response = self.client.post("/reroute_no_appointment/", content)
+        content = response.content.decode("utf-8")
+
+        self.assertIn("We do not have an appointment registered with your number.", content)
+        self.assertIn("Would you like to go back to the main menu?", content)
+        self.assertIn("/return_main_menu_response/", content)
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_confirm_account_with_cancel(self, mock_get_response_sentiment):
@@ -142,7 +154,7 @@ class CancelConfirmationTests(TestCase):
         content = response.content.decode("utf-8")
 
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)
     
     @patch("admin_panel.views.phone_service_cancel.get_response_sentiment")
     def test_cancellation_confirmation_no_response(self, mock_get_response_sentiment):
@@ -198,4 +210,4 @@ class CancelConfirmationTests(TestCase):
 
         mock_get_response_sentiment.assert_not_called()
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)
