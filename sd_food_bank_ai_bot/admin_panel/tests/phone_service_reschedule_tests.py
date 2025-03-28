@@ -3,7 +3,6 @@ from unittest.mock import patch, MagicMock
 from admin_panel.models import User, AppointmentTable
 from admin_panel.views.phone_service_reschedule import (
     prompt_reschedule_appointment_over_one,
-    prompt_reschedule_appointment_one,
     generate_requested_date,
     confirm_requested_date
 )
@@ -40,13 +39,6 @@ class PhoneServiceRescheduleTests(TestCase):
         self.assertEqual(response.status_code, 200)
         root = self.parse_twiml(response)
         self.assertIn("Which appointment would you like to reschedule?", [say.text for say in root.iter("Say")])
-
-    def test_prompt_reschedule_appointment_one(self):
-        request = self.factory.post("/prompt_reschedule_appointment_one/")
-        response = prompt_reschedule_appointment_one(request)
-        self.assertEqual(response.status_code, 200)
-        root = self.parse_twiml(response)
-        self.assertIn("What day would you like to reschedule to?", [say.text for say in root.iter("Say")])
 
     @patch("admin_panel.views.phone_service_reschedule.OpenAI")
     def test_generate_requested_date_valid(self, mock_openai):
