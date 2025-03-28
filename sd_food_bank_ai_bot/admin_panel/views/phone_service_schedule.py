@@ -663,7 +663,7 @@ def find_requested_time(request, time_encoded):
             return HttpResponse(str(response), content_type="text/xml")
 
         if requested_time in available_times:
-            response.redirect(f"/confirm_time_selection/{time_encoded}/{appointment_date_str}")
+            response.redirect(f"/confirm_time_selection/{time_encoded}/{appointment_date_str}/")
         else:
             # TODO: the lines below handles nearest appointment time, potentially put in its own separate function?
             nearest_time = min(available_times, key=lambda t: abs(datetime.combine(appointment_date, t) - datetime.combine(appointment_date, requested_time)))
