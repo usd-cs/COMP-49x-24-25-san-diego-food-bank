@@ -10,7 +10,7 @@ from .utilities import format_date_for_response
 import urllib.parse
 # Not sure how many of these ^ we will actually need 
 
-TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 
 @csrf_exempt
 def cancel_initial_routing(request):
@@ -25,7 +25,7 @@ def cancel_initial_routing(request):
     num_appointments = AppointmentTable.objects.filter(user=user).count()
 
     if num_appointments == 0:
-        response.redirect("/INSERT_URL_TO_REROUTE_NO_APPOINTEMNT/")
+        response.redirect("/reroute_no_appointment/")
     elif num_appointments == 1:
         appointment = AppointmentTable.objects.get(user=user)
         appointment_id = appointment.id
@@ -150,7 +150,7 @@ def cancellation_confirmation(request, appointment_id):
         if declaration:
             response.redirect(f"/cancel_appointment/{appointment_id}/")
         else:
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_repsonse/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
             gather.say("Would you like to go back to the main menu?")
             response.append(gather)
     else:
@@ -174,8 +174,22 @@ def return_main_menu_response(request):
             response.say("Have a great day!")
             response.hangup()
     else:
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_repsonse/")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
         gather.say("Would you like to go back to the main menu?")
         response.append(gather)
 
+    return HttpResponse(str(response), content_type="text/xml")
+
+@csrf_exempt
+def reroute_no_appointment(request):
+    """
+    Prompt user for if they would like to go back to the main menu when they do not have an appointment.
+    """
+    response = VoiceResponse()
+
+    response.say("We do not have an appointment registered with your number.")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
+    gather.say("Would you like to go back to the main menu?")
+    response.append(gather)
+    
     return HttpResponse(str(response), content_type="text/xml")
