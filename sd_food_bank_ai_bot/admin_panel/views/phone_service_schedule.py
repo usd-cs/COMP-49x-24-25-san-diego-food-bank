@@ -782,8 +782,8 @@ def reschedule_appointment(request, date_encoded=None):
         response.redirect("/reroute_caller_with_no_account/")
         return HttpResponse(str(response), content_type="text/xml")
     
-    upcoming_appts = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
-    num_appts = upcoming_appts.count()
+    upcoming_appts = list(AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date'))
+    num_appts = len(upcoming_appts)
     if num_appts == 0:
         response.say("You do not have an appointment scheduled.")
         response.redirect("/request_date_availability/")
