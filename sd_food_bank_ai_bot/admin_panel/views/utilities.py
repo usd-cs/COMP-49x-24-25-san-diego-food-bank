@@ -103,3 +103,25 @@ def send_sms(phone_number_to, message_to_send):
         return message
     except Exception as e:
         return None
+
+def format_date_for_response(date_obj):
+    """
+    Format a date object to return a string representation of the day and date
+    """
+    date_format = date_obj.strftime("%A, %B %d")
+    if 11 <= date_obj.day <= 13:
+        suffix = "th"
+    else:
+        last = date_obj.day % 10
+        if last == 1:
+            suffix = "st"
+        elif last == 2:
+            suffix = "nd"
+        elif last == 3:
+            suffix = "rd"
+        else:
+            suffix = "th"
+
+    date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
+
+    return date_final

@@ -46,10 +46,11 @@ urlpatterns = [
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
     path("cancel_initial_routing/", views.cancel_initial_routing, name="cancel_initial_routing"),
+    path("prompt_cancellation_confirmation/<int:appointment_id>/", views.prompt_cancellation_confirmation, name="prompt_cancellation_confirmation"),
+    path("cancellation_confirmation/<int:appointment_id>/", views.cancellation_confirmation, name="cancellation_confirmation"),
+    path("return_main_menu_response/", views.return_main_menu_response, name="return_main_menu_response"),
 
     # Phone Service Reschedule
-    path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
-    path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
     path("prompt_reschedule_appointment_over_one", views.prompt_reschedule_appointment_over_one, name="prompt_reschedule_appointment_over_one"),
     path("prompt_reschedule_appointment_one", views.prompt_reschedule_appointment_one, name="prompt_reschedule_appointment_one"),
     path("generate_requested_date", views.generate_requested_date, name="generate_requested_date"),

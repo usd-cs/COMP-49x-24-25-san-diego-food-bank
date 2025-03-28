@@ -59,7 +59,7 @@ def generate_requested_date(request):
         response_pred = completion.choices[0].message.content.strip()
         date_encoded = urllib.parse.quote(response_pred)
 
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_requested_date/{date_encoded}")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_requested_date/{date_encoded}/")
         gather.say(f"Your requested day was {response_pred}. Is that correct?")
         response.append(gather)
     else:
