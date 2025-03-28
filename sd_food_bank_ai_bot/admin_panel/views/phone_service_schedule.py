@@ -786,11 +786,12 @@ def reschedule_appointment(request, date_encoded=None):
     num_appts = len(upcoming_appts)
     if num_appts == 0:
         response.say("You do not have an appointment scheduled.")
+        response.say("Let's schedyle a new appointment.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
     
     if num_appts == 1:
-        appt_to_cancel = upcoming_appts.first() # Cancel the only appt that exists
+        appt_to_cancel = upcoming_appts[0] # Cancel the only appt that exists
 
     else:
         if not date_encoded:
@@ -805,7 +806,7 @@ def reschedule_appointment(request, date_encoded=None):
             response.hangup()
             return HttpResponse(str(response), content_type="text/xml")
         
-        appt_to_cancel = upcoming_appts.filter(date=target_date).first()
+        appt_to_cancel = next((appt for appt in upcoming_appts if appt.date == target_date), None)
         if not appt_to_cancel:
             response.say("No appointment found on the specified date.")
             response.hangup()
@@ -813,7 +814,7 @@ def reschedule_appointment(request, date_encoded=None):
     
     appt_to_cancel.delete()
     response.say("Your appointment has been canceled.")
-    response.say("You do not have an appointment scheduled.")
+    response.say("Let's schedule a new appointment.")
     response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")
