@@ -777,7 +777,7 @@ def no_account_reroute(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def reschedule_appointment(request):
+def reschedule_appointment(request, encoded_date=None):
     """
     Reschedule appointment for the caller by cancelling an upcoming appointment, informing
     the caller and then redirecting to the scheduling flow to book a new appointment.
@@ -796,13 +796,32 @@ def reschedule_appointment(request):
         response.redirect("/reroute_caller_with_no_account/")
         return HttpResponse(str(response), content_type="text/xml")
     
-    upcoming_appt = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
-    if upcoming_appt:
-        upcoming_appt.delete()
-        response.say("Your current appointment has been canceled.")
+    upcoming_appts = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
+    num_appts = upcoming_appts.count()
+
+    if num_appts == 1:
+        appt_to_cancel = upcoming_appts.first()
     else:
-        response.say("You do not have an appointment scheduled.")
-    # Reroute to scheduling flow
+        if not encoded_date:
+            response.say("No appointment date specified for rescheduling")
+            response.hangup()
+            return HttpResponse(str(response), content_type="text/xml")
+        try:
+            decoded_date_str = urllib.parse.unquote(encoded_date)
+            target_date = datetime.strptime(decoded_date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            response.say("Invalid appointment date provided.")
+            response.hangup()
+            return HttpResponse(str(response), content_type="text/xml")
+        
+        appt_to_cancel = upcoming_appts.filter(date=target_date).first()
+        if not appt_to_cancel:
+            response.say("No appointment found on the specified date.")
+            response.hangup()
+            return HttpResponse(str(response), content_type="text/xml")
+    
+    appt_to_cancel.delete()
+    response.say("Your appointment has been canceled.")
     response.say("Let's schedule a new appointment.")
     response.redirect("/request_date_availability/")
 
