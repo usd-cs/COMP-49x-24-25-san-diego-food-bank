@@ -1,12 +1,13 @@
+from .phone_service_schedule import CALLER, BOT
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 from .phone_service_faq import get_response_sentiment
 from .phone_service_schedule import get_phone_number
 from django.views.decorators.csrf import csrf_exempt
-from ..models import User, AppointmentTable
+from ..models import User, AppointmentTable, Log
 from django.http import HttpResponse
 from openai import OpenAI
 from datetime import time, datetime, timedelta
-from .utilities import format_date_for_response
+from .utilities import format_date_for_response, write_to_log
 import urllib.parse
 # Not sure how many of these ^ we will actually need 
 
@@ -42,6 +43,7 @@ def ask_appointment_to_cancel(request):
     Ask the user which appointment they want to cancel when multiple are scheduled
     """
     caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user = user)
@@ -55,6 +57,7 @@ def ask_appointment_to_cancel(request):
         appointments_formatted.append(f"{date_str} at {time_str}")
 
     gather.say("Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
+    write_to_log(log, BOT, "Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
 
     response.append(gather)
 
@@ -66,11 +69,13 @@ def process_appointment_selection(request):
     Process the user's response about which appointment to cancel
     """
     caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user = user)
 
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
 
     appointments_formatted = []
     for appointment in appointments:
@@ -99,9 +104,11 @@ def process_appointment_selection(request):
 
         if response_pred.upper() == "UNCERTAIN":
             response.say("I didn't catch that. Please try again.")
+            write_to_log(log, BOT, "I didn't catch that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         elif response_pred.upper() == "NONE":
             response.say("Sorry, we don't have you scheduled for that. Please try again.")
+            write_to_log(log, BOT, "Sorry, we don't have you scheduled for that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         else:
             try:
@@ -114,6 +121,7 @@ def process_appointment_selection(request):
                     raise ValueError
             except ValueError:
                 response.say("I didn't catch that. Please try again.")
+                write_to_log(log, BOT, "I didn't catch that. Please try again.")
                 response.redirect("/ask_appointment_to_cancel/")
         
     return HttpResponse(str(response), content_type="text/xml")
@@ -123,6 +131,8 @@ def prompt_cancellation_confirmation(request, appointment_id):
     """
     Prompts the user to ensure they wish to cancel their appointment
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     appointment = AppointmentTable.objects.get(pk=appointment_id)
 
@@ -134,6 +144,7 @@ def prompt_cancellation_confirmation(request, appointment_id):
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/cancellation_confirmation/{appointment_id}/")
     gather.say(f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
+    write_to_log(log, BOT, f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
     response.append(gather)
     
     return HttpResponse(str(response), content_type="text/xml")
@@ -143,8 +154,11 @@ def cancellation_confirmation(request, appointment_id):
     """
     Get the users response and proceed with the cancellation accordingly
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
     if speech_result:
         declaration = get_response_sentiment(request, speech_result)
         if declaration:
@@ -152,6 +166,7 @@ def cancellation_confirmation(request, appointment_id):
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
             gather.say("Would you like to go back to the main menu?")
+            write_to_log(log, BOT, "Would you like to go back to the main menu?")
             response.append(gather)
     else:
         response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
@@ -163,8 +178,11 @@ def return_main_menu_response(request):
     """
     Route the user back to the main menu or hang up, depending on their response.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
 
     if speech_result:
         declaration = get_response_sentiment(request, speech_result)
@@ -172,10 +190,12 @@ def return_main_menu_response(request):
             response.redirect("/answer/")
         else:
             response.say("Have a great day!")
+            write_to_log(log, BOT, "Have a great day!")
             response.hangup()
     else:
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
         gather.say("Would you like to go back to the main menu?")
+        write_to_log(log, BOT, "Would you like to go back to the main menu?")
         response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
@@ -185,11 +205,15 @@ def reroute_no_appointment(request):
     """
     Prompt user for if they would like to go back to the main menu when they do not have an appointment.
     """
+    caller_number = get_phone_number(request)
+    log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
 
     response.say("We do not have an appointment registered with your number.")
+    write_to_log(log, BOT, "We do not have an appointment registered with your number.")
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
     gather.say("Would you like to go back to the main menu?")
+    write_to_log(log, BOT, "Would you like to go back to the main menu?")
     response.append(gather)
     
     return HttpResponse(str(response), content_type="text/xml")
