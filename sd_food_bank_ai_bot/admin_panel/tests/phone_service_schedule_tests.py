@@ -671,7 +671,7 @@ class RescheduleAppointmentTests(TestCase):
         redirect to the scheduling flow.
         """
         date_encoded = urllib.parse.quote("2025-05-01")
-        url = reverse("reschedule_appointment_date", args=[date_encoded])
+        url = reverse("reschedule_appointment", args=[date_encoded])
 
         response = self.client.post(url, {"From": self.user.phone_number})
         self.assertFalse(AppointmentTable.objects.filter(pk=self.appointment.pk).exists())
@@ -695,7 +695,7 @@ class RescheduleAppointmentTests(TestCase):
         # Delete the appointment to simulate there isn't a scheduled appointment.
         self.appointment.delete()
         date_encoded = urllib.parse.quote("2025-05-01")
-        url = reverse("reschedule_appointment_date", args=[date_encoded])
+        url = reverse("reschedule_appointment", args=[date_encoded])
 
         response = self.client.post(url, {"From": self.user.phone_number})
 
