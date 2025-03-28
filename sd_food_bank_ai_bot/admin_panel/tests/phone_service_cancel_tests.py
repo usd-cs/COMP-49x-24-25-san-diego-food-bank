@@ -211,7 +211,7 @@ class CancelConfirmationTests(TestCase):
 
         mock_get_response_sentiment.assert_not_called()
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)
 
 class AppointmentCancelSelectionTests(TestCase):
     def setUp(self):
