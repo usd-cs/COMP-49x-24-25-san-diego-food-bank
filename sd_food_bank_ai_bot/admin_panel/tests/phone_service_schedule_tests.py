@@ -640,3 +640,37 @@ class CancelAppointmentFlowTests(TestCase):
 
         say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
         self.assertIn("Your appointment has been canceled", say_text)
+
+class ConfirmAccountRescheduleTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.phone_number = "+1234567890"
+        self.user = User.objects.create(phone_number=self.phone_number, first_name="John", last_name="Doe")
+        self.log = Log.objects.create(phone_number=self.phone_number)
+
+    def _mock_request(self):
+        return self.factory.post("/confirm_account/?action=reschedule", {"SpeechResult": "yes"})
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number", return_value="+1234567890")
+    @patch("admin_panel.views.phone_service_schedule.appointment_count", return_value=0)
+    def test_reschedule_zero_appointments(self, mock_count, mock_phone, mock_sentiment):
+        request = self._mock_request()
+        response = confirm_account(request)
+        self.assertIn("We do not have an appointment registered", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number", return_value="+1234567890")
+    @patch("admin_panel.views.phone_service_schedule.appointment_count", return_value=1)
+    def test_reschedule_one_appointment(self, mock_count, mock_phone, mock_sentiment):
+        request = self._mock_request()
+        response = confirm_account(request)
+        self.assertIn("/prompt_reschedule_appointment_one/", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number", return_value="+1234567890")
+    @patch("admin_panel.views.phone_service_schedule.appointment_count", return_value=2)
+    def test_reschedule_multiple_appointments(self, mock_count, mock_phone, mock_sentiment):
+        request = self._mock_request()
+        response = confirm_account(request)
+        self.assertIn("/prompt_reschedule_appointment_over_one/", response.content.decode())

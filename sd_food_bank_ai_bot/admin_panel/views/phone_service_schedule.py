@@ -1,5 +1,6 @@
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
-from .phone_service_faq import get_response_sentiment, prompt_question
+from .phone_service_faq import prompt_question
+from .utilities import appointment_count, get_response_sentiment, get_phone_number
 from django.views.decorators.csrf import csrf_exempt
 from ..models import User, AppointmentTable, Log
 from django.http import HttpResponse
@@ -8,7 +9,6 @@ from datetime import time, datetime, timedelta
 import calendar
 from django.utils.timezone import now
 import urllib.parse
-import re
 from .utilities import forward_operator, write_to_log, format_date_for_response
 
 BOT = "bot"
@@ -17,21 +17,6 @@ TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
 FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
-
-@csrf_exempt
-def get_phone_number(request):
-    """
-    Gets the user phone number from the post header
-    """
-    caller_number = request.POST.get('From', '')
-
-    #regex check
-    expression = "^\+[1-9]\d{1,14}$" # E.164 compliant phone numbers
-    valid = re.match(expression, caller_number)
-    
-    if valid:
-        return caller_number
-    return None
 
 @csrf_exempt
 def check_account(request):
@@ -55,6 +40,7 @@ def check_account(request):
 
             # Confirm the account with the caller 
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_account/?action={action}")
+
             gather.say("Is this your account? Please say yes or no.")
             write_to_log(log, BOT, "Is this your account? Please say yes or no.")
             response.append(gather)
@@ -74,6 +60,11 @@ def check_account(request):
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
             gather.say("Can I get your first and last name please?")
             write_to_log(log, BOT, "Can I get your first and last name please?")
+            response.append(gather)
+
+        elif action == "reschedule":
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
             response.append(gather)
 
         elif action == "cancel":
@@ -106,8 +97,22 @@ def confirm_account(request):
     if declaration:
         response.say("Great! Your account has been confirmed!")
         write_to_log(log, BOT, "Great! Your account has been confirmed!")
+
         if action == "cancel":
             response.redirect("/cancel_initial_routing/")
+        
+        if action == "reschedule":
+            if appointment_count(request) > 1:
+                # redirect to handle appt > 1 path
+                response.redirect("/prompt_reschedule_appointment_over_one/")
+            elif appointment_count(request) == 1:
+                # redirect to handle appt == 1 path
+                response.redirect("/prompt_reschedule_appointment_one/")
+            else: # return to main menu if no appointments associated with account
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu/")
+                gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
+                response.append(gather)
+        
         else:
             response.redirect("/request_date_availability/")
     else:

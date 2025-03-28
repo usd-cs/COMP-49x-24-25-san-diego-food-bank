@@ -5,6 +5,10 @@ from django.shortcuts import redirect
 from . import views
 
 urlpatterns = [
+    # Utilities
+    path("return_main_menu/", views.return_main_menu, name="return_main_menu"),
+    
+    # Admin Panel FAQ
     path("", lambda request: redirect('login/'), name="default"),
     path("faqs/", views.admin_panel_faq.faq_page_view, name="faq_page"),
     path("login/", views.admin_panel_faq.login_view, name="login"),
@@ -17,7 +21,8 @@ urlpatterns = [
     path("confirm_question/<str:question>/", views.phone_service_faq.confirm_question, name="confirm_question"),
     path("prompt_question/", views.phone_service_faq.prompt_question, name="prompt_question"),
     path("call_status_update/", views.phone_service_faq.call_status_update, name="call_status_update"),
-    # Phone Service Schedule
+   
+   # Phone Service Schedule
     path("check_account/", views.check_account, name="check_account"),
     path("confirm_account/", views.confirm_account, name="confirm_account"),
     path("get_name/", views.phone_service_schedule.get_name, name="get_name"),
@@ -35,7 +40,9 @@ urlpatterns = [
     path("given_time_response/<str:time_encoded>/<str:date>/", views.given_time_response, name="given_time_response"),
     path("confirm_time_selection/<str:time_encoded>/<str:date>/", views.confirm_time_selection, name="confirm_time_selection"),
     path("final_confirmation/<str:time_encoded>/<str:date>/", views.final_confirmation, name="final_confirmation"),
+
     # Phone service cancellation
+    path("reroute_no_appointment/", views.reroute_no_appointment, name="reroute_no_appointment"),
     path("cancel_appointment/<int:appointment_id>/", views.cancel_appointment, name="cancel_appointment"),
     path("no_account_reroute/", views.no_account_reroute, name="no_account_reroute"),
     path("reroute_caller_with_no_account/", views.reroute_caller_with_no_account, name="reroute_caller_with_no_account"),
@@ -43,5 +50,11 @@ urlpatterns = [
     path("prompt_cancellation_confirmation/<int:appointment_id>/", views.prompt_cancellation_confirmation, name="prompt_cancellation_confirmation"),
     path("cancellation_confirmation/<int:appointment_id>/", views.cancellation_confirmation, name="cancellation_confirmation"),
     path("return_main_menu_response/", views.return_main_menu_response, name="return_main_menu_response"),
-    path("reroute_no_appointment/", views.reroute_no_appointment, name="reroute_no_appointment"),
+
+    # Phone Service Reschedule
+    path("prompt_reschedule_appointment_over_one", views.prompt_reschedule_appointment_over_one, name="prompt_reschedule_appointment_over_one"),
+    path("prompt_reschedule_appointment_one", views.prompt_reschedule_appointment_one, name="prompt_reschedule_appointment_one"),
+    path("generate_requested_date", views.generate_requested_date, name="generate_requested_date"),
+    path("confirm_requested_date/<str:date_encoded>/", views.confirm_requested_date, name="confirm_requested_date"),
+
 ]
