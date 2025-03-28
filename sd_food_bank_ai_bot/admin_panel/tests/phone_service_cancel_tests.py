@@ -73,7 +73,7 @@ class CancelInitialRoutingTests(TestCase):
 
         self.assertIn("We do not have an appointment registered with your number.", content)
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)
     
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_confirm_account_with_cancel(self, mock_get_response_sentiment):
@@ -154,7 +154,7 @@ class CancelConfirmationTests(TestCase):
         content = response.content.decode("utf-8")
 
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)
     
     @patch("admin_panel.views.phone_service_cancel.get_response_sentiment")
     def test_cancellation_confirmation_no_response(self, mock_get_response_sentiment):
@@ -210,4 +210,4 @@ class CancelConfirmationTests(TestCase):
 
         mock_get_response_sentiment.assert_not_called()
         self.assertIn("Would you like to go back to the main menu?", content)
-        self.assertIn("/return_main_menu_repsonse/", content)
+        self.assertIn("/return_main_menu_response/", content)

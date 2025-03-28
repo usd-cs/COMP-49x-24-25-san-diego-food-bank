@@ -10,7 +10,7 @@ from .utilities import format_date_for_response
 import urllib.parse
 # Not sure how many of these ^ we will actually need 
 
-TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
 
 @csrf_exempt
 def cancel_initial_routing(request):
@@ -68,7 +68,7 @@ def cancellation_confirmation(request, appointment_id):
         if declaration:
             response.redirect(f"/cancel_appointment/{appointment_id}/")
         else:
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_repsonse/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
             gather.say("Would you like to go back to the main menu?")
             response.append(gather)
     else:
@@ -92,7 +92,7 @@ def return_main_menu_response(request):
             response.say("Have a great day!")
             response.hangup()
     else:
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_repsonse/")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
         gather.say("Would you like to go back to the main menu?")
         response.append(gather)
 
@@ -106,7 +106,7 @@ def reroute_no_appointment(request):
     response = VoiceResponse()
 
     response.say("We do not have an appointment registered with your number.")
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_repsonse/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu_response/")
     gather.say("Would you like to go back to the main menu?")
     response.append(gather)
     
