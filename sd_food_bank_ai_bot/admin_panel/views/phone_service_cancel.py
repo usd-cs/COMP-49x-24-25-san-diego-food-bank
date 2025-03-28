@@ -48,7 +48,7 @@ def ask_appointment_to_cancel(request):
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user = user)
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_appointment_selection")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_appointment_selection/")
 
     appointments_formatted = []
     for appointment in appointments:

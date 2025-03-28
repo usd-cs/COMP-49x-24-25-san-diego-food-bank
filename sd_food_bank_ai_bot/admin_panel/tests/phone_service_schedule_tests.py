@@ -574,7 +574,7 @@ class AppointmentConfirmationTests(TestCase):
         user = User.objects.get(phone_number="+16191234567")
         date_obj = datetime.strptime(date_encoded, '%Y-%m-%d').date()
         start = datetime.strptime(time_request, '%I:%M %p').time()
-        end = datetime.strptime("12:00 PM", '%I:%M %p').time()
+        end = datetime.strptime("11:45 AM", '%I:%M %p').time()
 
         self.assertTrue(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
         self.assertIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
@@ -736,7 +736,8 @@ class ConfirmAccountRescheduleTests(TestCase):
     def test_reschedule_one_appointment(self, mock_count, mock_phone, mock_sentiment):
         request = self._mock_request()
         response = confirm_account(request)
-        self.assertIn("/prompt_reschedule_appointment_one/", response.content.decode())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/reschedule_appointment/None/", response.content.decode())
 
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
     @patch("admin_panel.views.phone_service_schedule.get_phone_number", return_value="+1234567890")

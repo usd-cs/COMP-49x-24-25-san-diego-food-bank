@@ -22,24 +22,6 @@ def prompt_reschedule_appointment_over_one(request):
 
     return HttpResponse(str(response), content_type="text/xml")
 
-
-@csrf_exempt
-def prompt_reschedule_appointment_one(request):
-    """
-    Asks the user what appointment they would like to reschedule if they have one appointment
-    """
-    caller_number = get_phone_number(request)
-    log = Log.objects.filter(phone_number=caller_number).last()
-    response = VoiceResponse()
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_account_cancel_reschedule/")
-    gather.say("What day would you like to reschedule to?")
-    write_to_log(log, BOT, "What day would you like to reschedule to?")
-    response.append(gather)
-
-    response.redirect("URL_TO_RESCHEDULE") # TODO: redirect to reschedule/schedule
-
-    return HttpResponse(str(response), content_type="text/xml")
-
 @csrf_exempt
 def generate_requested_date(request):
     """
@@ -55,7 +37,7 @@ def generate_requested_date(request):
         # Query GPT to extract the date
         client = OpenAI()
         system_prompt = (
-            "Please extract the most likely intended appointment date from this message. "
+            "Please extract the most likely intended appointment date from this message."
             "Respond with a date in the format YYYY-MM-DD. If no date is present, return NONE."
         )
         completion = client.chat.completions.create(
@@ -103,14 +85,15 @@ def confirm_requested_date(request, date_encoded):
     if declaration:
         appointment_exists = AppointmentTable.objects.filter(user=user, date__date=requested_date).exists()
         if appointment_exists:
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/URL_TO_RESCHEDULE/{date_encoded}") #TODO: Send to reschedule/schedule
-            gather.say("What day would you like to reschedule to?")
-            write_to_log(log, BOT, "What day would you like to reschedule to?")
-            response.append(gather)
+            date_encoded_url = urllib.parse.quote(date_encoded)
+            response.redirect(f"/reschedule_appointment/{date_encoded_url}/") # Send to rescheduling
+
         else:
             response.say("Sorry, this is not in your appointments.")
             write_to_log(log, BOT, "Sorry, this is not in your appointments.")
             response.redirect("/prompt_reschedule_appointment_over_one")
             return HttpResponse(str(response), content_type="text/xml")
+    else:
+        response.redirect("/prompt_reschedule_appointment_over_one/")
     
     return HttpResponse(str(response), content_type="text/xml")

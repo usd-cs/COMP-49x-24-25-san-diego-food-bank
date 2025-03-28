@@ -107,7 +107,8 @@ def confirm_account(request):
                 response.redirect("/prompt_reschedule_appointment_over_one/")
             elif appointment_count(request) == 1:
                 # redirect to handle appt == 1 path
-                response.redirect("/prompt_reschedule_appointment_one/")
+                date_encoded = None
+                response.redirect(f"/reschedule_appointment/{date_encoded}/")
             else: # return to main menu if no appointments associated with account
                 gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu/")
                 gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
@@ -316,7 +317,7 @@ def final_confirmation(request, time_encoded, date):
             start_time = datetime.strptime(time_str, '%I:%M %p').time()
 
             start_datetime = datetime.combine(appointment_date, start_time)
-            end_datetime = start_datetime + timedelta(minutes=30)
+            end_datetime = start_datetime + FIXED_APPT_DURATION
             end_time = end_datetime.time()
 
         except ValueError:
@@ -769,7 +770,7 @@ def no_account_reroute(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def reschedule_appointment(request, date_encoded=None):
+def reschedule_appointment(request, date_encoded):
     """
     Reschedule appointment for the caller by cancelling an upcoming appointment, informing
     the caller and then redirecting to the scheduling flow to book a new appointment.
@@ -812,7 +813,7 @@ def reschedule_appointment(request, date_encoded=None):
             response.hangup()
             return HttpResponse(str(response), content_type="text/xml")
         
-        appt_to_cancel = next((appt for appt in upcoming_appts if appt.date == target_date), None)
+        appt_to_cancel = next((appt for appt in upcoming_appts if appt.date.date() == target_date), None)
         if not appt_to_cancel:
             response.say("No appointment found on the specified date.")
             response.hangup()

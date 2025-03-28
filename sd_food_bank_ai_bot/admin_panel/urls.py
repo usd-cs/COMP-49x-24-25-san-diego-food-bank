@@ -57,9 +57,8 @@ urlpatterns = [
     path("reroute_no_appointment/", views.reroute_no_appointment, name="reroute_no_appointment"),
 
     # Phone Service Reschedule
-    path("prompt_reschedule_appointment_over_one", views.prompt_reschedule_appointment_over_one, name="prompt_reschedule_appointment_over_one"),
-    path("prompt_reschedule_appointment_one", views.prompt_reschedule_appointment_one, name="prompt_reschedule_appointment_one"),
-    path("generate_requested_date", views.generate_requested_date, name="generate_requested_date"),
+    path("prompt_reschedule_appointment_over_one/", views.prompt_reschedule_appointment_over_one, name="prompt_reschedule_appointment_over_one"),
+    path("generate_requested_date/", views.generate_requested_date, name="generate_requested_date"),
     path("confirm_requested_date/<str:date_encoded>/", views.confirm_requested_date, name="confirm_requested_date"),
 
 ]
