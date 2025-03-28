@@ -10,7 +10,7 @@ from .utilities import format_date_for_response
 import urllib.parse
 # Not sure how many of these ^ we will actually need 
 
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 5 # The length of time the bot waits for a response
 
 @csrf_exempt
 def cancel_initial_routing(request):
@@ -46,7 +46,7 @@ def ask_appointment_to_cancel(request):
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user = user)
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_appointment_selection")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/process_appointment_selection/")
 
     appointments_formatted = []
     for appointment in appointments:
