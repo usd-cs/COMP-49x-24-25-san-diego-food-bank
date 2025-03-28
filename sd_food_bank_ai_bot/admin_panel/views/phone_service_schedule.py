@@ -813,7 +813,7 @@ def reschedule_appointment(request, date_encoded=None):
     
     appt_to_cancel.delete()
     response.say("Your appointment has been canceled.")
-    response.say("Let's schedule a new appointment.")
+    response.say("You do not have an appointment scheduled.")
     response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")
