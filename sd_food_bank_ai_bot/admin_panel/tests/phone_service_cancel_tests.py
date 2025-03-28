@@ -260,7 +260,7 @@ class AppointmentCancelSelectionTests(TestCase):
         self.assertIn("Friday, March 28th at 01:30 PM", content)
         self.assertIn("Saturday, March 29th at 04:00 PM", content)
 
-    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    @patch("admin_panel.views.phone_service_cancel.OpenAI")
     def test_process_appointment_selection_valid(self, mock_openai):
         """
         Test processing of valid appointment selection choice
