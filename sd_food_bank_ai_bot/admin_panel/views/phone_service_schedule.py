@@ -763,7 +763,7 @@ def no_account_reroute(request):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def reschedule_appointment(request, encoded_date=None):
+def reschedule_appointment(request, date_encoded=None):
     """
     Reschedule appointment for the caller by cancelling an upcoming appointment, informing
     the caller and then redirecting to the scheduling flow to book a new appointment.
@@ -784,16 +784,21 @@ def reschedule_appointment(request, encoded_date=None):
     
     upcoming_appts = AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date').first()
     num_appts = upcoming_appts.count()
-
+    if num_appts == 0:
+        response.say("You do not have an appointment scheduled.")
+        response.redirect("/request_date_availability/")
+        return HttpResponse(str(response), content_type="text/xml")
+    
     if num_appts == 1:
-        appt_to_cancel = upcoming_appts.first()
+        appt_to_cancel = upcoming_appts.first() # Cancel the only appt that exists
+
     else:
-        if not encoded_date:
+        if not date_encoded:
             response.say("No appointment date specified for rescheduling")
             response.hangup()
             return HttpResponse(str(response), content_type="text/xml")
         try:
-            decoded_date_str = urllib.parse.unquote(encoded_date)
+            decoded_date_str = urllib.parse.unquote(date_encoded)
             target_date = datetime.strptime(decoded_date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             response.say("Invalid appointment date provided.")
