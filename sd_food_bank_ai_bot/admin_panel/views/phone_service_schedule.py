@@ -9,7 +9,7 @@ import calendar
 from django.utils.timezone import now
 import urllib.parse
 import re
-from .utilities import forward_operator, write_to_log
+from .utilities import forward_operator, write_to_log, format_date_for_response
 
 BOT = "bot"
 CALLER = "caller"
@@ -277,22 +277,8 @@ def confirm_time_selection(request, time_encoded, date):
     time = time_encoded
     time_encoded = urllib.parse.quote(time_encoded)
 
-    # format date correctly
     date_obj = datetime.strptime(date, "%Y-%m-%d")
-    date_format = date_obj.strftime("%A, %B %d")
-    if 11 <= date_obj.day <= 13:
-        suffix = "th"
-    else:
-        last = date_obj.day % 10
-        if last == 1:
-            suffix = "st"
-        elif last == 2:
-            suffix = "nd"
-        elif last == 3:
-            suffix = "rd"
-        else:
-            suffix = "th"
-    date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
+    date_final = format_date_for_response(date_obj)
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
     gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
@@ -732,7 +718,7 @@ def cancel_appointment(request, appointment_id):
     response.say("Your appointment has been canceled. You will receive a confirmation message via SMS. Have a great day!")
     response.hangup()
 
-    return HttpResponse(str(response), content_type="text/xml")    
+    return HttpResponse(str(response), content_type="text/xml")
 
 def reroute_caller_with_no_account(request):
     """
