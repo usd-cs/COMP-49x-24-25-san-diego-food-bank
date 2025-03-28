@@ -85,9 +85,10 @@ def process_appointment_selection(request):
         client = OpenAI()
         system_prompt = (f"The user said: '{speech_result}'.\n"
                          f"Here are the available appointments:\n{appointment_options}\n"
-                         "Based on what the user said, which appointment do they most likely want to cancel."
+                         "Based on what the user said, which appointment do they want to cancel."
                          "Respond with a single number, 0 for the first appointment, 1 for the second appointment, and so on."
-                         "If you are unsure, respond only with UNCERTAIN")
+                         "If you are unsure, respond only with UNCERTAIN."
+                         "If none of the appointments match the date they said, respond only with NONE.")
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -98,6 +99,9 @@ def process_appointment_selection(request):
 
         if response_pred.upper() == "UNCERTAIN":
             response.say("I didn't catch that. Please try again.")
+            response.redirect("/ask_appointment_to_cancel/")
+        if response_pred.upper() == "NONE":
+            response.say("Sorry, we do not have you scheduled for that day. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         else:
             try:
