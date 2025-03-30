@@ -223,7 +223,7 @@ class PhoneFAQService(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, I couldn't understand that. Please try again.", response.content.decode())
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
+    @patch("admin_panel.views.utilities.OpenAI")
     def test_get_matching_question_api_call(self, mock_openai):
         """Test for making sure api is called and response returned"""
         mock_client = MagicMock()
@@ -233,13 +233,12 @@ class PhoneFAQService(TestCase):
         )
 
         question = "When does the food bank open?"
-        request = self.factory.post("/get_matching_question/")
-        response = get_matching_question(request, question)
+        response = get_matching_question(question)
 
         mock_client.chat.completions.create.assert_called()
         self.assertEqual("Prompt", response)
     
-    @patch("admin_panel.views.phone_service_faq.OpenAI")
+    @patch("admin_panel.views.utilities.OpenAI")
     def test_get_matching_question_api_call(self, mock_openai):
         """Test for when api returns NONE"""
         mock_client = MagicMock()
@@ -249,8 +248,7 @@ class PhoneFAQService(TestCase):
         )
 
         question = "When does the food bank open?"
-        request = self.factory.post("/get_matching_question/")
-        response = get_matching_question(request, question)
+        response = get_matching_question(question)
 
         mock_client.chat.completions.create.assert_called()
         self.assertEqual(None, response)
@@ -258,8 +256,7 @@ class PhoneFAQService(TestCase):
     def test_get_corresponding_answer(self):
         """Test for correct answer returned"""
         question = "How can I schedule an appointment?"
-        request = self.factory.post("/get_corresponding_answer/")
-        response = get_corresponding_answer(request, question)
+        response = get_corresponding_answer(question)
 
         answer = "To schedule an appointment, visit calendly.com/sdfb."
         self.assertEqual(response, answer)

@@ -1,5 +1,5 @@
 from twilio.twiml.voice_response import VoiceResponse, Dial
-from ..models import User, AppointmentTable
+from ..models import User, AppointmentTable, FAQ
 from django.http import HttpResponse
 from twilio.rest import Client
 from django.conf import settings
@@ -127,3 +127,42 @@ def format_date_for_response(date_obj):
     date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
 
     return date_final
+
+def get_matching_question(question):
+    """
+    Takes in a users question and finds the most closely related question, returning that question.
+    If there are no related questions, none is returned.
+    """ 
+    client = OpenAI()
+
+    # Gather all questions to be used in prompt
+    questions = FAQ.objects.values_list('question', flat=True)
+    questions = [question for question in questions]
+    questions.append("Can I speak to an operator?")
+
+    # Set the system prompt to provide instructions on what to do
+    system_prompt = f"You are a food pantry assistant with one job. When a user sends you a question, you find the closest match from questions you have memorized and respond with that question. If the question the user asks does not match any of your stored questions, respond with NONE. Only respond with the matching question or NONE.\nYour memorized questions are:{questions}"
+
+    # Make an API call to find the question
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question}
+        ]
+    )
+
+    # Extract the question from the response
+    question_pred = completion.choices[0].message.content
+    if question_pred == "NONE":
+        return None
+
+    return question_pred
+
+def get_corresponding_answer(question):
+    """
+    Takes in a predefined question and returns the matching answer.
+    If there is no question/answer match in the database, None is returned.
+    """
+    answer = FAQ.objects.filter(question__iexact=question).first().answer
+    return answer
