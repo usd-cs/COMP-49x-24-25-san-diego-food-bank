@@ -139,7 +139,7 @@ def confirm_question(request, question):
     write_to_log(log, CALLER, speech_result)
 
     if speech_result:
-        sentiment = get_response_sentiment(request, speech_result)
+        sentiment = get_response_sentiment(speech_result)
         if sentiment:
             question = urllib.parse.unquote(question)
 

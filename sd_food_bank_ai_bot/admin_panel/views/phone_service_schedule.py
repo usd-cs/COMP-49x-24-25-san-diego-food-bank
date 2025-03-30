@@ -9,13 +9,13 @@ from datetime import time, datetime, timedelta
 import calendar
 from django.utils.timezone import now
 import urllib.parse
-from .utilities import forward_operator, write_to_log, format_date_for_response
+from .utilities import (forward_operator, write_to_log, 
+                        format_date_for_response, get_day, check_available_date,
+                        get_available_times_for_date)
 
 BOT = "bot"
 CALLER = "caller"
 TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
-EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
-LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
 FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
 
 @csrf_exempt
@@ -92,7 +92,7 @@ def confirm_account(request):
     response = VoiceResponse()
     write_to_log(log, CALLER, speech_result)
 
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
 
     if declaration:
         response.say("Great! Your account has been confirmed!")
@@ -167,7 +167,7 @@ def process_name_confirmation(request, name_encoded):
 
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
-    confirmation = get_response_sentiment(request, speech_result)
+    confirmation = get_response_sentiment(speech_result)
     
     response = VoiceResponse()
     if confirmation:
@@ -228,7 +228,7 @@ def confirm_request_date_availability(request):
 
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     write_to_log(log, CALLER, speech_result)
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
     response = VoiceResponse()
 
     if declaration:
@@ -248,7 +248,7 @@ def confirm_available_date(request):
     log = Log.objects.filter(phone_number=caller_number).last()
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     write_to_log(log, CALLER, speech_result)
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
     response = VoiceResponse()
     appointment_date_str = request.GET.get('date', '')  # Extract appointment date from URL
     number_of_appointments = request.GET.get('num', '0')  # Extract number of available appointments
@@ -304,7 +304,7 @@ def final_confirmation(request, time_encoded, date):
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
 
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
     if declaration:
         #book appointment
         time_str = time_encoded
@@ -390,7 +390,7 @@ def given_time_response(request, time_encoded, date):
     response = VoiceResponse()
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
 
     time_encoded = urllib.parse.quote(time_encoded)
 
@@ -415,7 +415,7 @@ def suggested_time_response(request, time_encoded, date):
 
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
     if declaration:
         # Confirm appointment time
         time_encoded = urllib.parse.quote(time_encoded)
@@ -425,23 +425,6 @@ def suggested_time_response(request, time_encoded, date):
         response.redirect(f"/request_preferred_time_over_three/?date={date}")
 
     return HttpResponse(str(response), content_type="text/xml")
-
-def get_day(request, speech_result):
-    """
-    Extracts the day of the week from a given message. Only returns the day or NONE.
-    """
-    client = OpenAI()
-    system_prompt = "Please extract the day of the week from the following message. Only respond with the day of the week or NONE if one is not said."
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": speech_result}
-        ]
-    )   
-    response_pred = completion.choices[0].message.content
-    
-    return response_pred
 
 @csrf_exempt
 def check_for_appointment(request):
@@ -454,7 +437,7 @@ def check_for_appointment(request):
 
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     write_to_log(log, CALLER, speech_result)
-    speech_result = get_day(request, speech_result)
+    speech_result = get_day(speech_result)
     speech_result = speech_result.lower()
 
     weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
@@ -485,53 +468,6 @@ def check_for_appointment(request):
         response.append(gather)
     
     return HttpResponse(str(response), content_type="text/xml")
-
-@csrf_exempt
-def check_available_date(target_weekday):
-    """
-    Return if the given date has available timeslots or not.
-    """
-    today = now().date()
-    max_weeks_ahead = 4 
-    number_available_appointments = 0
-
-    for week in range(max_weeks_ahead):
-        # Calculate the next occurrence of the requested weekday
-        days_ahead = (target_weekday - today.weekday()) % 7
-        if days_ahead == 0 and week == 0:
-            days_ahead = 7 
-
-        appointment_date = today + timedelta(days=days_ahead + (week * 7))
-
-        # Retrieve existing appointments for this date
-        existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
-
-        # For no appointments that day yet
-        if not existing_appointments:
-            number_available_appointments = 4 # TODO: mod by n = fixed appt. length
-            return True, appointment_date, number_available_appointments
-
-        current_time = EARLIEST_TIME
-
-        # Check for time slots before appointments until the latest appointment
-        for appointment in existing_appointments:
-            while current_time < appointment.start_time:
-                number_available_appointments += 1
-                # Increment by fixed appt time
-                current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
-            current_time = appointment.end_time
-
-        # Checks for time slots after last appointment is iterated in the for loop above
-        while current_time < LATEST_TIME:
-            number_available_appointments += 1
-            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
-        
-        # If there are available timeslots return True and additional var.
-        if number_available_appointments > 0:
-            return True, appointment_date, number_available_appointments
-
-    # If no available timeslots for the next month on request day return False    
-    return False, None, 0
 
 @csrf_exempt
 def request_preferred_time_under_four(request):
@@ -637,7 +573,7 @@ def find_requested_time(request, time_encoded):
     log = Log.objects.filter(phone_number=caller_number).last()
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
-    confirmation = get_response_sentiment(request, speech_result)
+    confirmation = get_response_sentiment(speech_result)
     response = VoiceResponse()
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
@@ -688,31 +624,6 @@ def find_requested_time(request, time_encoded):
     return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def get_available_times_for_date(appointment_date):
-    """
-    Retrieve available appointment times for a given date.
-    """
-    existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
-    available_times = []
-
-    current_time = EARLIEST_TIME
-    
-    # Adds timeslots between appointments
-    for appointment in existing_appointments:
-        if current_time < appointment.start_time:
-            available_times.append(current_time)
-            # Increment by fixed appt time
-            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
-        current_time = appointment.end_time
-
-    # Adds timeslots after the latest iterated appointment
-    while current_time < LATEST_TIME:
-        available_times.append(current_time)
-        current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
-
-    return available_times
-
-@csrf_exempt
 def cancel_appointment(request, appointment_id):
     """
     Cancels the caller's appointment and informs them their appointment has been canceled.
@@ -756,7 +667,7 @@ def no_account_reroute(request):
     """
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
     response = VoiceResponse()
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
 
     if declaration:
         # If user said yes, redirect to main menu (in this example /answer/)

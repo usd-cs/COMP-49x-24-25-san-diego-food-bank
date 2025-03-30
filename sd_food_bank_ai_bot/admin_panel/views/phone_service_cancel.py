@@ -160,7 +160,7 @@ def cancellation_confirmation(request, appointment_id):
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
     if speech_result:
-        declaration = get_response_sentiment(request, speech_result)
+        declaration = get_response_sentiment(speech_result)
         if declaration:
             response.redirect(f"/cancel_appointment/{appointment_id}/")
         else:
@@ -185,7 +185,7 @@ def return_main_menu_response(request):
     write_to_log(log, CALLER, speech_result)
 
     if speech_result:
-        declaration = get_response_sentiment(request, speech_result)
+        declaration = get_response_sentiment(speech_result)
         if declaration:
             response.redirect("/answer/")
         else:

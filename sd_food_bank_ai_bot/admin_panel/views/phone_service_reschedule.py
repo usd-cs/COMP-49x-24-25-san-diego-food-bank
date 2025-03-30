@@ -1,5 +1,5 @@
 from .phone_service_schedule import *
-from .utilities import get_phone_number
+from .utilities import get_phone_number, get_response_sentiment
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 
 @csrf_exempt
@@ -71,7 +71,7 @@ def confirm_requested_date(request, date_encoded):
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
-    declaration = get_response_sentiment(request, speech_result)
+    declaration = get_response_sentiment(speech_result)
 
     try:
         requested_date_str = urllib.parse.unquote(date_encoded)
