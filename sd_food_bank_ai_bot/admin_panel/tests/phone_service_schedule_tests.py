@@ -291,7 +291,7 @@ class AppointmentTests(TestCase):
             self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
         ]
 
-    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    @patch("admin_panel.views.utilities.OpenAI")
     def test_check_for_appointment_valid_day(self, mock_openai):
         """Tests if check_for_appointment correctly identifies available days"""
         mock_client = MagicMock()
@@ -340,7 +340,7 @@ class AppointmentTests(TestCase):
         self.assertTrue(is_available)
         self.assertGreater(num_available, 0)
 
-    @patch("admin_panel.views.phone_service_schedule.OpenAI")
+    @patch("admin_panel.views.utilities.OpenAI")
     def test_check_for_appointment_no_available_dates(self, mock_openai):
         """Tests if check_for_appointment correctly handles fully booked schedules"""
         mock_client = MagicMock()
