@@ -46,7 +46,7 @@ def check_account(request):
             response.append(gather)
 
             # Repeat the prompt if no input received
-            response.redirect("/check_account/")
+            response.redirect(f"/check_account/?action={action}")
         else:
             # Phone number is invalid
             response.say("Sorry, we are unable to help you at this time.")
