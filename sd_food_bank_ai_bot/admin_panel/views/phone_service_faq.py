@@ -9,7 +9,8 @@ from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Dial
 from openai import OpenAI
 import urllib.parse
 import datetime
-from .utilities import strike_system_handler, forward_operator, write_to_log, get_response_sentiment
+from .utilities import (strike_system_handler, forward_operator, write_to_log, get_response_sentiment,
+                        get_matching_question, get_corresponding_answer)
 
 BOT = "bot"
 CALLER = "caller"
@@ -107,7 +108,7 @@ def get_question_from_user(request):
     write_to_log(log, CALLER, speech_result)
     caller_response = VoiceResponse()
     if speech_result:
-        question = get_matching_question(request, speech_result)
+        question = get_matching_question(speech_result)
         if question:
             question_encoded = urllib.parse.quote(question)
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_question/{question_encoded}/")
@@ -138,14 +139,14 @@ def confirm_question(request, question):
     write_to_log(log, CALLER, speech_result)
 
     if speech_result:
-        sentiment = get_response_sentiment(request, speech_result)
+        sentiment = get_response_sentiment(speech_result)
         if sentiment:
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
                 return forward_operator(log)
 
-            answer = get_corresponding_answer(request, question)
+            answer = get_corresponding_answer(question)
             
             caller_response.say(answer)
             write_to_log(log, BOT, answer)
@@ -163,44 +164,3 @@ def confirm_question(request, question):
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
-
-@csrf_exempt
-def get_matching_question(request, question):
-    """
-    Takes in a users question and finds the most closely related question, returning that question.
-    If there are no related questions, none is returned.
-    """ 
-    client = OpenAI()
-
-    # Gather all questions to be used in prompt
-    questions = FAQ.objects.values_list('question', flat=True)
-    questions = [question for question in questions]
-    questions.append("Can I speak to an operator?")
-
-    # Set the system prompt to provide instructions on what to do
-    system_prompt = f"You are a food pantry assistant with one job. When a user sends you a question, you find the closest match from questions you have memorized and respond with that question. If the question the user asks does not match any of your stored questions, respond with NONE. Only respond with the matching question or NONE.\nYour memorized questions are:{questions}"
-
-    # Make an API call to find the question
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question}
-        ]
-    )
-
-    # Extract the question from the response
-    question_pred = completion.choices[0].message.content
-    if question_pred == "NONE":
-        return None
-
-    return question_pred
-
-@csrf_exempt
-def get_corresponding_answer(request, question):
-    """
-    Takes in a predefined question and returns the matching answer.
-    If there is no question/answer match in the database, None is returned.
-    """
-    answer = FAQ.objects.filter(question__iexact=question).first().answer
-    return answer
