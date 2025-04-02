@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 
 class Admin(AbstractUser):
     """Table for storing information on admins"""
+    foodbank_email = models.EmailField(blank=True, max_length=254, verbose_name="foodbank emil")
+    foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="unknown")
+    approved_for_admin_panel = models.BooleanField(default=False, verbose_name="approved for admin panel")
 
 class User(models.Model): 
     """Table for storing user information"""
