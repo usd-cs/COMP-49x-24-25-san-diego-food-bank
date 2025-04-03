@@ -11,7 +11,7 @@ from django.utils.timezone import now
 import urllib.parse
 from .utilities import (forward_operator, write_to_log, 
                         format_date_for_response, get_day, check_available_date,
-                        get_available_times_for_date)
+                        get_available_times_for_date, send_sms)
 
 BOT = "bot"
 CALLER = "caller"
@@ -631,7 +631,12 @@ def cancel_appointment(request, appointment_id):
     response = VoiceResponse()
     # Get the appointment and delete it 
     appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
+    phone_number = appt_to_cancel.user.phone_number if appt_to_cancel.user else None
     appt_to_cancel.delete()
+
+    if phone_number:
+        send_sms(phone_number, f"Your appointment has been canceled. Thank you!")
+        
 
     response.say("Your appointment has been canceled. You will receive a confirmation message via SMS. Have a great day!")
     response.hangup()
