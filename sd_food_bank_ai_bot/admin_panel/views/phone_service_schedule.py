@@ -11,7 +11,7 @@ from django.utils.timezone import now
 import urllib.parse
 from .utilities import (forward_operator, write_to_log, 
                         format_date_for_response, get_day, check_available_date,
-                        get_available_times_for_date)
+                        get_available_times_for_date, send_sms)
 
 BOT = "bot"
 CALLER = "caller"
@@ -335,7 +335,7 @@ def final_confirmation(request, time_encoded, date):
 
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         write_to_log(log, BOT, "Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
-        # send sms
+        send_sms(caller_number,f"Your appointment at {start_datetime} has been scheduled.")
     else:
         response.redirect("/answer/")
     
