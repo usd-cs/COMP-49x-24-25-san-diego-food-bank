@@ -57,7 +57,6 @@ class PhoneServiceRescheduleTests(TestCase):
         request = self.factory.post("/generate_requested_date/", {"SpeechResult": ""})
         response = generate_requested_date(request)
         self.assertEqual(response.status_code, 200)
-        root = self.parse_twiml(response)
         self.assertIn("/prompt_reschedule_appointment_over_one/", response.content.decode())
 
     @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment", return_value=True)
@@ -99,7 +98,7 @@ class PhoneServiceRescheduleTests(TestCase):
         self.assertEqual(response.status_code, 200)
         root = self.parse_twiml(response)
         self.assertEqual(root.tag, "Response")  # Confirm root TwiML response
-    
+
     @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment", return_value=True)
     def test_confirm_requested_date_invalid_date_format(self, mock_sentiment):
         invalid_encoded = urllib.parse.quote("Not-a-date")
