@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
+from django.contrib.auth.hashers import make_password
 from django.db.models import Q
-from ..models import FAQ, Tag
+from django.contrib import messages
+from ..models import FAQ, Tag, Admin
 from ..forms import FAQForm
 
 
@@ -142,3 +144,41 @@ def edit_faq(request, faq_id):
         form = FAQForm(instance=old_faq)
 
     return render(request, 'edit_faq.html', {'form': form, 'faq': old_faq})
+
+def create_account(request):
+    """"
+    View to render create account page for foodbank admin employees. 
+    Only employees with valid foodbank credentials should be able to create an account.
+    """
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "").strip()
+        foodbank_employee_id = request.POST.get("foodbank_employee_id", "").strip()
+        foodbank_email = request.POST.get("foodbank_email", "").strip()
+
+        if not (username and password and foodbank_email and foodbank_employee_id):
+            messages.error(request, "All fields are required.")
+            return render(request, "create_account.html")
+        
+        try: # Look for approved admin record with provided credentials 
+            admin_candidate = Admin.objects.get(foodbank_id=foodbank_employee_id, foodbank_email=foodbank_email)
+        except Admin.DoesNotExist:
+            messages.error(request, "Admin record does not exist.")
+            return render(request, "create_account.html")
+        
+        if not admin_candidate.approved_for_admin_panel:
+            messages.error(request, "You have not been approved for access.")
+            return render(request, "create_account.html")
+
+        if Admin.objects.filter(username=username).exists():
+            messages.error(request, "This username is already in use.")
+            return render(request, "create_account.html")
+        
+        admin_candidate.username = username
+        admin_candidate.password = make_password(password)
+        admin_candidate.save()
+
+        messages.success(request, "Account created successfully! Please log in.")
+        return redirect("login")
+
+    return render(request, "create_account.html")

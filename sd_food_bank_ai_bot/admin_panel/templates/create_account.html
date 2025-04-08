@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Admin Account</title>
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <h2>Create Admin Account</h2>
+      <p>Please fill out the form below.</p>
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="text" name="foodbank_employee_id" placeholder="Foodbank Employee ID" required>
+        <input type="email" name="foodbank_email" placeholder="Foodbank Email" required>
+        <button type="submit">Create Account</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
