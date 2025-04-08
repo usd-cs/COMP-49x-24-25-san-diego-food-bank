@@ -9,19 +9,26 @@ from django.utils.timezone import now
 from datetime import time, datetime, timedelta
 import re
 
-EARLIEST_TIME = time(9, 0)   # Earliest time to schedule an appointment, 9:00 AM
+# Earliest time to schedule an appointment, 9:00 AM
+EARLIEST_TIME = time(9, 0)
 LATEST_TIME = time(17, 0)    # Latest time appointments can end, 5:00 PM
-FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
+# TODO: Assuming each appointment is 15 minutes
+FIXED_APPT_DURATION = timedelta(minutes=15)
 
-def strike_system_handler(log, reset = False):
-    """Updates strikes within the log object associated with call as conversation progresses"""
+
+def strike_system_handler(log, reset=False):
+    """
+    Updates strikes within the log object associated with call as
+    conversation progresses
+    """
     if log:
         if reset:
             log.reset_strikes()
         else:
-            
+
             if log.add_strike():
                 forward_operator()
+
 
 def get_phone_number(request):
     """
@@ -29,13 +36,14 @@ def get_phone_number(request):
     """
     caller_number = request.POST.get('From', '')
 
-    #regex check
-    expression = "^\+[1-9]\d{1,14}$" # E.164 compliant phone numbers
+    #  regex check
+    expression = r"^\+[1-9]\d{1,14}$"  # E.164 compliant phone numbers
     valid = re.match(expression, caller_number)
-    
+
     if valid:
         return caller_number
     return None
+
 
 def get_response_sentiment(sentence):
     """
@@ -50,12 +58,13 @@ def get_response_sentiment(sentence):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": sentence}
         ]
-    )   
+    )
     response_pred = completion.choices[0].message.content
 
     if response_pred.upper() == "AFFIRMATIVE":
         return True
     return False
+
 
 @csrf_exempt
 def return_main_menu(request):
@@ -73,6 +82,7 @@ def return_main_menu(request):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 def appointment_count(request):
     """
     Returns the appointment count of user
@@ -83,25 +93,38 @@ def appointment_count(request):
 
     return appointment_count
 
+
 def forward_operator(log):
-    """Relays info to and forwards caller to operator because requested or failed strike system"""
+    """
+    Relays info to and forwards caller to operator because requested or
+    failed strike system
+    """
     caller_response = VoiceResponse()
 
     caller_response.say("I'm transferring you to an operator now. Please hold.")
-    write_to_log(log, "bot", "I'm transferring you to an operator now. Please hold.")
+    write_to_log(log,
+                 "bot",
+                 "I'm transferring you to an operator now. Please hold.")
     dial = Dial()
     dial.number("###-###-####")
     caller_response.append(dial)
 
     return HttpResponse(str(caller_response), content_type="text/xml")
 
+
 def write_to_log(log, speaker, message):
-    """Log conversation as conversation progresses attributing each dialogue to a specific party"""
+    """
+    Log conversation as conversation progresses attributing each dialogue
+    to a specific party
+    """
     if log:
-        log.add_transcript(speaker = speaker, message = message)
+        log.add_transcript(speaker=speaker, message=message)
+
 
 def send_sms(phone_number_to, message_to_send):
-    """Send confirmation details via sms to caller"""
+    """
+    Send confirmation details via sms to caller
+    """
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
     try:
         message = client.messages.create(
@@ -109,8 +132,9 @@ def send_sms(phone_number_to, message_to_send):
             from_=settings.TWILIO_PHONE_NUMBER,
             to=phone_number_to)
         return message
-    except Exception as e:
+    except Exception:
         return None
+
 
 def format_date_for_response(date_obj):
     """
@@ -130,15 +154,18 @@ def format_date_for_response(date_obj):
         else:
             suffix = "th"
 
-    date_final = date_format.replace(f"{date_obj.day}", f"{date_obj.day}{suffix}")
+    date_final = date_format.replace(f"{date_obj.day}",
+                                     f"{date_obj.day}{suffix}")
 
     return date_final
 
+
 def get_matching_question(question):
     """
-    Takes in a users question and finds the most closely related question, returning that question.
+    Takes in a users question and finds the most closely related question,
+    returning that question.
     If there are no related questions, none is returned.
-    """ 
+    """
     client = OpenAI()
 
     # Gather all questions to be used in prompt
@@ -165,6 +192,7 @@ def get_matching_question(question):
 
     return question_pred
 
+
 def get_corresponding_answer(question):
     """
     Takes in a predefined question and returns the matching answer.
@@ -173,9 +201,11 @@ def get_corresponding_answer(question):
     answer = FAQ.objects.filter(question__iexact=question).first().answer
     return answer
 
+
 def get_day(speech_result):
     """
-    Extracts the day of the week from a given message. Only returns the day or NONE.
+    Extracts the day of the week from a given message.
+    Only returns the day or NONE.
     """
     client = OpenAI()
     system_prompt = "Please extract the day of the week from the following message. Only respond with the day of the week or NONE if one is not said."
@@ -185,33 +215,36 @@ def get_day(speech_result):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": speech_result}
         ]
-    )   
+    )
     response_pred = completion.choices[0].message.content
-    
+
     return response_pred
+
 
 def check_available_date(target_weekday):
     """
     Return if the given date has available timeslots or not.
     """
     today = now().date()
-    max_weeks_ahead = 4 
+    max_weeks_ahead = 4
     number_available_appointments = 0
 
     for week in range(max_weeks_ahead):
         # Calculate the next occurrence of the requested weekday
         days_ahead = (target_weekday - today.weekday()) % 7
         if days_ahead == 0 and week == 0:
-            days_ahead = 7 
+            days_ahead = 7
 
         appointment_date = today + timedelta(days=days_ahead + (week * 7))
 
         # Retrieve existing appointments for this date
-        existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
+        existing_appointments = AppointmentTable.objects.filter(
+            date__date=appointment_date).order_by('start_time')
 
         # For no appointments that day yet
         if not existing_appointments:
-            number_available_appointments = 4 # TODO: mod by n = fixed appt. length
+            # TODO: mod by n = fixed appt. length
+            number_available_appointments = 4
             return True, appointment_date, number_available_appointments
 
         current_time = EARLIEST_TIME
@@ -221,41 +254,49 @@ def check_available_date(target_weekday):
             while current_time < appointment.start_time:
                 number_available_appointments += 1
                 # Increment by fixed appt time
-                current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
+                current_time = (datetime.combine(datetime.today(),
+                                                 current_time) +
+                                FIXED_APPT_DURATION).time()
             current_time = appointment.end_time
 
-        # Checks for time slots after last appointment is iterated in the for loop above
+        # Checks for time slots after last appointment
+        # is iterated in the for loop above
         while current_time < LATEST_TIME:
             number_available_appointments += 1
-            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
-        
+            current_time = (datetime.combine(datetime.today(), current_time) +
+                            FIXED_APPT_DURATION).time()
+
         # If there are available timeslots return True and additional var.
         if number_available_appointments > 0:
             return True, appointment_date, number_available_appointments
 
-    # If no available timeslots for the next month on request day return False    
+    # If no available timeslots for the next month on request day return False
     return False, None, 0
+
 
 def get_available_times_for_date(appointment_date):
     """
     Retrieve available appointment times for a given date.
     """
-    existing_appointments = AppointmentTable.objects.filter(date__date=appointment_date).order_by('start_time')
+    existing_appointments = AppointmentTable.objects.filter(
+        date__date=appointment_date).order_by('start_time')
     available_times = []
 
     current_time = EARLIEST_TIME
-    
+
     # Adds timeslots between appointments
     for appointment in existing_appointments:
         if current_time < appointment.start_time:
             available_times.append(current_time)
             # Increment by fixed appt time
-            current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
+            current_time = (datetime.combine(datetime.today(), current_time) +
+                            FIXED_APPT_DURATION).time()
         current_time = appointment.end_time
 
     # Adds timeslots after the latest iterated appointment
     while current_time < LATEST_TIME:
         available_times.append(current_time)
-        current_time = (datetime.combine(datetime.today(), current_time) + FIXED_APPT_DURATION).time()
+        current_time = (datetime.combine(datetime.today(), current_time) +
+                        FIXED_APPT_DURATION).time()
 
     return available_times
