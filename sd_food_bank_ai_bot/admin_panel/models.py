@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 
 class Admin(AbstractUser):
@@ -48,7 +49,7 @@ class Log(models.Model):
     transcript = models.JSONField(default=list)
     audio = models.FileField(upload_to="conversations/")
     time_started = models.DateTimeField(auto_now_add=True)
-    time_ended = models.DateTimeField(default=datetime.now)
+    time_ended = models.DateTimeField(default=timezone.now)
     length_of_call = models.DurationField(default=timedelta(seconds=0))
     strikes = models.PositiveIntegerField(default=0)
     intents = models.JSONField(default=dict)
@@ -94,4 +95,4 @@ class AppointmentTable(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     location = models.TextField()
-    date = models.DateTimeField()
+    date = timezone.now()

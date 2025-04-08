@@ -395,7 +395,7 @@ class AppointmentSchedulingTests(TestCase):
                 AppointmentTable.objects.create(
                     user=self.test_user,
                     start_time=appt_time,
-                    end_time=(datetime.combine(date, appt_time) + timedelta(minutes=30)).time(),
+                    end_time=(datetime.combine(avail_date, appt_time) + timedelta(minutes=30)).time(),
                     location="Office",
                     date=avail_date
                 )
