@@ -95,4 +95,4 @@ class AppointmentTable(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     location = models.TextField()
-    date = timezone.now()
+    date = models.DateTimeField(default=timezone.now)
