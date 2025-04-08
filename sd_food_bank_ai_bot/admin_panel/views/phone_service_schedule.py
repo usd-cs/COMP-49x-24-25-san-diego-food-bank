@@ -1,28 +1,32 @@
-from twilio.twiml.voice_response import VoiceResponse, Gather, Say
-from .phone_service_faq import prompt_question
-from .utilities import appointment_count, get_response_sentiment, get_phone_number
+from twilio.twiml.voice_response import VoiceResponse, Gather
+from .utilities import (appointment_count, get_response_sentiment,
+                        get_phone_number)
 from django.views.decorators.csrf import csrf_exempt
 from ..models import User, AppointmentTable, Log
 from django.http import HttpResponse
 from openai import OpenAI
-from datetime import time, datetime, timedelta
+from datetime import datetime, timedelta
 import calendar
 from django.utils.timezone import now
 import urllib.parse
-from .utilities import (forward_operator, write_to_log, 
-                        format_date_for_response, get_day, check_available_date,
+from .utilities import (forward_operator, write_to_log,
+                        format_date_for_response, get_day,
+                        check_available_date,
                         get_available_times_for_date)
 
 BOT = "bot"
 CALLER = "caller"
-TIMEOUT_LENGTH = 2 # The length of time the bot waits for a response
-FIXED_APPT_DURATION = timedelta(minutes=15) # TODO: Assuming each appointment is 15 minutes
+TIMEOUT_LENGTH = 2  # The length of time the bot waits for a response
+# TODO: Assuming each appointment is 15 minutes
+FIXED_APPT_DURATION = timedelta(minutes=15)
+
 
 @csrf_exempt
 def check_account(request):
     """
-    Check the User table for phone number to check if the account exists. If it does, 
-    relay the information such as the saved name to confirm the account.
+    Check the User table for phone number to check if the account exists.
+    If it does, relay the information such as the saved name to confirm
+    the account.
     """
     # Have twilio send the caller's number using 'From'
     caller_number = get_phone_number(request)
@@ -31,18 +35,21 @@ def check_account(request):
 
     action = request.GET.get("action", "schedule").lower()
 
-    try: 
+    try:
         if caller_number:
             # Query the User table for phone number and relay saved name.
             user = User.objects.get(phone_number=caller_number)
             response.say(f"Hello, {user.first_name} {user.last_name}.")
-            write_to_log(log, BOT, f"Hello, {user.first_name} {user.last_name}.")
+            write_to_log(log, BOT,
+                         f"Hello, {user.first_name} {user.last_name}.")
 
-            # Confirm the account with the caller 
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/confirm_account/?action={action}")
+            # Confirm the account with the caller
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                            action=f"/confirm_account/?action={action}")
 
             gather.say("Is this your account? Please say yes or no.")
-            write_to_log(log, BOT, "Is this your account? Please say yes or no.")
+            write_to_log(log, BOT,
+                         "Is this your account? Please say yes or no.")
             response.append(gather)
 
             # Repeat the prompt if no input received
@@ -50,39 +57,46 @@ def check_account(request):
         else:
             # Phone number is invalid
             response.say("Sorry, we are unable to help you at this time.")
-            write_to_log(log, BOT, "Sorry, we are unable to help you at this time.")
+            write_to_log(log, BOT,
+                         "Sorry, we are unable to help you at this time.")
             forward_operator(log)
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
         if action == "schedule":
 
-        # User does not exist to being registration process
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            # User does not exist to being registration process
+            gather = Gather(input="speech",
+                            timeout=TIMEOUT_LENGTH, action="/get_name/")
             gather.say("Can I get your first and last name please?")
-            write_to_log(log, BOT, "Can I get your first and last name please?")
+            write_to_log(log, BOT,
+                         "Can I get your first and last name please?")
             response.append(gather)
 
         elif action == "reschedule":
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                            action="/no_account_reroute/")
             gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
             response.append(gather)
 
         elif action == "cancel":
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                            action="/no_account_reroute/")
             gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
             response.append(gather)
         else:
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/get_name/")
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                            action="/get_name/")
             gather.say("Can I get your first and last name please?")
             response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 @csrf_exempt
 def confirm_account(request):
     """
-    Process the caller's response. If they say yes, the account is confirmed, otherwise
-    they will be prompted to try again.
+    Process the caller's response. If they say yes, the account is confirmed,
+    otherwise they will be prompted to try again.
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
@@ -100,7 +114,7 @@ def confirm_account(request):
 
         if action == "cancel":
             response.redirect("/cancel_initial_routing/")
-        
+
         if action == "reschedule":
             if appointment_count(request) > 1:
                 # redirect to handle appt > 1 path
@@ -109,18 +123,21 @@ def confirm_account(request):
                 # redirect to handle appt == 1 path
                 date_encoded = None
                 response.redirect(f"/reschedule_appointment/{date_encoded}/")
-            else: # return to main menu if no appointments associated with account
-                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/return_main_menu/")
+            else:
+                # return to main menu if no appointments associated to account
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                                action="/return_main_menu/")
                 gather.say("We do not have an appointment registered with your number. Would you like to go back to the main menu?")
                 response.append(gather)
-        
+
         else:
             response.redirect("/request_date_availability/")
     else:
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def get_name(request):
@@ -133,7 +150,7 @@ def get_name(request):
     speech_result = request.POST.get('SpeechResult', '')
     response = VoiceResponse()
     write_to_log(log, CALLER, speech_result)
-    
+
     if speech_result:
         # Query GPT for name (incase other words are said)
         client = OpenAI()
@@ -144,18 +161,21 @@ def get_name(request):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": speech_result}
             ]
-        )   
+        )
         response_pred = completion.choices[0].message.content
 
         name_encoded = urllib.parse.quote(response_pred)
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/process_name_confirmation/{name_encoded}/")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action=f"/process_name_confirmation/{name_encoded}/")
         gather.say(f"Your name is {response_pred}. Is that correct?")
-        write_to_log(log, BOT, f"Your name is {response_pred}. Is that correct?")
+        write_to_log(log, BOT,
+                     f"Your name is {response_pred}. Is that correct?")
         response.append(gather)
     else:
         response.redirect("/check_account/")
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def process_name_confirmation(request, name_encoded):
@@ -168,7 +188,7 @@ def process_name_confirmation(request, name_encoded):
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
     confirmation = get_response_sentiment(speech_result)
-    
+
     response = VoiceResponse()
     if confirmation:
         # Unencode the name and split into first and last name
@@ -185,7 +205,7 @@ def process_name_confirmation(request, name_encoded):
         caller_number = get_phone_number(request)
 
         # Create user account
-        new_user = User.objects.create(
+        User.objects.create(
                 first_name=first_name,
                 last_name=last_name,
                 phone_number=caller_number,
@@ -199,8 +219,9 @@ def process_name_confirmation(request, name_encoded):
         response.say("I'm sorry, please try again.")
         write_to_log(log, BOT, "I'm sorry, please try again.")
         response.redirect("/check_account/")
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def request_date_availability(request):
@@ -210,12 +231,14 @@ def request_date_availability(request):
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                    action="/check_for_appointment/")
     gather.say("What day are you available for your appointment?")
     write_to_log(log, BOT, "What day are you available for your appointment?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def confirm_request_date_availability(request):
@@ -232,11 +255,14 @@ def confirm_request_date_availability(request):
     response = VoiceResponse()
 
     if declaration:
-        response.redirect("/request_date_availability/") # Ask for available date again
+        # Ask for available date again
+        response.redirect("/request_date_availability/")
     else:
-        response.redirect("/answer/") # Send user back to the start of loop
-    
+        # Send user back to the start of loop
+        response.redirect("/answer/")
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def confirm_available_date(request):
@@ -250,8 +276,10 @@ def confirm_available_date(request):
     write_to_log(log, CALLER, speech_result)
     declaration = get_response_sentiment(speech_result)
     response = VoiceResponse()
-    appointment_date_str = request.GET.get('date', '')  # Extract appointment date from URL
-    number_of_appointments = request.GET.get('num', '0')  # Extract number of available appointments
+    # Extract appointment date from URL
+    appointment_date_str = request.GET.get('date', '')
+    # Extract number of available appointments
+    number_of_appointments = request.GET.get('num', '0')
 
     try:
         number_of_appointments = int(number_of_appointments)
@@ -261,12 +289,14 @@ def confirm_available_date(request):
     if declaration:
         if number_of_appointments > 3:
             response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
-        else: 
+        else:
             response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
     else:
-        response.redirect("/request_date_availability/") # Send user back to ask for another day
-    
+        # Send user back to ask for another day
+        response.redirect("/request_date_availability/")
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def confirm_time_selection(request, time_encoded, date):
@@ -286,12 +316,15 @@ def confirm_time_selection(request, time_encoded, date):
     date_obj = datetime.strptime(date, "%Y-%m-%d")
     date_final = format_date_for_response(date_obj)
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/final_confirmation/{time_encoded}/{date}/")
+    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                    action=f"/final_confirmation/{time_encoded}/{date}/")
     gather.say(f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
-    write_to_log(log, BOT, f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
+    write_to_log(log, BOT,
+                 f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def final_confirmation(request, time_encoded, date):
@@ -306,10 +339,10 @@ def final_confirmation(request, time_encoded, date):
 
     declaration = get_response_sentiment(speech_result)
     if declaration:
-        #book appointment
+        # book appointment
         time_str = time_encoded
         phone_number = get_phone_number(request)
-        
+
         user = User.objects.get(phone_number=phone_number)
 
         try:
@@ -321,12 +354,13 @@ def final_confirmation(request, time_encoded, date):
             end_time = end_datetime.time()
 
         except ValueError:
-            response.say("An error has occurred when attempting to schedule your appointment.") # Forward to operator
-            write_to_log(log, BOT, "An error has occurred when attempting to schedule your appointment.")
+            response.say("An error has occurred when attempting to schedule your appointment.")  # Forward to operator
+            write_to_log(log, BOT,
+                         "An error has occurred when attempting to schedule your appointment.")
             forward_operator(log)
             return HttpResponse(str(response), content_type="text/xml")
 
-        new_appointment = AppointmentTable.objects.create(
+        AppointmentTable.objects.create(
             user=user,
             start_time=start_time,
             end_time=end_time,
@@ -338,8 +372,9 @@ def final_confirmation(request, time_encoded, date):
         # send sms
     else:
         response.redirect("/answer/")
-    
-    return HttpResponse(str(response), content_type="text/xml") 
+
+    return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def get_time_response(request):
@@ -355,7 +390,7 @@ def get_time_response(request):
     speech_result = request.POST.get('SpeechResult', '')
     write_to_log(log, CALLER, speech_result)
     response = VoiceResponse()
-    
+
     if speech_result:
         # Query GPT for time to be able to cover statement variations
         client = OpenAI()
@@ -366,24 +401,28 @@ def get_time_response(request):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": speech_result}
             ]
-        )   
+        )
         response_pred = completion.choices[0].message.content
 
         time_encoded = urllib.parse.quote(response_pred)
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
         gather.say(f"Your requested time was {response_pred}. Is that correct?")
-        write_to_log(log, BOT, f"Your requested time was {response_pred}. Is that correct?")
+        write_to_log(log, BOT,
+                     f"Your requested time was {response_pred}. Is that correct?")
         response.append(gather)
     else:
         response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def given_time_response(request, time_encoded, date):
     """
-    Get's the users response for the given times and see's if it is satisfactory.
-    Determines the path of the conversation based on the users response.
+    Get's the users response for the given times and see's if
+    it is satisfactory. Determines the path of the
+    conversation based on the users response.
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
@@ -403,11 +442,13 @@ def given_time_response(request, time_encoded, date):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 @csrf_exempt
 def suggested_time_response(request, time_encoded, date):
     """
-    Get's the users response for the suggested time and see's if it is satisfactory.
-    Determines the path of the conversation based on the users response.
+    Get's the users response for the suggested time and see's
+    if it is satisfactory. Determines the path of the
+    conversation based on the users response.
     """
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
@@ -425,6 +466,7 @@ def suggested_time_response(request, time_encoded, date):
         response.redirect(f"/request_preferred_time_over_three/?date={date}")
 
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def check_for_appointment(request):
@@ -445,8 +487,10 @@ def check_for_appointment(request):
     if speech_result not in weekdays:
         response = VoiceResponse()
         response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
-        write_to_log(log, BOT, "I did not recognize that day. Can you say a weekday like Monday or Friday?")
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/check_for_appointment/")
+        write_to_log(log, BOT,
+                     "I did not recognize that day. Can you say a weekday like Monday or Friday?")
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/check_for_appointment/")
         response.append(gather)
         return HttpResponse(str(response), content_type="text/xml")
 
@@ -466,8 +510,9 @@ def check_for_appointment(request):
         write_to_log(log, BOT, f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
         response.append(gather)
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def request_preferred_time_under_four(request):
@@ -478,7 +523,7 @@ def request_preferred_time_under_four(request):
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
-    
+
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
 
@@ -489,7 +534,7 @@ def request_preferred_time_under_four(request):
         write_to_log(log, BOT, "There was an issue retrieving the appointment date. Please try again.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
-    
+
     available_times = get_available_times_for_date(appointment_date)
 
     if available_times:
@@ -508,6 +553,7 @@ def request_preferred_time_under_four(request):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 @csrf_exempt
 def request_preferred_time_over_three(request):
     """
@@ -519,13 +565,14 @@ def request_preferred_time_over_three(request):
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
     response = VoiceResponse()
-    
+
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
     gather.say("What time would you like?")
     write_to_log(log, BOT, "What time would you like?")
     response.append(gather)
 
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def generate_requested_time(request):
@@ -539,7 +586,7 @@ def generate_requested_time(request):
     response = VoiceResponse()
     # Extract appointment_date from the request
     appointment_date_str = request.GET.get('date', '')
-    
+
     if speech_result:
         # Query GPT for time to be able to cover statement variations
         client = OpenAI()
@@ -550,7 +597,7 @@ def generate_requested_time(request):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": speech_result}
             ]
-        )   
+        )
         response_pred = completion.choices[0].message.content
 
         time_encoded = urllib.parse.quote(response_pred)
@@ -560,8 +607,9 @@ def generate_requested_time(request):
         response.append(gather)
     else:
         response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def find_requested_time(request, time_encoded):
@@ -597,7 +645,7 @@ def find_requested_time(request, time_encoded):
             write_to_log(log, BOT, "There was an issue understanding your requested time. Please try again.")
             response.redirect("/request_preferred_time_over_three/")
             return HttpResponse(str(response), content_type="text/xml")
-        
+
         if not available_times:
             response.say(f"Sorry, there are no available appointments on {appointment_date.strftime('%B %d, %Y')}.")
             write_to_log(log, BOT, f"Sorry, there are no available appointments on {appointment_date.strftime('%B %d, %Y')}.")
@@ -617,11 +665,12 @@ def find_requested_time(request, time_encoded):
             gather.say("Please say yes to confirm or no to select another time.")
             write_to_log(log, BOT, "Please say yes to confirm or no to select another time.")
             response.append(gather)
-    
+
     else:
-        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")    
-    
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def cancel_appointment(request, appointment_id):
@@ -629,7 +678,7 @@ def cancel_appointment(request, appointment_id):
     Cancels the caller's appointment and informs them their appointment has been canceled.
     """
     response = VoiceResponse()
-    # Get the appointment and delete it 
+    # Get the appointment and delete it
     appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
     appt_to_cancel.delete()
 
@@ -638,31 +687,34 @@ def cancel_appointment(request, appointment_id):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 def reroute_caller_with_no_account(request):
     """
-    Check the User table for phone number to check if the account exists. If it doesn't, 
-    reroute the caller to main menu or hang up according to their response
+    Check the User table for phone number to check if the account exists.
+    If it doesn't, reroute the caller to main menu or hang up according to
+    their response
     """
     # Have twilio send the caller's number using 'From'
     caller_number = get_phone_number(request)
     response = VoiceResponse()
 
     if not caller_number:
-        # Phone number is invalid 
+        # Phone number is invalid
         response.say("Sorry, we are unable to help you at this time.")
         return HttpResponse(str(response), content_type="text/xml")
 
     gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/no_account_reroute/")
     gather.say("We do not have an account associated with your number. Would you like to go back to the main menu? Please say yes or no.")
     response.append(gather)
-    
+
     return HttpResponse(str(response), content_type="text/xml")
+
 
 @csrf_exempt
 def no_account_reroute(request):
     """
-    Helper function for reroute_caller_with_no_account to handle response from caller.
-    If the response is yes, reroute to the main menu. 
+    Helper function for reroute_caller_with_no_account to handle response from
+    caller. If the response is yes, reroute to the main menu.
     If the response is no, hang up the call.
     """
     speech_result = request.POST.get('SpeechResult', '').strip().lower()
@@ -680,11 +732,13 @@ def no_account_reroute(request):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+
 @csrf_exempt
 def reschedule_appointment(request, date_encoded):
     """
-    Reschedule appointment for the caller by cancelling an upcoming appointment, informing
-    the caller and then redirecting to the scheduling flow to book a new appointment.
+    Reschedule appointment for the caller by cancelling an upcoming
+    appointment, informing the caller and then redirecting to the
+    scheduling flow to book a new appointment.
     """
     response = VoiceResponse()
     phone_number = get_phone_number(request)
@@ -699,7 +753,7 @@ def reschedule_appointment(request, date_encoded):
     except User.DoesNotExist:
         response.redirect("/reroute_caller_with_no_account/")
         return HttpResponse(str(response), content_type="text/xml")
-    
+
     upcoming_appts = list(AppointmentTable.objects.filter(user=user, date__gte=now().date()).order_by('date'))
     num_appts = len(upcoming_appts)
     if num_appts == 0:
@@ -707,9 +761,9 @@ def reschedule_appointment(request, date_encoded):
         response.say("Let's schedule a new appointment.")
         response.redirect("/request_date_availability/")
         return HttpResponse(str(response), content_type="text/xml")
-    
+
     if num_appts == 1:
-        appt_to_cancel = upcoming_appts[0] # Cancel the only appt that exists
+        appt_to_cancel = upcoming_appts[0]  # Cancel the only appt that exists
 
     else:
         if not date_encoded:
@@ -723,13 +777,13 @@ def reschedule_appointment(request, date_encoded):
             response.say("Invalid appointment date provided.")
             response.hangup()
             return HttpResponse(str(response), content_type="text/xml")
-        
+
         appt_to_cancel = next((appt for appt in upcoming_appts if appt.date.date() == target_date), None)
         if not appt_to_cancel:
             response.say("No appointment found on the specified date.")
             response.hangup()
             return HttpResponse(str(response), content_type="text/xml")
-    
+
     appt_to_cancel.delete()
     response.say("Your appointment has been canceled.")
     response.say("Let's schedule a new appointment.")
