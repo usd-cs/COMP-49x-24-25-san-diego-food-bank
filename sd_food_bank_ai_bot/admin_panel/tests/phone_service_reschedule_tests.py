@@ -9,6 +9,7 @@ from admin_panel.views.phone_service_reschedule import (
 from datetime import datetime, timedelta, time
 import urllib.parse
 import xml.etree.ElementTree as ET
+from django.utils import timezone
 
 
 class PhoneServiceRescheduleTests(TestCase):
@@ -24,7 +25,7 @@ class PhoneServiceRescheduleTests(TestCase):
             user=self.user,
             start_time=time(10, 0),
             end_time=time(10, 30),
-            date=datetime.combine(self.appt_date, time(0, 0)),
+            date=timezone.make_aware(datetime.combine(self.appt_date, time(0, 0))),
             location="Test Location"
         )
 

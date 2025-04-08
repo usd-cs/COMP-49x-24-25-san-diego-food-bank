@@ -9,6 +9,7 @@ from django.utils.timezone import now
 from datetime import timedelta, time, datetime, date
 from ..models import User, AppointmentTable, Log
 import urllib.parse
+from django.utils import timezone
 
 
 class RequestPhoneNumberTests(TestCase):
@@ -293,6 +294,12 @@ class AppointmentTests(TestCase):
             self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
         ]
 
+        self.appointment_dates = [
+            timezone.make_aware(datetime.combine(
+                self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)),
+                time(0, 0))) for week in range(4)
+                ]
+
     @patch("admin_panel.views.utilities.OpenAI")
     def test_check_for_appointment_valid_day(self, mock_openai):
         """Tests if check_for_appointment correctly identifies available days"""
@@ -388,6 +395,13 @@ class AppointmentSchedulingTests(TestCase):
             self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7))
             for week in range(4)
         ]
+
+#         self.appointment_dates = [
+#     make_aware(datetime.combine(
+#         self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)),
+#         time(0, 0)
+#     )) for week in range(4)
+# ]
 
         # Create sample appointments in the database
         for avail_date in self.appointment_dates:
@@ -614,7 +628,7 @@ class CancelAppointmentFlowTests(TestCase):
         )
         self.appointment = AppointmentTable.objects.create(
             user=self.user,
-            date=now().date() + timedelta(days=1),
+            date=timezone.make_aware(datetime.combine((now() + timedelta(days=1)).date(), time(0, 0))),
             start_time=time(9, 0),
             end_time=time(9, 30),
             location="Foodbank"
@@ -652,10 +666,12 @@ class RescheduleAppointmentTests(TestCase):
             last_name="Bost",
             phone_number="+1234567890"
         )
-        tomorrow = now().date() + timedelta(days=1)
+        # tomorrow = now().date() + timedelta(days=1)
+        tomorrow = timezone.make_aware(datetime.combine(now().date() + timedelta(days=1), time(0, 0)))
         start_time = time(10, 0)
 
-        end_time = (datetime.combine(date.today(), start_time) + timedelta(minutes=30)).time()
+        # end_time = (datetime.combine(date.today(), start_time) + timedelta(minutes=30)).time()
+        end_time = (datetime.combine(timezone.localdate(), start_time) + timedelta(minutes=30)).time()
         self.appointment = AppointmentTable.objects.create(
             user=self.user,
             date=tomorrow,

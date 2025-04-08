@@ -2,7 +2,8 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from ..models import User, AppointmentTable
 from unittest.mock import patch, MagicMock
-from datetime import datetime
+from datetime import datetime, time
+from django.utils import timezone
 
 
 class CancelInitialRoutingTests(TestCase):
@@ -32,7 +33,7 @@ class CancelInitialRoutingTests(TestCase):
             user=self.test_user,
             start_time=datetime.strptime("2:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("3:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-26", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-26", '%Y-%m-%d').date(), time(0, 0)))
         )
 
         content = {"From": self.test_user_phone_number}
@@ -47,14 +48,14 @@ class CancelInitialRoutingTests(TestCase):
             user=self.test_user,
             start_time=datetime.strptime("2:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("3:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-26", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-26", '%Y-%m-%d').date(), time(0, 0)))
         )
 
         AppointmentTable.objects.create(
             user=self.test_user,
             start_time=datetime.strptime("12:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("1:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-28", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-28", '%Y-%m-%d').date(), time(0, 0)))
         )
 
         content = {"From": self.test_user_phone_number}
@@ -108,14 +109,14 @@ class CancelConfirmationTests(TestCase):
             user=self.test_user,
             start_time=datetime.strptime("2:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("3:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-26", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-26", '%Y-%m-%d').date(), time(0, 0)))
         )
 
         AppointmentTable.objects.create(
             user=self.test_user,
             start_time=datetime.strptime("12:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("1:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-28", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-28", '%Y-%m-%d').date(), time(0, 0)))
         )
 
     def test_prompt_cancel_confirmation(self):
@@ -230,19 +231,19 @@ class AppointmentCancelSelectionTests(TestCase):
             user=self.user,
             start_time=datetime.strptime("10:00 AM", '%I:%M %p').time(),
             end_time=datetime.strptime("10:30 AM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-27", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-27", '%Y-%m-%d').date(), time(0, 0)))
         )
         self.appointment2 = AppointmentTable.objects.create(
             user=self.user,
             start_time=datetime.strptime("1:30 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("2:00 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-28", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-28", '%Y-%m-%d').date(), time(0, 0)))
         )
         self.appointment3 = AppointmentTable.objects.create(
             user=self.user,
             start_time=datetime.strptime("4:00 PM", '%I:%M %p').time(),
             end_time=datetime.strptime("4:30 PM", '%I:%M %p').time(),
-            date=datetime.strptime("2025-03-29", '%Y-%m-%d').date()
+            date=timezone.make_aware(datetime.combine(datetime.strptime("2025-03-29", '%Y-%m-%d').date(), time(0, 0)))
         )
 
     def test_ask_appointment_to_cancel(self):

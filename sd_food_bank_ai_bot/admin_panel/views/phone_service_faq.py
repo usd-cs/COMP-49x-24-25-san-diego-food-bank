@@ -4,7 +4,7 @@ from ..models import Log
 from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather
 import urllib.parse
-import datetime
+from django.utils import timezone
 from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
                         get_matching_question, get_corresponding_answer)
@@ -68,7 +68,7 @@ def call_status_update(request):
         if call_status == 'completed':
             log = Log.objects.filter(phone_number=phone_number).last()
             if log:
-                log.time_ended = datetime.now()
+                log.time_ended = timezone.now()
 
                 if log.time_started:
                     call_duration = log.time_ended - log.time_started
