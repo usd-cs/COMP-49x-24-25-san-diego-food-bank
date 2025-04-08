@@ -10,7 +10,8 @@ class FAQForm(forms.ModelForm):
         label="Existing Tags",
     )
     new_tags = forms.CharField(
-        widget=forms.TextInput(attrs={'placeholder': 'Add new tags, comma-separated'}),
+        widget=forms.TextInput(attrs={'placeholder':
+                                      'Add new tags, comma-separated'}),
         required=False,
         label="New Tags",
     )
