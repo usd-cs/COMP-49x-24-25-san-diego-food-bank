@@ -573,13 +573,15 @@ class AppointmentConfirmationTests(TestCase):
         self.assertIn(f"Great! To confirm you are booked for {expected_date_str} at {time_request} and your name is Billy Bob. Is that correct?", content)
         self.assertIn(f'action="/final_confirmation/{time_request_encoded}/{date_encoded}/"', content)
 
+    @patch("admin_panel.views.phone_service_schedule.send_sms")
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
-    def test_final_confirmation_affirmative(self, mock_get_response_sentiment):
+    def test_final_confirmation_affirmative(self, mock_get_response_sentiment, mock_send_sms):
         """Test giving an affirmative response to the final confirmation"""
         mock_get_response_sentiment.return_value = True
         time_request = "11:30 AM"
         time_request_encoded = urllib.parse.quote(time_request)
         date_encoded = "2025-03-01"
+        phone_number = "+16191234567"
 
         content = {"From": "+16191234567"}
         response = self.client.post(f"/final_confirmation/{time_request_encoded}/{date_encoded}/", content)
@@ -592,6 +594,9 @@ class AppointmentConfirmationTests(TestCase):
 
         self.assertTrue(AppointmentTable.objects.filter(user=user, start_time=start, end_time=end, date=date_obj).exists())
         self.assertIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
+
+        start_datetime = datetime.combine(date_obj, start)
+        mock_send_sms.assert_called_once_with(phone_number, f"Your appointment at {start_datetime} has been scheduled.")
 
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_final_confirmation_negative(self, mock_get_response_sentiment):
