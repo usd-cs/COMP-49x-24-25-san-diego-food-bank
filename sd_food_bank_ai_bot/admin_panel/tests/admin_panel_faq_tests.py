@@ -246,7 +246,7 @@ class CreateAccountTests(TestCase):
             "foodbank_employee_id": "WRONG123",
             "foodbank_email": "wrong@foodbank.org"
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, follow=True)
         self.assertEqual(response.status_code, 200)
         
         messages = list(get_messages(response.wsgi_request))
