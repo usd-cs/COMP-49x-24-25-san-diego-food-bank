@@ -60,10 +60,14 @@ def create_account_view(request):
             messages.error(request, "No approved admin record found for the provided credentials.")
             return render(request, "create_account.html")
 
-        if not admin_candidate.approved_for_admin_panel:
-            messages.error(request, "You are not approved to access the admin panel.")
+        if admin_candidate.approved_for_admin_panel is None:
+            messages.error(request, "You are not approved to access the admin panel. Please request for approval.")
             return render(request, "create_account.html")
-
+        
+        elif admin_candidate.approved_for_admin_panel is False:
+            messages.error(request, "Your admin account creation is pending approval. Please wait for confirmation.")
+            return render(request, "create_account.html")
+        
         if Admin.objects.filter(username=username).exists():
             messages.error(request, "This username is already in use.")
             return render(request, "create_account.html")
