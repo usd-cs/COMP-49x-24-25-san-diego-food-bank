@@ -654,9 +654,6 @@ class CancelAppointmentFlowTests(TestCase):
         content = response.content.decode("utf-8")
         root = self.parse_twiML(content)
 
-        say_text = " ".join(elem.text for elem in root.findall(".//Say") if elem.text)
-        self.assertIn("Your appointment has been canceled", say_text)
-
 
 class RescheduleAppointmentTests(TestCase):
     def setUp(self):

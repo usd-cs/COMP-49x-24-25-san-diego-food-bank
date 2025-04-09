@@ -9,10 +9,9 @@ from datetime import datetime, timedelta
 import calendar
 from django.utils.timezone import now
 import urllib.parse
-from .utilities import (forward_operator, write_to_log,
-                        format_date_for_response, get_day,
-                        check_available_date,
-                        get_available_times_for_date)
+from .utilities import (forward_operator, write_to_log, 
+                        format_date_for_response, get_day, check_available_date,
+                        get_available_times_for_date, send_sms)
 
 BOT = "bot"
 CALLER = "caller"
@@ -678,11 +677,31 @@ def cancel_appointment(request, appointment_id):
     Cancels the caller's appointment and informs them their appointment has been canceled.
     """
     response = VoiceResponse()
-    # Get the appointment and delete it
-    appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
-    appt_to_cancel.delete()
+    
+    try: 
+        appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
+    except AppointmentTable.DoesNotExist:
+        response.say("We could not find an appointment to cancel.")
+        response.redirect("/answer/") # Reroute back to main menu if no appointment found
+        return HttpResponse(str(response), content_type="text/xml")
+    
+    appt_date = appt_to_cancel.date.strftime("%B %d") # Formatted like "March 03"
+    appt_time = appt_to_cancel.start_time.strftime("%I:%M %p") # Formatted like "10:30 AM"
 
-    response.say("Your appointment has been canceled. You will receive a confirmation message via SMS. Have a great day!")
+    # Get the phone number associated with the appointment's user
+    phone_number = appt_to_cancel.user.phone_number if appt_to_cancel.user else None
+
+    appt_to_cancel.delete() # Delete the appointment
+
+    cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
+
+    if phone_number:
+        try: 
+            send_sms(phone_number, cancellation_message)
+        except Exception as e:
+            print(f"Error sending SMS: {e}") 
+
+    response.say(cancellation_message)
     response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
