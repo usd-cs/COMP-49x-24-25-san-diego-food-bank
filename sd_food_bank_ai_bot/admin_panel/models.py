@@ -7,10 +7,15 @@ from django.utils import timezone
 class Admin(AbstractUser):
     """
     Table for storing information on admins
+        * approved_for_admin_panel states: 
+        - NONE: have not attempted to create account for admin panel access 
+        - FALSE: attempted to create account for admin panel access and had matching employee ID and email
+                    so waiting for pending approval for account to be officially created
+        - TRUE: account creation has been approved so this account has access to admin panel
     """
     foodbank_email = models.EmailField(blank=True, max_length=254, verbose_name="foodbank email")
     foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="unknown")
-    approved_for_admin_panel = models.BooleanField(default=False, verbose_name="approved for admin panel")
+    approved_for_admin_panel = models.BooleanField(null=True, default=None, verbose_name="approved for admin panel")
 
 class User(models.Model):
     """
