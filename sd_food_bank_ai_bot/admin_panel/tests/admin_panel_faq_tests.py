@@ -1,14 +1,15 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from admin_panel.models import Admin, FAQ, Tag, Log
+from admin_panel.models import Admin, FAQ, Tag
 
 
 class LoginViewsTestCase(TestCase):
     def setUp(self):
         """Set up a test client & user"""
         self.client = Client()
-        self.admin = Admin.objects.create_user(username='user1', password='pass123')
+        self.admin = Admin.objects.create_user(username='user1',
+                                               password='pass123')
 
     def test_get_request(self):
         """Test the GET request for the login view"""
@@ -18,12 +19,14 @@ class LoginViewsTestCase(TestCase):
 
     def test_post_request(self):
         """Test the POST request with valid login credentials"""
-        response = self.client.post(reverse('login'), {'username': 'user1', 'password': 'pass123'})
+        response = self.client.post(reverse('login'), {'username': 'user1',
+                                                       'password': 'pass123'})
         self.assertEqual(response.status_code, 302)
 
     def test_post_invalid_user(self):
         """Test the POST request with invalid login credentials"""
-        response = self.client.post(reverse('login'), {'username': 'user3', 'password': 'pass321'})
+        response = self.client.post(reverse('login'), {'username': 'user3',
+                                                       'password': 'pass321'})
         self.assertTemplateUsed(response, 'login.html')
 
 
@@ -32,7 +35,8 @@ class LogoutViewTestCase(TestCase):
         """Set up test client and a user"""
         self.client = Client()
         User = get_user_model()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.user = User.objects.create_user(username='testuser',
+                                             password='testpassword')
 
     def test_logout_redirect(self):
         """Test that the logout view redirects back to login page"""
@@ -44,7 +48,8 @@ class LogoutViewTestCase(TestCase):
         """Test to make sure the user is logged out"""
         self.client.login(username='testuser', password='testpassword')
         self.client.get(reverse('logout'))
-        self.assertNotIn('_auth_user_id', self.client.session)  # There should be no user id in the session
+        # There should be no user id in the session
+        self.assertNotIn('_auth_user_id', self.client.session)
 
 
 class FAQPageTestCase(TestCase):
@@ -52,7 +57,8 @@ class FAQPageTestCase(TestCase):
         """Set up a test client and FAQ objects"""
         self.client = Client()
         User = get_user_model()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.user = User.objects.create_user(username='testuser',
+                                             password='testpassword')
 
         self.faq_1 = FAQ.objects.create(question="When does the food bank open?",
                                         answer="The food bank is open Monday-Friday from 9:00 AM to 5:00 PM")
