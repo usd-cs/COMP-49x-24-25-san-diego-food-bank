@@ -368,7 +368,7 @@ def final_confirmation(request, time_encoded, date):
 
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         write_to_log(log, BOT, "Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
-        # send sms
+        send_sms(phone_number,f"Your appointment at {start_datetime} has been scheduled.")
     else:
         response.redirect("/answer/")
 
