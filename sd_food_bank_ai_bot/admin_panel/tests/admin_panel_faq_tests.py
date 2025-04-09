@@ -204,3 +204,30 @@ class FAQPageTestCase(TestCase):
         response = self.client.get(reverse('faq_page'))
         self.assertContains(response, "When does the food bank open?")
         self.assertContains(response, "How can I have access to the food bank client choice center?")
+
+class CreateAccountTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        # Create an already approved admin record that will be updated with username and password
+        self.preapproved_admin = Admin.objects.create(
+            foodbank_id="EMP12345",
+            foodbank_email="employee@foodbank.org",
+            approved_for_admin_panel=True
+        )
+    
+    def test_create_account_valid(self):
+        """
+        Test that a valid admin account creation updates the record.
+        """
+        url = reverse("create_account") 
+        data = {
+            "username": "newadmin",
+            "password": "s3cur3P@ssw0rd!",
+            "foodbank_employee_id": "EMP12345",
+            "foodbank_email": "employee@foodbank.org"
+        }
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+        
+        updated_admin = Admin.objects.get(foodbank_id="EMP12345")
+        self.assertEqual(updated_admin.username, "newadmin")
