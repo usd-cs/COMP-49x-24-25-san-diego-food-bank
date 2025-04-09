@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.contrib.messages import get_messages
 from admin_panel.models import Admin, FAQ, Tag
 
 
@@ -231,3 +232,25 @@ class CreateAccountTests(TestCase):
         
         updated_admin = Admin.objects.get(foodbank_id="EMP12345")
         self.assertEqual(updated_admin.username, "newadmin")
+    
+    def test_invalid_credentials(self):
+        """
+        Test that when provided invalid foodbank credentials (employee ID and email)
+        no admin record is found and an error message is displayed.
+        """
+        url = reverse("create_account")
+        data = {
+            "username": "newadmin",
+            "password": "s3cur3P@ssw0rd!",
+            # Add credentials that do not match any Admin 
+            "foodbank_employee_id": "WRONG123",
+            "foodbank_email": "wrong@foodbank.org"
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        
+        messages = list(get_messages(response.wsgi_request))
+        self.assertGreater(len(messages), 0, "Expected at least one error message")
+        # Check that one of the error messages contains the expected text 
+        self.assertTrue(any("No admin record found" in message.message for message in messages), 
+                    "Expected an error message that there was no matching admin record found.")
