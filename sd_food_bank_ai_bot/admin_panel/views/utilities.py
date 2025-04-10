@@ -7,6 +7,7 @@ from openai import OpenAI
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now
 from datetime import time, datetime, timedelta
+from google.cloud import translate_v2 as translate
 import re
 
 # Earliest time to schedule an appointment, 9:00 AM
@@ -300,3 +301,13 @@ def get_available_times_for_date(appointment_date):
                         FIXED_APPT_DURATION).time()
 
     return available_times
+
+
+def translate_to_language(source_lang, target_lang, text):
+    """
+    Translate the given text from the given language to the other given language.
+    """
+    translate_client = translate.Client()
+
+    result = translate_client.translate(text, target_language=target_lang, source_language=source_lang)
+    return result["translatedText"]
