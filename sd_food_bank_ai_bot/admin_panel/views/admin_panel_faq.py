@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
+from django.contrib import messages
+from django.contrib.auth.hashers import make_password
 from django.db.models import Q
-from ..models import FAQ, Tag
+from ..models import FAQ, Tag, Admin
 from ..forms import FAQForm
 
 
@@ -32,6 +34,52 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+def create_account_view(request):
+    """
+    Render the create account page for foodbank admin employees.
+    Only employees with valid foodbank credentials (foodbank ID and email)
+    and approved_for_admin_panel=True can create an account.
+    """
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "").strip()
+        foodbank_employee_id = request.POST.get("foodbank_employee_id", "").strip()
+        foodbank_email = request.POST.get("foodbank_email", "").strip()
+
+        if not (username and password and foodbank_employee_id and foodbank_email):
+            messages.error(request, "All fields are required.")
+            return render(request, "create_account.html")
+
+        # Look for an approved admin record with the provided credentials.
+        try:
+            admin_candidate = Admin.objects.get(
+                foodbank_id=foodbank_employee_id,
+                foodbank_email=foodbank_email
+            )
+        except Admin.DoesNotExist:
+            messages.error(request, "No approved admin record found for the provided credentials.")
+            return render(request, "create_account.html")
+
+        if admin_candidate.approved_for_admin_panel is None:
+            messages.error(request, "You are not approved to access the admin panel. Please request for approval.")
+            return render(request, "create_account.html")
+        
+        elif admin_candidate.approved_for_admin_panel is False:
+            messages.error(request, "Your admin account creation is pending approval. Please wait for confirmation.")
+            return render(request, "create_account.html")
+        
+        if Admin.objects.filter(username=username).exists():
+            messages.error(request, "This username is already in use.")
+            return render(request, "create_account.html")
+
+        admin_candidate.username = username
+        admin_candidate.password = make_password(password) # Hash password for security purposes
+        admin_candidate.save()
+
+        messages.success(request, "Account created successfully! Please log in.")
+        return redirect("login")  
+
+    return render(request, "create_account.html")
 
 @login_required
 def faq_page_view(request):
