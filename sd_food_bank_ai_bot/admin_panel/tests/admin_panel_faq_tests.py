@@ -252,4 +252,4 @@ class CreateAccountTests(TestCase):
         messages = list(get_messages(response.wsgi_request))
         self.assertGreater(len(messages), 0, "Expected at least one error message")
         # Check that one of the error messages contains the expected text 
-        self.assertTrue(any("No admin record found" in message.message for message in messages))
+        self.assertTrue(any("No approved admin record found for the provided credentials." in message.message for message in messages))
