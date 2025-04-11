@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from openai import OpenAI
 from .utilities import format_date_for_response, write_to_log
 
-TIMEOUT_LENGTH = 2  # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
 
 
 @csrf_exempt

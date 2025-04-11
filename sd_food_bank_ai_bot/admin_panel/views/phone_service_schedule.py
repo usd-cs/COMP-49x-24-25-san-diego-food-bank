@@ -15,7 +15,7 @@ from .utilities import (forward_operator, write_to_log,
 
 BOT = "bot"
 CALLER = "caller"
-TIMEOUT_LENGTH = 2  # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
 # TODO: Assuming each appointment is 15 minutes
 FIXED_APPT_DURATION = timedelta(minutes=15)
 
