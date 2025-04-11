@@ -17,6 +17,7 @@ class Admin(AbstractUser):
     foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="unknown")
     approved_for_admin_panel = models.BooleanField(null=True, default=None, verbose_name="approved for admin panel")
 
+
 class User(models.Model):
     """
     Table for storing user information
@@ -25,6 +26,7 @@ class User(models.Model):
     last_name = models.CharField(max_length=20)
     phone_number = models.CharField(max_length=16)
     email = models.EmailField(unique=True, null=True)
+    language = models.CharField(max_length=5, default='en')
 
 
 class Tag(models.Model):
