@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from admin_panel.views.phone_service_faq import (answer_call, confirm_question, get_matching_question,
                                                  get_question_from_user, strike_system_handler,
                                                  get_corresponding_answer)
-from admin_panel.models import Log, FAQ
+from admin_panel.models import Log, FAQ, User
 from django.urls import reverse
 import urllib.parse
 import datetime
@@ -14,26 +14,44 @@ class TwilioViewsTestCase(TestCase):
         self.client = Client()
         self.factory = RequestFactory()
 
-    def test_answer_call(self):
+    def test_answer_call_english(self):
         """
-        Test to make sure that answer_call view returns valid TwiML response.
+        Test to make sure that answer_call view returns valid TwiML response in english.
         """
-        response = self.client.get('/answer/')
+        content = {"From": "+17601231234"}
+        response = self.client.post('/answer/', content)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
         # Check for expected greeting and the TwiML tags
-        self.assertIn("Thank you for calling the San Diego Food Bank! Press 1 to\
-         schedule an appointment, press 2 to reschedule an appointment,\
-             press 3 to cancel an appointment, press 4 to ask about specific\
-                inquiries, or press 0 to be forwarded to an operator.", content)
+        self.assertIn("Thank you for calling the San Diego Food Bank!", content)
+        self.assertIn("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
+                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
+                        or press 5 to be forwarded to an operator.", content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
+        self.assertEqual(User.objects.get(phone_number="+17601231234").language, "en")
+
+    def test_answer_call_spanish(self):
+        """
+        Test to make sure that answer_call view returns valid TwiML response in spanish.
+        """
+        content = {"Digits": "0", "From": "+17601231234"}
+        response = self.client.post('/answer/', content)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+
+        # Check for expected greeting and the TwiML tags
+        self.assertIn("Gracias por llamar al banco de alimentos de San Diego!", content)
+        self.assertIn("For english press 0.", content)
+        self.assertIn("<Response>", content)
+        self.assertIn("</Response>", content)
+        self.assertEqual(User.objects.get(phone_number="+17601231234").language, "es")
 
     def test_answer_call_faq(self):
         """
         Test for when the user indicates they wish to ask a question.
         """
-        request = self.factory.post("/get_question_from_user/", {"Digits": "4"})
+        request = self.factory.post("/get_question_from_user/", {"Digits": "4", "From": "+17601231234"})
         response = answer_call(request)
 
         self.assertIn("/prompt_question/", response.content.decode())
@@ -42,7 +60,7 @@ class TwilioViewsTestCase(TestCase):
         """
         Test for when the user indicates they wish to schedule an appointment.
         """
-        request = self.factory.post("/get_question_from_user/", {"Digits": "1"})
+        request = self.factory.post("/get_question_from_user/", {"Digits": "1", "From": "+17601231234"})
         response = answer_call(request)
 
         self.assertIn("/check_account/", response.content.decode())
@@ -51,11 +69,12 @@ class TwilioViewsTestCase(TestCase):
         """
         Test for when the user gives no input.
         """
-        request = self.factory.post("/get_question_from_user/", {})
+        request = self.factory.post("/get_question_from_user/", {"From": "+17601231234"})
         response = answer_call(request)
 
         self.assertNotIn("/check_account/", response.content.decode())
         self.assertNotIn("/prompt_question/", response.content.decode())
+        self.assertIn("/answer/", response.content.decode())
 
 
 class LogModelTestCase(TestCase):
