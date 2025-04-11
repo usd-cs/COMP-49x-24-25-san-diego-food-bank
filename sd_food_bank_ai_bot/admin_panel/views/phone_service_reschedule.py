@@ -21,16 +21,18 @@ def prompt_reschedule_appointment_over_one(request):
     caller_number = get_phone_number(request)
     log = Log.objects.filter(phone_number=caller_number).last()
     user = User.objects.get(phone_number=caller_number)
-    # appointments = AppointmentTable.objects.filter(user=user)
 
     response = VoiceResponse()
-    gather = Gather(input="speech",
-                    timeout=TIMEOUT_LENGTH, action="/generate_requested_date/")
+    
     if user.language == "en":
+        gather = Gather(input="speech",
+                    timeout=TIMEOUT_LENGTH, action="/generate_requested_date/")
         gather.say("Which appointment would you like to reschedule?")
         write_to_log(log, BOT, "Which appointment would you like to reschedule?")
     else:
-        gather.say("Que cita le gustaria reprogramar?")
+        gather = Gather(input="speech",
+                    timeout=TIMEOUT_LENGTH, action="/generate_requested_date/", language = 'es-MX')
+        gather.say("Que cita le gustaria reprogramar?", language = 'es-MX')
         write_to_log(log, BOT, "Que cita le gustaria reprogramar?")
     response.append(gather)
 
@@ -70,15 +72,18 @@ def generate_requested_date(request):
         response_pred = completion.choices[0].message.content.strip()
         date_encoded = urllib.parse.quote(response_pred)
 
-        gather = Gather(input="speech",
+        if user.language == "en":
+            gather = Gather(input="speech",
                         timeout=TIMEOUT_LENGTH,
                         action=f"/confirm_requested_date/{date_encoded}/")
-        if user.language == "en":
             gather.say(f"Your requested day was {response_pred}. Is that correct?")
             write_to_log(log, BOT, f"Your requested day was {response_pred}. Is that correct?")
         else:
+            gather = Gather(input="speech",
+                        timeout=TIMEOUT_LENGTH,
+                        action=f"/confirm_requested_date/{date_encoded}/", language = 'es-MX')
             out_speech_es = translate_to_language("en", "es", f"Your requested day was {response_pred}. Is that correct?")
-            gather.say(out_speech_es)
+            gather.say(out_speech_es, language = 'es-MX')
             write_to_log(log, BOT, out_speech_es)
         response.append(gather)
     else:
@@ -111,7 +116,7 @@ def confirm_requested_date(request, date_encoded):
             response.say("Sorry, we could not understand the date. Let's try again.")
             write_to_log(log, BOT, "Sorry, we could not understand the date. Let's try again.")
         else:
-            response.say("Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.")
+            response.say("Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.", language = 'es-MX')
             write_to_log(log, BOT, "Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.")
         response.redirect("/prompt_reschedule_appointment_over_one/")
         return HttpResponse(str(response), content_type="text/xml")
@@ -128,7 +133,7 @@ def confirm_requested_date(request, date_encoded):
                 response.say("Sorry, this is not in your appointments.")
                 write_to_log(log, BOT, "Sorry, this is not in your appointments.")
             else:
-                response.say("Lo sentimos, esto no esta en tus citas.")
+                response.say("Lo sentimos, esto no esta en tus citas.", language = 'es-MX')
                 write_to_log(log, BOT, "Lo sentimos, esto no esta en tus citas.")
             response.redirect("/prompt_reschedule_appointment_over_one")
             return HttpResponse(str(response), content_type="text/xml")
