@@ -8,6 +8,11 @@
         <p>Welcome back! Please enter your details.</p>
         <form method="post" action="{% url 'login' %}">
             {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="error-text">
+                    {{ form.non_field_errors.0 }}
+                </div>
+            {% endif %}
             <label for="username">Username</label>
             <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
         

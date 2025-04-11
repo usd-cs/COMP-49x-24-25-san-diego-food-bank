@@ -22,6 +22,10 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             return redirect('faq_page')
+        else:
+            # clear the errors generated for the form and add custom message to display on login page about what went wrong
+            form._errors.pop('__all__', None)
+            form.add_error(None, "Username or password is incorrect")
     else:
         form = AuthenticationForm()
     return render(request, 'login.html', {'form': form})
