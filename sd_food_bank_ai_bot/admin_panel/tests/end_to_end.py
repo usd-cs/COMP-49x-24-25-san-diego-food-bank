@@ -1,42 +1,61 @@
-import time
+import ssl
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.poolmanager import PoolManager
+from twilio.http.http_client import TwilioHttpClient
 from twilio.rest import Client
+import time
+import os
 
-# Replace with your real values
-ACCOUNT_SID = "YOUR_ACCOUNT_SID"
-AUTH_TOKEN = "YOUR_AUTH_TOKEN"
+class SSLBypassAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = ssl._create_unverified_context()
+        return super().init_poolmanager(*args, **kwargs)
 
-CALLER_NUMBER = "+1XXXXXXXXXX"  # Your Twilio number making the call
-CALLEE_NUMBER = "+1YYYYYYYYYY"  # Your Django-exposed Twilio number (linked to /answer/)
-CALL_URL = "https://sd-food-bank.dedyn.io/answer/"  # This should point to /answer/
+# Create a requests Session that ignores SSL verification
+session = requests.Session()
+session.mount("https://", SSLBypassAdapter())
 
-client = Client(ACCOUNT_SID, AUTH_TOKEN)
+# Initialize Twilio client with this session
+twilio_http_client = TwilioHttpClient(session)
+client = Client("NA", "NA", http_client=twilio_http_client)
 
-# STEP 1: Place call from caller to callee (which is linked to /answer/)
-print("📞 Placing call from CALLER_NUMBER to CALLEE_NUMBER...")
-call = client.calls.create(
-    to=CALLEE_NUMBER,
-    from_=CALLER_NUMBER,
-    url=CALL_URL,  # This URL must return TwiML
-    method="POST",
-    record=True  # ✅ Record the call for demo purposes
-)
+def run_end_to_end_call():
+    ACCOUNT_SID = os.environ.get("TWILIO_SID", "NA")
+    AUTH_TOKEN = os.environ.get("TWILIO_AUTH", "NA")
 
-print(f"✅ Call SID: {call.sid}")
-print("🎙️ Call in progress... Waiting for flow to complete...")
+    CALLER_NUMBER = os.environ.get("TWILIO_CALLER", "+18444352594")
+    CALLEE_NUMBER = os.environ.get("TWILIO_CALLEE", "+18624292500")
+    CALL_URL = "https://joey-champion-reasonably.ngrok-free.app/answer/"
 
-# STEP 2: Poll call until it finishes
-while True:
-    call_status = client.calls(call.sid).fetch().status
-    print(f"🔄 Call status: {call_status}")
-    if call_status in ["completed", "failed", "busy", "no-answer"]:
-        break
-    time.sleep(5)
+    client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-# STEP 3: Retrieve recording
-recordings = client.recordings.list(call_sid=call.sid)
-if recordings:
-    recording = recordings[0]
-    print(f"📼 Call recorded! Access recording here:")
-    print(f"https://api.twilio.com{recording.uri.replace('.json', '.mp3')}")
-else:
-    print("⚠️ No recording found.")
+    print("📞 Placing call from CALLER_NUMBER to CALLEE_NUMBER...")
+    call = client.calls.create(
+        to=CALLEE_NUMBER,
+        from_=CALLER_NUMBER,
+        url=CALL_URL,
+        method="POST",
+        record=True
+    )
+
+    print(f"✅ Call SID: {call.sid}")
+    print("🎙️ Call in progress... Waiting for flow to complete...")
+
+    while True:
+        call_status = client.calls(call.sid).fetch().status
+        print(f"🔄 Call status: {call_status}")
+        if call_status in ["completed", "failed", "busy", "no-answer"]:
+            break
+        time.sleep(5)
+
+    recordings = client.recordings.list(call_sid=call.sid)
+    if recordings:
+        recording = recordings[0]
+        print("📼 Call recorded! Listen here:")
+        print(f"https://api.twilio.com{recording.uri.replace('.json', '.mp3')}")
+    else:
+        print("⚠️ No recording found.")
+
+if __name__ == "__main__":
+    run_end_to_end_call()
