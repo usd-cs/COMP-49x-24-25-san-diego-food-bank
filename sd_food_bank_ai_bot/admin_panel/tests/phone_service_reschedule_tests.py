@@ -1,5 +1,5 @@
 from django.test import TestCase, RequestFactory
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from admin_panel.models import User, AppointmentTable
 from admin_panel.views.phone_service_reschedule import (
     prompt_reschedule_appointment_over_one,
@@ -48,14 +48,14 @@ class PhoneServiceRescheduleTests(TestCase):
         mock_client.chat.completions.create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="2025-04-02"))]
         )
-        request = self.factory.post("/generate_requested_date/", {"SpeechResult": "Next Tuesday"})
+        request = self.factory.post("/generate_requested_date/", {"SpeechResult": "Next Tuesday", "From": self.user.phone_number})
         response = generate_requested_date(request)
         self.assertEqual(response.status_code, 200)
         root = self.parse_twiml(response)
         self.assertIn("Your requested day was 2025-04-02. Is that correct?", [say.text for say in root.iter("Say")])
 
     def test_generate_requested_date_empty(self):
-        request = self.factory.post("/generate_requested_date/", {"SpeechResult": ""})
+        request = self.factory.post("/generate_requested_date/", {"SpeechResult": "", "From": self.user.phone_number})
         response = generate_requested_date(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("/prompt_reschedule_appointment_over_one/", response.content.decode())
@@ -110,3 +110,78 @@ class PhoneServiceRescheduleTests(TestCase):
         response = confirm_requested_date(request, invalid_encoded)
         self.assertEqual(response.status_code, 200)
         self.assertIn("we could not understand the date", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_reschedule.generate_requested_date")
+    def test_prompt_reschedule_appointment_over_one_spanish(self, mock_generate_req_date):
+        """test spanish route for rescheduling when caller has more than one appointment scheduled"""
+        self.user.language = "es"
+        self.user.save()
+
+        request = self.factory.post("/prompt_reschedule_appointment_over_one/", {"From": self.user.phone_number})
+        response = prompt_reschedule_appointment_over_one(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Que cita le gustaria reprogramar?", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_reschedule.OpenAI")
+    @patch("admin_panel.views.phone_service_reschedule.translate_to_language")
+    def test_generate_requested_date_spanish(self, mock_translate, mock_openai):
+        """test spanish route for appointment date generation on rescheduling path"""
+        self.user.language = "es"
+        self.user.save()
+        mock_translate.return_value = "Su dia solicitado fue 2025-04-02. ¿Es correcto?"
+
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        mock_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="2025-04-02"))]
+        )
+        request = self.factory.post("/generate_requested_date/", {"SpeechResult": "Quiero cambiar mi cita al dos de abril", "From": self.user.phone_number})
+        response = generate_requested_date(request)
+
+        self.assertEqual(response.status_code, 200)
+        root = self.parse_twiml(response)
+        self.assertTrue(any("Su dia solicitado fue 2025-04-02" in say.text for say in root.iter("Say")))
+        
+    @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_reschedule.translate_to_language")
+    def test_confirm_requested_date_spanish_correct(self, mock_translate, mock_sentiment):
+        """test spanish route for confirmation on a valid appointment date"""
+        self.user.language = "es"
+        self.user.save()
+
+        mock_sentiment.return_value = True
+        mock_translate.return_value = "Yes"
+
+        date_str = self.appt_date.strftime("%Y-%m-%d")
+        encoded = urllib.parse.quote(date_str)
+
+        request = self.factory.post(f"/confirm_requested_date/{encoded}/", {
+            "From": self.user.phone_number,
+            "SpeechResult": "Si"
+        })
+        response = confirm_requested_date(request, encoded)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/reschedule_appointment/", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_reschedule.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_reschedule.translate_to_language")
+    def test_confirm_requested_date_spanish_invalid(self, mock_translate, mock_sentiment):
+        """test spanish route for confirmation on an invalid appointment date"""
+        self.user.language = "es"
+        self.user.save()
+        mock_sentiment.return_value = True
+        mock_translate.return_value = "Yes"
+
+        future_date = (datetime.now().date() + timedelta(days=30)).strftime("%Y-%m-%d")
+        encoded = urllib.parse.quote(future_date)
+
+        request = self.factory.post(f"/confirm_requested_date/{encoded}/", {
+            "From": self.user.phone_number,
+            "SpeechResult": "Si"
+        })
+        response = confirm_requested_date(request, encoded)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Lo sentimos, esto no esta en tus citas.", response.content.decode())

@@ -15,7 +15,7 @@ from .utilities import (forward_operator, write_to_log,
 
 BOT = "bot"
 CALLER = "caller"
-TIMEOUT_LENGTH = 2  # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
 # TODO: Assuming each appointment is 15 minutes
 FIXED_APPT_DURATION = timedelta(minutes=15)
 
@@ -38,21 +38,24 @@ def check_account(request):
         if caller_number:
             # Query the User table for phone number and relay saved name.
             user = User.objects.get(phone_number=caller_number)
-            response.say(f"Hello, {user.first_name} {user.last_name}.")
-            write_to_log(log, BOT,
-                         f"Hello, {user.first_name} {user.last_name}.")
+            if user.first_name != "NaN" and user.last_name != "NaN":
+                response.say(f"Hello, {user.first_name} {user.last_name}.")
+                write_to_log(log, BOT,
+                            f"Hello, {user.first_name} {user.last_name}.")
 
-            # Confirm the account with the caller
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                            action=f"/confirm_account/?action={action}")
+                # Confirm the account with the caller
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                                action=f"/confirm_account/?action={action}")
 
-            gather.say("Is this your account? Please say yes or no.")
-            write_to_log(log, BOT,
-                         "Is this your account? Please say yes or no.")
-            response.append(gather)
+                gather.say("Is this your account? Please say yes or no.")
+                write_to_log(log, BOT,
+                            "Is this your account? Please say yes or no.")
+                response.append(gather)
 
-            # Repeat the prompt if no input received
-            response.redirect(f"/check_account/?action={action}")
+                # Repeat the prompt if no input received
+                response.redirect(f"/check_account/?action={action}")
+            else:
+                raise User.DoesNotExist
         else:
             # Phone number is invalid
             response.say("Sorry, we are unable to help you at this time.")
@@ -204,12 +207,18 @@ def process_name_confirmation(request, name_encoded):
         caller_number = get_phone_number(request)
 
         # Create user account
-        User.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=caller_number,
-                email=None
+        user, created = User.objects.get_or_create(
+            phone_number=caller_number,
+            defaults={
+                "first_name": "NaN",
+                "last_name": "NaN",
+            }
         )
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = None
+
+        user.save()
 
         # Send to get_date function
         response.redirect("/request_date_availability/")
@@ -368,7 +377,7 @@ def final_confirmation(request, time_encoded, date):
 
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         write_to_log(log, BOT, "Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
-        send_sms(phone_number,f"Your appointment at {start_datetime} has been scheduled.")
+        send_sms(phone_number,f"Your appointment at {start_datetime} has been scheduled. Thank you!")
     else:
         response.redirect("/answer/")
 
@@ -806,6 +815,18 @@ def reschedule_appointment(request, date_encoded):
     appt_to_cancel.delete()
     response.say("Your appointment has been canceled.")
     response.say("Let's schedule a new appointment.")
+
+    appt_date = appt_to_cancel.date.strftime("%B %d") # Formatted like "March 03"
+    appt_time = appt_to_cancel.start_time.strftime("%I:%M %p") # Formatted like "10:30 AM"
+
+    cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
+
+    if phone_number:
+        try: 
+            send_sms(phone_number, cancellation_message)
+        except Exception as e:
+            print(f"Error sending SMS: {e}")
+
     response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")

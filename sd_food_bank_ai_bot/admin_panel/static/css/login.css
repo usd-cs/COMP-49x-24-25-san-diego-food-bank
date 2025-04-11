@@ -58,3 +58,8 @@ body {
     background-color: #276749;
 }
 
+.error-text {
+    color: red;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}

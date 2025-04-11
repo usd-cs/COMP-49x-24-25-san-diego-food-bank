@@ -596,7 +596,7 @@ class AppointmentConfirmationTests(TestCase):
         self.assertIn("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!", content)
 
         start_datetime = datetime.combine(date_obj, start)
-        mock_send_sms.assert_called_once_with(phone_number, f"Your appointment at {start_datetime} has been scheduled.")
+        mock_send_sms.assert_called_once_with(phone_number, f"Your appointment at {start_datetime} has been scheduled. Thank you!")
 
     @patch("admin_panel.views.phone_service_schedule.get_response_sentiment")
     def test_final_confirmation_negative(self, mock_get_response_sentiment):
@@ -643,7 +643,7 @@ class AppointmentConfirmationTests(TestCase):
         start_datetime = datetime.combine(appointment_date, start_time)
 
         # Assert send_sms was called with correct args
-        mock_send_sms.assert_called_once_with(phone_number, f"Your appointment at {start_datetime} has been scheduled.")
+        mock_send_sms.assert_called_once_with(phone_number, f"Your appointment at {start_datetime} has been scheduled. Thank you!")
 
 
 class CancelAppointmentFlowTests(TestCase):
