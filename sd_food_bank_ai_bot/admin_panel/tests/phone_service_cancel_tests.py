@@ -83,7 +83,7 @@ class CancelInitialRoutingTests(TestCase):
         """
         mock_get_response_sentiment.return_value = True
 
-        content = {"SpeechResult": "Yes, that is correct."}
+        content = {"SpeechResult": "Yes, that is correct.", "From": "+1234567890"}
         response = self.client.post("/confirm_account/?action=cancel", content)
         content = response.content.decode("utf-8")
 
