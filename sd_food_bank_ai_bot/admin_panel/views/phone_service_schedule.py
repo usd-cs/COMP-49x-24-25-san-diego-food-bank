@@ -377,7 +377,7 @@ def final_confirmation(request, time_encoded, date):
 
         response.say("Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
         write_to_log(log, BOT, "Perfect! Your appointment has been scheduled. You'll receive a confirmation SMS shortly. Have a great day!")
-        send_sms(phone_number,f"Your appointment at {start_datetime} has been scheduled.")
+        send_sms(phone_number,f"Your appointment at {start_datetime} has been scheduled. Thank you!")
     else:
         response.redirect("/answer/")
 
@@ -815,6 +815,18 @@ def reschedule_appointment(request, date_encoded):
     appt_to_cancel.delete()
     response.say("Your appointment has been canceled.")
     response.say("Let's schedule a new appointment.")
+
+    appt_date = appt_to_cancel.date.strftime("%B %d") # Formatted like "March 03"
+    appt_time = appt_to_cancel.start_time.strftime("%I:%M %p") # Formatted like "10:30 AM"
+
+    cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
+
+    if phone_number:
+        try: 
+            send_sms(phone_number, cancellation_message)
+        except Exception as e:
+            print(f"Error sending SMS: {e}")
+
     response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")
