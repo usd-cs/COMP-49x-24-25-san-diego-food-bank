@@ -38,21 +38,24 @@ def check_account(request):
         if caller_number:
             # Query the User table for phone number and relay saved name.
             user = User.objects.get(phone_number=caller_number)
-            response.say(f"Hello, {user.first_name} {user.last_name}.")
-            write_to_log(log, BOT,
-                         f"Hello, {user.first_name} {user.last_name}.")
+            if user.first_name != "NaN" and user.last_name != "NaN":
+                response.say(f"Hello, {user.first_name} {user.last_name}.")
+                write_to_log(log, BOT,
+                            f"Hello, {user.first_name} {user.last_name}.")
 
-            # Confirm the account with the caller
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                            action=f"/confirm_account/?action={action}")
+                # Confirm the account with the caller
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                                action=f"/confirm_account/?action={action}")
 
-            gather.say("Is this your account? Please say yes or no.")
-            write_to_log(log, BOT,
-                         "Is this your account? Please say yes or no.")
-            response.append(gather)
+                gather.say("Is this your account? Please say yes or no.")
+                write_to_log(log, BOT,
+                            "Is this your account? Please say yes or no.")
+                response.append(gather)
 
-            # Repeat the prompt if no input received
-            response.redirect(f"/check_account/?action={action}")
+                # Repeat the prompt if no input received
+                response.redirect(f"/check_account/?action={action}")
+            else:
+                raise User.DoesNotExist
         else:
             # Phone number is invalid
             response.say("Sorry, we are unable to help you at this time.")
@@ -204,12 +207,18 @@ def process_name_confirmation(request, name_encoded):
         caller_number = get_phone_number(request)
 
         # Create user account
-        User.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=caller_number,
-                email=None
+        user, created = User.objects.get_or_create(
+            phone_number=caller_number,
+            defaults={
+                "first_name": "NaN",
+                "last_name": "NaN",
+            }
         )
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = None
+
+        user.save()
 
         # Send to get_date function
         response.redirect("/request_date_availability/")
