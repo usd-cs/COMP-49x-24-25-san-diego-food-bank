@@ -141,6 +141,9 @@ class PhoneFAQService(TestCase):
                                         answer="You must have an appointment.")
         self.faq_3 = FAQ.objects.create(question="How can I schedule an appointment?",
                                         answer="To schedule an appointment, visit calendly.com/sdfb.")
+        
+        self.user_eng = User.objects.create(first_name="John", last_name="Doe", phone_number="+17601231234")
+        self.user_span = User.objects.create(first_name="Jane", last_name="Doe", phone_number="+17603214321", language="es")
 
     @patch("admin_panel.views.phone_service_faq.get_matching_question")
     def test_get_question_from_user_valid(self, mock_get_matching_question):
@@ -149,11 +152,30 @@ class PhoneFAQService(TestCase):
         mock_get_matching_question.return_value = question  # Avoids API call
 
         request = self.factory.post("/get_question_from_user/",
-                                    {"SpeechResult": "What time do you open?"})
+                                    {"SpeechResult": "What time do you open?",
+                                     "From": "+17601231234"})
         response = get_question_from_user(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(f"You asked: {question} Is this correct?",
+                      response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_matching_question")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_get_question_from_user_valid_spanish(self, mock_translate_to_language, mock_get_matching_question):
+        """Test for when a valid question is asked in Spanish"""
+        question = "¿Cuándo abre el banco de alimentos?"
+        mock_translate_to_language.return_value = "Translated to Spanish"
+        mock_get_matching_question.return_value = question  # Avoids API call
+
+        request = self.factory.post("/get_question_from_user/",
+                                    {"SpeechResult": "¿Cuándo abre el banco de alimentos?",
+                                     "From": "+17603214321"})
+        response = get_question_from_user(request)
+
+        mock_translate_to_language.assert_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f"Preguntaste: Translated to Spanish",
                       response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_matching_question")
@@ -162,32 +184,81 @@ class PhoneFAQService(TestCase):
         mock_get_matching_question.return_value = None
 
         request = self.factory.post("/get_question_from_user/",
-                                    {"SpeechResult": "What time do you open?"})
+                                    {"SpeechResult": "What time do you open?",
+                                     "From": "+17601231234"})
         response = get_question_from_user(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_matching_question")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_get_question_from_user_invalid_spanish(self, mock_translate_to_language, mock_get_matching_question):
+        """Test for when a question did not match in Spanish"""
+        mock_translate_to_language.return_value = "Translated to Spanish"
+        mock_get_matching_question.return_value = None  # Avoids API call
+
+        request = self.factory.post("/get_question_from_user/",
+                                    {"SpeechResult": "¿Cuándo abre el banco de alimentos?",
+                                     "From": "+17603214321"})
+        response = get_question_from_user(request)
+
+        mock_translate_to_language.assert_called() # To translate asked question to english
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Lo siento, no tengo la respuesta en este momento.",
+                      response.content.decode())
+
+    @patch("admin_panel.views.phone_service_faq.get_matching_question")
     def test_get_question_from_user_unheard(self, mock_get_matching_question):
         """Test for when the bot does not receive an input"""
         mock_get_matching_question.return_value = None
 
-        request = self.factory.post("/get_question_from_user/", {"SpeechResult": ""})
+        request = self.factory.post("/get_question_from_user/", {"SpeechResult": "",
+                                                                 "From": "+17601231234"})
         response = get_question_from_user(request)
 
         self.assertEqual(response.status_code, 200)
         mock_get_matching_question.assert_not_called()
         self.assertIn("Sorry, I couldn't understand that.", response.content.decode())
 
-    def test_prompt_question(self):
-        """Test for prompting the user for input"""
+    @patch("admin_panel.views.phone_service_faq.get_matching_question")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def  test_get_question_from_user_unheard_spanish(self, mock_translate_to_language, mock_get_matching_question):
+        """Test for when the bot does not receive an input in Spanish"""
+        mock_translate_to_language.return_value = "Translated to Spanish"
+        mock_get_matching_question.return_value = None  # Avoids API call
+
+        request = self.factory.post("/get_question_from_user/",
+                                    {"SpeechResult": "",
+                                     "From": "+17603214321"})
+        response = get_question_from_user(request)
+
+        mock_translate_to_language.assert_not_called()
+        mock_get_matching_question.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Lo siento, no pude entender eso.",
+                      response.content.decode())
+
+    def test_prompt_question_english(self):
+        """Test for prompting the user for input in English"""
         self.client = Client()
 
-        response = self.client.get(reverse("prompt_question"), follow=False)
+        content = {"From": "+17601231234"}
+        response = self.client.post(reverse("prompt_question"), content, follow=False)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("What can I help you with?", response.content.decode())
+    
+    def test_prompt_question_spanish(self):
+        """Test for prompting the user for input in Spanish"""
+        self.client = Client()
+
+        content = {"From": "+17603214321"}
+        response = self.client.post(reverse("prompt_question"), content, follow=False)
+
+        self.assertEqual(response.status_code, 200)
+        # Can't give full sentence because of encoding of special symbols
+        self.assertIn("puedo ayudarte?", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.get_corresponding_answer")
@@ -200,11 +271,29 @@ class PhoneFAQService(TestCase):
 
         question = "When does the food bank open?"
         question_encoded = urllib.parse.quote(question)
-        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Yes"})
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Yes",
+                                                                               "From": "+17601231234"})
         response = confirm_question(request, question_encoded)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("The food bank is open Monday-Friday from 9:00 AM to 5:00 PM", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_confirm_question_affirmative_spanish(self, mock_translate_to_language,
+                                          mock_get_response_sentiment):
+        """Test for when the user has said the question is correct in Spanish"""
+        mock_get_response_sentiment.return_value = True
+        mock_translate_to_language.return_value = "Translated to Spanish"
+
+        question = "When does the food bank open?" # In English because passed as parameter from other function
+        question_encoded = urllib.parse.quote(question)
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Sí",
+                                                                               "From": "+17603214321"})
+        response = confirm_question(request, question_encoded)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Translated to Spanish", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.get_corresponding_answer")
@@ -214,7 +303,8 @@ class PhoneFAQService(TestCase):
 
         question = "Can I speak to an operator?"
         question_encoded = urllib.parse.quote(question)
-        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Yes"})
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Yes",
+                                                                               "From": "+17601231234"})
         response = confirm_question(request, question_encoded)
 
         self.assertEqual(response.status_code, 200)
@@ -229,11 +319,45 @@ class PhoneFAQService(TestCase):
 
         question = "When does the food bank open?"
         question_encoded = urllib.parse.quote(question)
-        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "Yes"})
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "No",
+                                                                               "From": "+17601231234"})
         response = confirm_question(request, question_encoded)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry about that. Please try asking again or rephrasing.", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_confirm_question_negative_spanish(self, mock_translate_to_language, mock_get_response_sentiment):
+        """Test for when the user has said the question is incorrect in spanish"""
+        mock_translate_to_language.return_vaue = "Translated to Spanish"
+        mock_get_response_sentiment.return_value = False
+
+        question = "When does the food bank open?" # Passed as parameter from a different function, so in English
+        question_encoded = urllib.parse.quote(question)
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "No",
+                                                                               "From": "+17603214321"})
+        response = confirm_question(request, question_encoded)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_confirm_question_unheard(self, mock_translate_to_language, mock_get_response_sentiment):
+        """Test for when the bot receives no input"""
+        mock_translate_to_language.return_value = "Translated to Spanish"
+        mock_get_response_sentiment.return_value = False
+
+        question = "When does the food bank open?" # In English because previously translated
+        question_encoded = urllib.parse.quote(question)
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "",
+                                                                               "From": "+17603214321"})
+        response = confirm_question(request, question_encoded)
+
+        mock_get_response_sentiment.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Lo siento, no pude entender eso.", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     def test_confirm_question_unheard(self, mock_get_response_sentiment):
@@ -242,7 +366,8 @@ class PhoneFAQService(TestCase):
 
         question = "When does the food bank open?"
         question_encoded = urllib.parse.quote(question)
-        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": ""})
+        request = self.factory.post(f"/confirm_question/{question_encoded}/", {"SpeechResult": "",
+                                                                               "From": "+17601231234"})
         response = confirm_question(request, question_encoded)
 
         mock_get_response_sentiment.assert_not_called()

@@ -9,11 +9,11 @@ from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
                         get_matching_question, get_corresponding_answer)
 from .phone_service_schedule import CALLER, BOT
-from .utilities import get_phone_number
+from .utilities import get_phone_number, translate_to_language
 from ..models import User
 
 
-TIMEOUT_LENGTH = 3  # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 5  # The length of time the bot waits for a response
 
 
 @csrf_exempt
@@ -63,7 +63,7 @@ def answer_call(request):
         if user.language == "en":
             gather.say("Thank you for calling the San Diego Food Bank!", language="en")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
-            gather.say("Para español presione 0.", language="es")
+            gather.say("Para español presione 0.", language="es-MX")
             write_to_log(log, BOT, "Para español presione 0.")
             gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
                         press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
@@ -72,13 +72,13 @@ def answer_call(request):
                         press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
                         or press 5 to be forwarded to an operator.")
         else:
-            gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es")
+            gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
             write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
             gather.say("For english press 0.", language="en")
             write_to_log(log, BOT, "For english press 0.")
             gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
                         3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
-                        o presione 5 para ser remitido a un operador.", language="es")
+                        o presione 5 para ser remitido a un operador.", language="es-MX")
             write_to_log(log, BOT, "presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
                         3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
                         o presione 5 para ser remitido a un operador.")
@@ -132,10 +132,19 @@ def prompt_question(request):
     phone_number = request.POST.get('From')
     log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                    action="/get_question_from_user/")
-    gather.say("What can I help you with?")
-    write_to_log(log, BOT, "What can I help you with?")
+    
+    user = User.objects.get(phone_number=phone_number)
+    gather = None
+    if user.language == "en":
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/get_question_from_user/", language="en")
+        gather.say("What can I help you with?", language="en")
+        write_to_log(log, BOT, "What can I help you with?")
+    else:
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/get_question_from_user/", language="es-MX")
+        gather.say("¿En qué puedo ayudarte?", language="es-MX")
+        write_to_log(log, BOT, "¿En qué puedo ayudarte?")
     caller_response.append(gather)
 
     return HttpResponse(str(caller_response), content_type='text/xml')
@@ -151,24 +160,47 @@ def get_question_from_user(request):
     log = Log.objects.filter(phone_number=phone_number).last()
     write_to_log(log, CALLER, speech_result)
     caller_response = VoiceResponse()
+
+    user = User.objects.get(phone_number=phone_number)
     if speech_result:
+        if user.language == "es":
+            speech_result = translate_to_language(source_lang="es", target_lang="en", text=speech_result)
         question = get_matching_question(speech_result)
         if question:
             question_encoded = urllib.parse.quote(question)
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                            action=f"/confirm_question/{question_encoded}/")
-            gather.say(f"You asked: {question} Is this correct?")
-            write_to_log(log, BOT, f"You asked: {question} Is this correct?")
+            gather = None
+            
+            if user.language == "en":
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                                action=f"/confirm_question/{question_encoded}/", language="en")
+                gather.say(f"You asked: {question} Is this correct?")
+                write_to_log(log, BOT, f"You asked: {question} Is this correct?")
+            else:
+                question = translate_to_language(source_lang="en", target_lang="es", text=question)
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                                action=f"/confirm_question/{question_encoded}/", language="es-MX")
+                gather.say(f"Preguntaste: {question} ¿Es esto correcto?", language="es-MX")
+                write_to_log(log, BOT, f"Preguntaste: {question} ¿Es esto correcto?")
+
             caller_response.append(gather)
         else:  # No matching question found
             # Add a strike
             strike_system_handler(log)
-            caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
-            write_to_log(log, BOT, "Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+            if user.language == "en":
+                caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+                write_to_log(log, BOT, "Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+            else:
+                caller_response.say("Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.", language="es-MX")
+                write_to_log(log, BOT, "Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.")
+
             caller_response.redirect("/prompt_question/")
     else:
-        caller_response.say("Sorry, I couldn't understand that.")
-        write_to_log(log, BOT, "Sorry, I couldn't understand that.")
+        if user.language == "en":
+            caller_response.say("Sorry, I couldn't understand that.")
+            write_to_log(log, BOT, "Sorry, I couldn't understand that.")
+        else:
+            caller_response.say("Lo siento, no pude entender eso.", language="es-MX")
+            write_to_log(log, BOT, "Lo siento, no pude entender eso.")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -183,8 +215,12 @@ def confirm_question(request, question):
     log = Log.objects.filter(phone_number=phone_number).last()
     caller_response = VoiceResponse()
     write_to_log(log, CALLER, speech_result)
-
+    
+    user = User.objects.get(phone_number=phone_number)
     if speech_result:
+        if user.language == "es":
+            speech_result = translate_to_language("es", "en", speech_result)
+
         sentiment = get_response_sentiment(speech_result)
         if sentiment:
             question = urllib.parse.unquote(question)
@@ -194,7 +230,11 @@ def confirm_question(request, question):
 
             answer = get_corresponding_answer(question)
 
-            caller_response.say(answer)
+            if user.language == "en":
+                caller_response.say(answer)
+            else:
+                answer = translate_to_language("en", "es", answer)
+                caller_response.say(answer, language="es-MX")
             write_to_log(log, BOT, answer)
 
             caller_response.redirect("/prompt_question/")
@@ -203,12 +243,20 @@ def confirm_question(request, question):
         else:
             # Add a strike
             strike_system_handler(log)
-            caller_response.say("Sorry about that. Please try asking again or rephrasing.")
-            write_to_log(log, BOT, "Sorry about that. Please try asking again or rephrasing.")
+            if user.language == "en":
+                caller_response.say("Sorry about that. Please try asking again or rephrasing.")
+                write_to_log(log, BOT, "Sorry about that. Please try asking again or rephrasing.")
+            else:
+                caller_response.say("Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.", language="es-MX")
+                write_to_log(log, BOT, "Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.")
             caller_response.redirect("/prompt_question/")
     else:
-        caller_response.say("Sorry, I couldn't understand that. Please try again.")
-        write_to_log(log, BOT, "Sorry, I couldn't understand that. Please try again.")
+        if user.language == "en":
+            caller_response.say("Sorry, I couldn't understand that. Please try again.")
+            write_to_log(log, BOT, "Sorry, I couldn't understand that. Please try again.")
+        else:
+            caller_response.say("Lo siento, no pude entender eso. Por favor inténtalo de nuevo.")
+            write_to_log(log, BOT, "Lo siento, no pude entender eso. Por favor inténtalo de nuevo.")
         caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
