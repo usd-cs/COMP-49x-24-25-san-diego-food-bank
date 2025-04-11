@@ -700,8 +700,8 @@ def cancel_appointment(request, appointment_id):
     try: 
         appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
     except AppointmentTable.DoesNotExist:
-        if language == "es":
-            response.say("No pudimos encontrar una cita para cancelar.", language="es")
+        if language == "es-MX":
+            response.say("No pudimos encontrar una cita para cancelar.", language="es-MX")
         else:
             response.say("We could not find an appointment to cancel.", language="en")
         response.redirect("/answer/") # Reroute back to main menu if no appointment found
@@ -713,7 +713,7 @@ def cancel_appointment(request, appointment_id):
     
     # Determine the language (default to english unless caller opts for spanish)
     
-    if language == "es":
+    if language == "es-MX":
         cancellation_message = f"Su cita del {appt_date} a las {appt_time} ha sido cancelada. ¡Gracias!"
     else: 
         cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
@@ -729,8 +729,8 @@ def cancel_appointment(request, appointment_id):
         except Exception as e:
             print(f"Error sending SMS: {e}") 
     
-    if language == "es":
-        response.say(cancellation_message, language="es")
+    if language == "es-MX":
+        response.say(cancellation_message, language="es-MX")
     else: 
         response.say(cancellation_message, language="en")
 
