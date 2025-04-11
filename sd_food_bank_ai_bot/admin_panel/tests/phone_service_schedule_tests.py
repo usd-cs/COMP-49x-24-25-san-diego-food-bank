@@ -219,7 +219,7 @@ class NameRequestTests(TestCase):
             choices=[MagicMock(message=MagicMock(content="Billy Bob"))]
         )
 
-        request = self.factory.post("/get_name/", {"SpeechResult": "My name is Billy Bob", "From": +1234567890})
+        request = self.factory.post("/get_name/", {"SpeechResult": "My name is Billy Bob", "From": "+16294968156"})
         response = get_name(request)
 
         self.assertIn("Your name is Billy Bob. Is that correct?", response.content.decode())
@@ -233,7 +233,7 @@ class NameRequestTests(TestCase):
             choices=[MagicMock(message=MagicMock(content="Billy Bob"))]
         )
 
-        request = self.factory.post("/get_name/", {"SpeechResult": ""})
+        request = self.factory.post("/get_name/", {"SpeechResult": "", "From": "+16294968156"})
         response = get_name(request)
 
         mock_openai.assert_not_called()
@@ -327,7 +327,7 @@ class AppointmentTests(TestCase):
         mock_client.chat.completions.create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="Tuesday"))]
         )
-        response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
+        response = self.client.post(self.url, {'SpeechResult': 'Tuesday', "From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("The next available Tuesday", str(response.content))
 
@@ -388,7 +388,7 @@ class AppointmentTests(TestCase):
                     date=avail_date
                 )
 
-        response = self.client.post(self.url, {'SpeechResult': 'Tuesday'})
+        response = self.client.post(self.url, {'SpeechResult': 'Tuesday', "From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
 
@@ -436,14 +436,14 @@ class AppointmentSchedulingTests(TestCase):
     def test_request_preferred_time_under_four(self):
         """Tests if available times are correctly listed when ≤ 3 slots exist."""
         url = reverse('request_preferred_time_under_four') + f"?date={self.appointment_dates[0]}"
-        response = self.client.post(url)
+        response = self.client.post(url, {"From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Here are the available times", response.content.decode())
 
     def test_request_preferred_time_over_three(self):
         """Tests if prompt correctly asks for a preferred time when >3 slots exist."""
         url = reverse('request_preferred_time_over_three') + f"?date={self.appointment_dates[0]}"
-        response = self.client.post(url)
+        response = self.client.post(url, {"From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("What time would you like?", response.content.decode())
 
@@ -457,7 +457,7 @@ class AppointmentSchedulingTests(TestCase):
         )
 
         url = reverse('generate_requested_time') + f"?date={self.appointment_dates[0]}"
-        response = self.client.post(url, {"SpeechResult": "Can I come at 2:45 PM?"})
+        response = self.client.post(url, {"SpeechResult": "Can I come at 2:45 PM?", "From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Your requested time was 2:45 PM", response.content.decode())
 
@@ -466,7 +466,7 @@ class AppointmentSchedulingTests(TestCase):
         """Tests if find_requested_time correctly finds an exact time match."""
         time_encoded = urllib.parse.quote("02:30 PM")
         url = reverse('find_requested_time', args=[time_encoded]) + f"?date={self.appointment_dates[0]}"
-        response = self.client.post(url, {"SpeechResult": "yes"})
+        response = self.client.post(url, {"SpeechResult": "yes", "From": "+1234567890"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("Our nearest appointment slot is", response.content.decode())
 
