@@ -13,7 +13,7 @@ from .utilities import get_phone_number, translate_to_language
 from ..models import User
 
 
-TIMEOUT_LENGTH = 5  # The length of time the bot waits for a response
+TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
 
 
 @csrf_exempt
