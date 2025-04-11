@@ -700,7 +700,7 @@ def cancel_appointment(request, appointment_id):
     try: 
         appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
     except AppointmentTable.DoesNotExist:
-        if language == "es-MX":
+        if language == "es":
             response.say("No pudimos encontrar una cita para cancelar.", language="es-MX")
         else:
             response.say("We could not find an appointment to cancel.", language="en")
@@ -711,10 +711,23 @@ def cancel_appointment(request, appointment_id):
     appt_date = appt_to_cancel.date.strftime("%B %d") # Formatted like "March 03"
     appt_time = appt_to_cancel.start_time.strftime("%I:%M %p") # Formatted like "10:30 AM"
     
-    # Determine the language (default to english unless caller opts for spanish)
-    
-    if language == "es-MX":
-        cancellation_message = f"Su cita del {appt_date} a las {appt_time} ha sido cancelada. ¡Gracias!"
+    if language == "es":
+        english_to_spanish_months = {
+            "January": "enero", "February": "febrero", "March": "marzo",
+            "April": "abril", "May": "mayo", "June": "junio",
+            "July": "julio", "August": "agosto", "September": "septiembre",
+            "October": "octubre", "November": "noviembre", "December": "diciembre"
+        }
+        # Split appt_date into month and day parts 
+        parts = appt_date.split()
+        if len(parts) == 2:
+            month_en, day = parts 
+            translated_month = english_to_spanish_months.get(month_en, month_en)
+            translated_date = f"{translated_month} {day}"
+        else: 
+            translated_date = appt_date
+
+        cancellation_message = f"Su cita del {translated_date} a las {appt_time} ha sido cancelada. ¡Gracias!"
     else: 
         cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
 
@@ -729,7 +742,7 @@ def cancel_appointment(request, appointment_id):
         except Exception as e:
             print(f"Error sending SMS: {e}") 
     
-    if language == "es-MX":
+    if language == "es":
         response.say(cancellation_message, language="es-MX")
     else: 
         response.say(cancellation_message, language="en")
