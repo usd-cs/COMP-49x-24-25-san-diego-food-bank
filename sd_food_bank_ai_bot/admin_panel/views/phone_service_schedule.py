@@ -875,31 +875,67 @@ def cancel_appointment(request, appointment_id):
     Cancels the caller's appointment and informs them their appointment has been canceled.
     """
     response = VoiceResponse()
+
+    # Determine language from caller's phone number 
+    language = "en" # Default to english 
+    phone_number = get_phone_number(request)
+    if phone_number:
+        try:
+            user = User.objects.get(phone_number=phone_number)
+            language = user.language
+        except User.DoesNotExist:
+            pass
     
     try: 
         appt_to_cancel = AppointmentTable.objects.get(pk=appointment_id)
     except AppointmentTable.DoesNotExist:
-        response.say("We could not find an appointment to cancel.")
+        if language == "es":
+            response.say("No pudimos encontrar una cita para cancelar.", language="es-MX")
+        else:
+            response.say("We could not find an appointment to cancel.", language="en")
         response.redirect("/answer/") # Reroute back to main menu if no appointment found
         return HttpResponse(str(response), content_type="text/xml")
     
+    # Format appointment date and time 
     appt_date = appt_to_cancel.date.strftime("%B %d") # Formatted like "March 03"
     appt_time = appt_to_cancel.start_time.strftime("%I:%M %p") # Formatted like "10:30 AM"
+    
+    if language == "es":
+        english_to_spanish_months = {
+            "January": "enero", "February": "febrero", "March": "marzo",
+            "April": "abril", "May": "mayo", "June": "junio",
+            "July": "julio", "August": "agosto", "September": "septiembre",
+            "October": "octubre", "November": "noviembre", "December": "diciembre"
+        }
+        # Split appt_date into month and day parts 
+        parts = appt_date.split()
+        if len(parts) == 2:
+            month_en, day = parts 
+            translated_month = english_to_spanish_months.get(month_en, month_en)
+            translated_date = f"{translated_month} {day}"
+        else: 
+            translated_date = appt_date
+
+        cancellation_message = f"Su cita del {translated_date} a las {appt_time} ha sido cancelada. ¡Gracias!"
+    else: 
+        cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
 
     # Get the phone number associated with the appointment's user
     phone_number = appt_to_cancel.user.phone_number if appt_to_cancel.user else None
 
     appt_to_cancel.delete() # Delete the appointment
 
-    cancellation_message = f"Your appointment on {appt_date} at {appt_time} has been canceled. Thank you!"
-
     if phone_number:
         try: 
             send_sms(phone_number, cancellation_message)
         except Exception as e:
             print(f"Error sending SMS: {e}") 
+    
+    if language == "es":
+        response.say(cancellation_message, language="es-MX")
+    else: 
+        response.say(cancellation_message, language="en")
 
-    response.say(cancellation_message)
     response.hangup()
 
     return HttpResponse(str(response), content_type="text/xml")
