@@ -152,4 +152,11 @@ urlpatterns = [
          views.confirm_requested_date,
          name="confirm_requested_date"),
 
+     # Audit Logs
+     path("audit_logs/",
+          views.main_page_view,
+          name="audit_logs"),
+     path("singe_log_view/<int:log_id>/",
+          views.single_log_view,
+          name="singe_log_view"),
 ]
