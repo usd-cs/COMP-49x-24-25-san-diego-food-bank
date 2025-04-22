@@ -8,7 +8,7 @@
     <div class="title-and-search">
         <h1>Audit Logs</h1>
         <form class="search" method="get" action="">
-            <input type="text" name="q" placeholder="Search..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
+            <input type="text" name="q" placeholder="Search by phone number..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
             <button type="submit" class="search-button">Search</button>
         </form>
         <h1 style="color: white;">Audit Logs</h1>
@@ -16,7 +16,7 @@
     <div class="log-table">
         {% if logs %}
         <table>
-            <thead>
+            <thead>                
                 <tr>
                     <th>Caller Number</th>
                     <th>Duration</th>
@@ -25,7 +25,7 @@
             </thead>
             <tbody>
                 {% for log in logs %}
-                <tr>
+                <tr onclick="window.location='{% url 'singe_log_view' log.id %}'" style="cursor: pointer;">
                     <td>{{ log.phone_number }}</td>
                     <td>{{ log.length_of_call }}</td>
                     <td>{{ log.time_started|date:"M d, Y" }}</td>
