@@ -95,7 +95,7 @@ def appointment_count(request):
     return appointment_count
 
 
-def forward_operator(log):
+def forward_operator(log=None):
     """
     Relays info to and forwards caller to operator because requested or
     failed strike system
@@ -103,9 +103,10 @@ def forward_operator(log):
     caller_response = VoiceResponse()
 
     caller_response.say("I'm transferring you to an operator now. Please hold.")
-    write_to_log(log,
-                 "bot",
-                 "I'm transferring you to an operator now. Please hold.")
+    if log:
+        write_to_log(log,
+                    "bot",
+                    "I'm transferring you to an operator now. Please hold.")
     dial = Dial()
     dial.number("###-###-####")
     caller_response.append(dial)
