@@ -5,6 +5,7 @@ from django.contrib.auth import login, logout
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q
+from django.core.paginator import Paginator
 from ..models import FAQ, Tag, Admin
 from ..forms import FAQForm
 
@@ -96,23 +97,30 @@ def faq_page_view(request):
     """
     query = request.GET.get('q')
     selected_tag = request.GET.get('tag', '')
+    page_number = request.GET.get('page')
+
+    faqs_qs = FAQ.objects.all()
 
     # Filter FAQs based on the search query
     if query:
-        faqs = FAQ.objects.filter(Q(question__icontains=query) | Q(answer__icontains=query))
-    else:
-        # Retrieve all FAQs and update the view if no search query is specified
-        faqs = FAQ.objects.all()
+        faqs_qs = faqs_qs.filter(
+            Q(question__icontains=query) | 
+            Q(answer__icontains=query)
+        )
 
     if selected_tag:
-        faqs = faqs.filter(tags__id=selected_tag)
+        faqs_qs = faqs_qs.filter(tags__id=selected_tag)
 
-    tags = Tag.objects.all()
+    paginator = Paginator(faqs_qs.order_by("id"), 10) # 10 FAQs per page
+    faqs_page = paginator.get_page(page_number)
 
-    # Render FAQ page with the FAQs, search query, and tags
-    return render(request, 'faq_page.html', {"faqs": faqs, "query": query, "tags": tags,
-                  "selected_tag": int(selected_tag) if selected_tag else None, })
-
+    context = {
+        "faqs": faqs_page, 
+        "query": query,
+        "tags": Tag.objects.all(),
+        "selected_tag":int(selected_tag) if selected_tag else None,
+    }
+    return render(request, "faq_page.html", context) 
 
 @login_required
 def delete_faq(request, faq_id):
