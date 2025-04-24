@@ -141,3 +141,20 @@ body {
     background-color: #f1f1f1;
     cursor: pointer;
 }
+
+.pagination {
+    margin: 10px;
+}
+
+.search-button a{
+    color: #82B65B;
+    font-family: Arial, sans-serif;
+    vertical-align: middle;
+    text-decoration: none; 
+}
+
+.current {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    vertical-align: middle;
+}
