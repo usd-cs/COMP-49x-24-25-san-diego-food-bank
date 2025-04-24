@@ -27,8 +27,8 @@ class TwilioViewsTestCase(TestCase):
         # Check for expected greeting and the TwiML tags
         self.assertIn("Thank you for calling the San Diego Food Bank!", content)
         self.assertIn("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
-                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                        or press 5 to be forwarded to an operator.", content)
+                    press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
+                    or press 5 to be forwarded to an operator.", content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
         self.assertEqual(User.objects.get(phone_number="+17601231234").language, "en")
