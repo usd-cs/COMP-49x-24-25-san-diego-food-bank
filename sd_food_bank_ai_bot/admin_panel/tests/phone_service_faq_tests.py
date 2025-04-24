@@ -5,9 +5,11 @@ from admin_panel.views.phone_service_faq import (answer_call, confirm_question, 
                                                  get_corresponding_answer)
 from admin_panel.models import Log, FAQ, User
 from django.urls import reverse
+from django.utils import timezone
+import time
 import urllib.parse
 import datetime
-
+from datetime import timedelta
 
 class TwilioViewsTestCase(TestCase):
     def setUp(self):
@@ -438,3 +440,56 @@ class PhoneFAQService(TestCase):
         strike_system_handler(log_mock, reset=True)
 
         log_mock.reset_strikes.assert_called_once()
+
+class CallStatusUpdateTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse("call_status_update")  # Make sure this matches your urls.py
+        self.phone_number = "+1234567890"
+        self.log = Log.objects.create(
+            phone_number=self.phone_number,
+            time_started=timezone.now() - timedelta(seconds=30)
+        )
+
+    def test_call_status_update_success(self):
+        time.sleep(1)
+        response = self.client.post(self.url, {
+            "CallStatus": "completed",
+            "From": self.phone_number
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+        # Refresh the log from DB
+        self.log.refresh_from_db()
+
+        self.assertIsNotNone(self.log.time_ended)
+        self.assertGreater(self.log.length_of_call.total_seconds(), 0)
+
+    def test_call_status_update_ignores_non_completed(self):
+        original_ended = self.log.time_ended
+        response = self.client.post(self.url, {
+            "CallStatus": "in-progress",
+            "From": self.phone_number
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+        self.log.refresh_from_db()
+        self.assertEqual(self.log.length_of_call.total_seconds(), 0)
+
+    def test_call_status_update_missing_log(self):
+        response = self.client.post(self.url, {
+            "CallStatus": "completed",
+            "From": "+19998887777"
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+
+    def test_call_status_update_invalid_method(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.json()["error"], "Method not allowed")

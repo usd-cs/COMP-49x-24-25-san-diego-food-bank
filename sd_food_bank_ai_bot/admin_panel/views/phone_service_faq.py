@@ -11,6 +11,7 @@ from .utilities import (strike_system_handler, forward_operator, write_to_log,
 from .phone_service_schedule import CALLER, BOT
 from .utilities import get_phone_number, translate_to_language
 from ..models import User
+from datetime import timedelta
 
 
 TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
@@ -23,6 +24,7 @@ def answer_call(request):
     """
     phone_number = request.POST.get('From')
     log = Log.objects.create(phone_number=phone_number)
+    log.time_started = timezone.now()
     caller_response = VoiceResponse()
 
     phone_number = get_phone_number(request)
@@ -113,7 +115,7 @@ def call_status_update(request):
 
                 if log.time_started:
                     call_duration = log.time_ended - log.time_started
-                    log.length_of_call = call_duration
+                    log.length_of_call = timedelta(seconds=round(call_duration.total_seconds()))
 
                 log.save()
 
