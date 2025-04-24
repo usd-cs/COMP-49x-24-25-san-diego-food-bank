@@ -42,8 +42,6 @@ def answer_call(request):
     """
     caller_response = VoiceResponse()
     phone_number = get_phone_number(request)
-    log = Log.objects.filter(phone_number=phone_number).last()
-    log.time_started = timezone.now()
 
     user, created = User.objects.get_or_create(
         phone_number=phone_number,
@@ -52,6 +50,9 @@ def answer_call(request):
             "last_name": "NaN",
         }
     )
+
+    log = Log.objects.filter(phone_number=phone_number).last()
+    log.time_started = timezone.now()
 
     digit_input = request.POST.get('Digits', '')
     if digit_input:

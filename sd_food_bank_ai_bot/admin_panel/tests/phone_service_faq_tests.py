@@ -15,6 +15,17 @@ class TwilioViewsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.factory = RequestFactory()
+        self.phone_number = "+17601231234"
+
+        self.user, _ = User.objects.get_or_create(
+            phone_number=self.phone_number,
+            defaults={"first_name": "NaN", "last_name": "NaN"}
+        )
+
+        self.log = Log.objects.create(
+            phone_number=self.phone_number,
+            time_started=timezone.now()
+        )
 
     def test_answer_call_english(self):
         """
