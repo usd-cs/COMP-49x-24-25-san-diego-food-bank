@@ -25,7 +25,7 @@
             </thead>
             <tbody>
                 {% for log in logs %}
-                <tr onclick="window.location='{% url 'singe_log_view' log.id %}'" style="cursor: pointer;">
+                <tr onclick="window.location='{% url 'single_log_view' log.id %}'" style="cursor: pointer;">
                     <td>{{ log.phone_number }}</td>
                     <td>{{ log.length_of_call }}</td>
                     <td>{{ log.time_started|date:"M d, Y" }}</td>
