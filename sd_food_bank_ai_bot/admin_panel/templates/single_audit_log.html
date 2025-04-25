@@ -1,0 +1,33 @@
+{% extends 'nav_bar.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/single_audit_log.css' %}">
+
+<button class="back-button" onclick="window.history.back();">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
+
+<div class="log-container">
+    <p><strong>Caller Number:</strong> {{ log.phone_number }}</p>
+    <p><strong>Duration:</strong> {{ log.length_of_call }}</p>
+    <p><strong>Date:</strong> {{ log.time_started|date:"m/d/Y" }}</p>
+
+    <hr>
+
+    <div class="transcript-container">
+        {% for line in cleaned_transcript %}
+            {% if line.speaker == 'bot' %}
+                <div class="chat-bubble bot"><strong>BOT:</strong> {{ line.message }}</div>
+            {% elif line.speaker == 'caller' %}
+                <div class="chat-bubble caller"><strong>CALLER:</strong> {{ line.message }}</div>
+            {% else %}
+                <div class="chat-bubble">{{ line.message }}</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <hr>
+    <p><em>CALL ENDED</em></p>
+</div>
+{% endblock %}

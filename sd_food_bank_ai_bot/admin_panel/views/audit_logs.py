@@ -29,5 +29,16 @@ def main_page_view(request):
 
 @login_required
 def single_log_view(request, log_id):
-    # Replace with transcript stuff
-    return HttpResponse(str(log_id))
+    log = get_object_or_404(Log, id=log_id)
+
+    # Remove weird large spacing caused by \n\r in the messages  for transcript
+    cleaned_transcript = []
+    for entry in log.transcript:
+        message = entry.get('message', '')
+        cleaned_message = ' '.join(message.replace('\n', ' ').replace('\r', ' ').split())
+        cleaned_transcript.append({
+            'speaker': entry.get('speaker', ''),
+            'message': cleaned_message
+        })
+
+    return render(request, 'single_audit_log.html', {"log": log, "cleaned_transcript": cleaned_transcript})
