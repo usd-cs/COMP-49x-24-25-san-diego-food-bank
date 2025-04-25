@@ -61,6 +61,7 @@ def ask_appointment_to_cancel(request):
     write_to_log(log, BOT, "Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
 
     response.append(gather)
+    response.redirect("/ask_appointment_to_cancel/")
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -152,6 +153,7 @@ def prompt_cancellation_confirmation(request, appointment_id):
     gather.say(f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
     write_to_log(log, BOT, f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
     response.append(gather)
+    response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -178,6 +180,7 @@ def cancellation_confirmation(request, appointment_id):
             write_to_log(log, BOT,
                          "Would you like to go back to the main menu?")
             response.append(gather)
+            response.redirect("/return_main_menu_response/")
     else:
         response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
 
@@ -232,5 +235,6 @@ def reroute_no_appointment(request):
     gather.say("Would you like to go back to the main menu?")
     write_to_log(log, BOT, "Would you like to go back to the main menu?")
     response.append(gather)
+    response.redirect("/reroute_no_appointment/")
 
     return HttpResponse(str(response), content_type="text/xml")

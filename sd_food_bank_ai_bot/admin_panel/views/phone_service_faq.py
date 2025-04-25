@@ -160,6 +160,7 @@ def prompt_question(request):
         gather.say("¿En qué puedo ayudarte?", language="es-MX")
         write_to_log(log, BOT, "¿En qué puedo ayudarte?")
     caller_response.append(gather)
+    caller_response.redirect("/prompt_question/")
 
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -197,6 +198,7 @@ def get_question_from_user(request):
                 write_to_log(log, BOT, f"Preguntaste: {question} ¿Es esto correcto?")
 
             caller_response.append(gather)
+            caller_response.redirect("/prompt_question/")
         else:  # No matching question found
             # Add a strike
             strike_system_handler(log)

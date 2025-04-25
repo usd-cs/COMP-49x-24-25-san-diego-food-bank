@@ -216,6 +216,7 @@ def get_name(request):
             write_to_log(log, BOT,
                         f"Your name is {response_pred}. Is that correct?")
             response.append(gather)
+            response.redirect("/check_account/")
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
                             action=f"/process_name_confirmation/{name_encoded}/")
@@ -223,6 +224,7 @@ def get_name(request):
             write_to_log(log, BOT,
                         translate_to_language("en", "es", f"Your name is {response_pred}. Is that correct?"))
             response.append(gather)
+            response.redirect("/check_account/")
     else:
         response.redirect("/check_account/")
 
@@ -395,6 +397,7 @@ def confirm_time_selection(request, time_encoded, date):
         write_to_log(log, BOT,
                     f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?")
         response.append(gather)
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
     else:
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
                         action=f"/final_confirmation/{time_encoded}/{date}/")
@@ -403,8 +406,10 @@ def confirm_time_selection(request, time_encoded, date):
         write_to_log(log, BOT, translate_to_language("en", "es",
                 f"Great! To confirm you are booked for {date_final} at {time} and your name is {first_name} {last_name}. Is that correct?"))
         response.append(gather)
+        response.redirect(f"/confirm_time_selection/{time_encoded}/{date}/")
 
     return HttpResponse(str(response), content_type="text/xml")
+
 
 
 @csrf_exempt
@@ -508,6 +513,7 @@ def get_time_response(request):
             write_to_log(log, BOT,
                         f"Your requested time was {response_pred}. Is that correct?")
             response.append(gather)
+            response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
                             action=f"/given_time_response/{time_encoded}/{appointment_date_str}/")
@@ -516,6 +522,7 @@ def get_time_response(request):
             write_to_log(log, BOT, translate_to_language("en", "es", 
                             f"Your requested time was {response_pred}. Is that correct?"))
             response.append(gather)
+            response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
     else:
         response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
 
@@ -596,13 +603,13 @@ def check_for_appointment(request):
             response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
             write_to_log(log, BOT,
                         "I did not recognize that day. Can you say a weekday like Monday or Friday?")
-            response.redirect("/check_for_appointment/")
+            response.redirect("/request_date_availability/")
             return HttpResponse(str(response), content_type="text/xml")
         else:
             response.say(translate_to_language("en", "es", "I did not recognize that day. Can you say a weekday like Monday or Friday?"), language='es-MX')
             write_to_log(log, BOT,
                         translate_to_language("en", "es", "I did not recognize that day. Can you say a weekday like Monday or Friday?"))
-            response.redirect("/check_for_appointment/")
+            response.redirect("/request_date_availability/")
             return HttpResponse(str(response), content_type="text/xml")
 
     target_weekday = weekdays[speech_result]
@@ -616,6 +623,7 @@ def check_for_appointment(request):
             gather.say(f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
             write_to_log(log, BOT, f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
             response.append(gather)
+            response.redirect("/request_date_availability/")
         else:
             action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
@@ -625,12 +633,14 @@ def check_for_appointment(request):
                     translate_to_language("en", "es", 
                     f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?"))
             response.append(gather)
+            response.redirect("/request_date_availability/")
     else:
         if user.language == "en":
             response.say(f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
             write_to_log(log, BOT, f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
             response.append(gather)
+            response.redirect("/request_date_availability/")
         else:
             response.say(translate_to_language("en", "es", 
                         f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?"), language='es-MX')
@@ -638,6 +648,7 @@ def check_for_appointment(request):
                         f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?"))
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
             response.append(gather)
+            response.redirect("/request_date_availability/")
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -682,6 +693,7 @@ def request_preferred_time_under_four(request):
             gather.say(f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?")
             write_to_log(log, BOT, f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?")
             response.append(gather)
+            response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/get_time_response/?date={appointment_date_str}&time_list={time_list_encoded}", method="POST")
             gather.say(translate_to_language("en", "es", 
@@ -689,6 +701,7 @@ def request_preferred_time_under_four(request):
             write_to_log(log, BOT, translate_to_language("en", "es", 
                     f"Here are the available times for {appointment_date.strftime('%B %d')}: {time_list_text}. Which time would you like?"))
             response.append(gather)
+            response.redirect(f"/request_preferred_time_under_four/?date={appointment_date_str}")
     else:
         if user.language == "en":
             response.say("There are no available times on this day. Would you like to choose another day?")
@@ -721,11 +734,13 @@ def request_preferred_time_over_three(request):
         gather.say("What time would you like?")
         write_to_log(log, BOT, "What time would you like?")
         response.append(gather)
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
     else:
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/generate_requested_time/?date={appointment_date_str}")
         gather.say(translate_to_language("en", "es", "What time would you like?"), language='es-MX')
         write_to_log(log, BOT, translate_to_language("en", "es", "What time would you like?"))
         response.append(gather)
+        response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
 
     return HttpResponse(str(response), content_type="text/xml")
 
@@ -763,11 +778,13 @@ def generate_requested_time(request):
             gather.say(f"Your requested time was {response_pred}. Is that correct?")
             write_to_log(log, BOT, f"Your requested time was {response_pred}. Is that correct?")
             response.append(gather)
+            response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
         else:
             gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/find_requested_time/{time_encoded}/?date={appointment_date_str}")
             gather.say(translate_to_language("en", "es", f"Your requested time was {response_pred}. Is that correct?"), language='es-MX')
             write_to_log(log, BOT, translate_to_language("en", "es", f"Your requested time was {response_pred}. Is that correct?"))
             response.append(gather)
+            response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
     else:
         response.redirect(f"/request_preferred_time_over_three/?date={appointment_date_str}")
 
