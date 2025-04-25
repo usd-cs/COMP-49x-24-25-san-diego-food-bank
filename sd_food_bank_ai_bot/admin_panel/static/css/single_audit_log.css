@@ -1,0 +1,62 @@
+.log-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 700px;
+    margin: 40px auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.back-button {
+    padding: 10px 15px;
+    font-size: 18px;
+    background-color: #82B65B;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.back-button:hover {
+    background-color: #218838;
+}
+
+.log-container p {
+    margin: 8px 0;
+}
+
+.transcript-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.chat-bubble {
+    padding: 12px 18px;
+    border-radius: 18px;
+    margin: 10px 0;
+    max-width: 80%;
+    line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.bot {
+    background-color: #e0f0ff;
+    align-self: flex-start;
+    margin-right: auto;
+}
+
+.caller {
+    background-color: #d9fdd3;
+    align-self: flex-end;
+    margin-left: auto;
+    text-align: right;
+}
