@@ -35,6 +35,7 @@ def prompt_reschedule_appointment_over_one(request):
         gather.say("Que cita le gustaria reprogramar?", language = 'es-MX')
         write_to_log(log, BOT, "Que cita le gustaria reprogramar?")
     response.append(gather)
+    response.redirect("/prompt_reschedule_appointment_over_one/")
 
     generate_requested_date(request)
 
@@ -86,6 +87,7 @@ def generate_requested_date(request):
             gather.say(out_speech_es, language = 'es-MX')
             write_to_log(log, BOT, out_speech_es)
         response.append(gather)
+        response.redirect("/prompt_reschedule_appointment_over_one/")
     else:
         response.redirect("/prompt_reschedule_appointment_over_one/")
 
