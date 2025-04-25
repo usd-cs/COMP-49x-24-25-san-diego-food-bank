@@ -78,28 +78,29 @@ def answer_call(request):
 
     gather = Gather(num_digits=1)
 
-    if user.language == "en":
-        gather.say("Thank you for calling the San Diego Food Bank!", language="en")
-        write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
-        gather.say("Para español presione 0.", language="es-MX")
-        write_to_log(log, BOT, "Para español presione 0.")
-        gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
-                    press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                    or press 5 to be forwarded to an operator.", language="en")
-        write_to_log(log, BOT, "press 1 to schedule an appointment, press 2 to reschedule an appointment,\
-                    press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                    or press 5 to be forwarded to an operator.")
-    else:
-        gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
-        write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
-        gather.say("For english press 0.", language="en")
-        write_to_log(log, BOT, "For english press 0.")
-        gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
-                    3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
-                    o presione 5 para ser remitido a un operador.", language="es-MX")
-        write_to_log(log, BOT, "presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
-                    3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
-                    o presione 5 para ser remitido a un operador.")
+    if digit_input == "":
+        if user.language == "en":
+            gather.say("Thank you for calling the San Diego Food Bank!", language="en")
+            write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
+            gather.say("Para español presione 0.", language="es-MX")
+            write_to_log(log, BOT, "Para español presione 0.")
+            gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
+                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
+                        or press 5 to be forwarded to an operator.", language="en")
+            write_to_log(log, BOT, "press 1 to schedule an appointment, press 2 to reschedule an appointment,\
+                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
+                        or press 5 to be forwarded to an operator.")
+        else:
+            gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
+            write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
+            gather.say("For english press 0.", language="en")
+            write_to_log(log, BOT, "For english press 0.")
+            gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
+                        3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
+                        o presione 5 para ser remitido a un operador.", language="es-MX")
+            write_to_log(log, BOT, "presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
+                        3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
+                        o presione 5 para ser remitido a un operador.")
 
     caller_response.append(gather)
     
