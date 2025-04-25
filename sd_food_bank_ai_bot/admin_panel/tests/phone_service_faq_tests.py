@@ -10,6 +10,8 @@ import time
 import urllib.parse
 import datetime
 from datetime import timedelta
+import re
+
 
 class TwilioViewsTestCase(TestCase):
     def setUp(self):
@@ -22,8 +24,19 @@ class TwilioViewsTestCase(TestCase):
             defaults={"first_name": "NaN", "last_name": "NaN"}
         )
 
+        self.user2, _ = User.objects.get_or_create(
+            phone_number="+17603214321",
+            language="es",
+            defaults={"first_name": "NaN", "last_name": "NaN"}
+        )
+
         self.log = Log.objects.create(
             phone_number=self.phone_number,
+            time_started=timezone.now()
+        )
+
+        self.log = Log.objects.create(
+            phone_number="+17603214321",
             time_started=timezone.now()
         )
 
@@ -37,18 +50,32 @@ class TwilioViewsTestCase(TestCase):
         content = response.content.decode('utf-8')
         # Check for expected greeting and the TwiML tags
         self.assertIn("Thank you for calling the San Diego Food Bank!", content)
-        self.assertIn("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
+        msg = "press 1 to schedule an appointment, press 2 to reschedule an appointment,\
                     press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                    or press 5 to be forwarded to an operator.", content)
+                    or press 5 to be forwarded to an operator."
+        msg = re.sub(r"\s+", " ", msg)
+        content = re.sub(r"\s+", " ", content)
+        self.assertIn(msg, content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
         self.assertEqual(User.objects.get(phone_number="+17601231234").language, "en")
+
+    def test_changing_language(self):
+        """
+        Test to make sure that the language is changed in answer.
+        """
+        content = {"Digits": "0", "From": "+17601231234"}
+        response = self.client.post('/answer/', content)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+
+        self.assertEqual(User.objects.get(phone_number="+17601231234").language, "es")
 
     def test_answer_call_spanish(self):
         """
         Test to make sure that answer_call view returns valid TwiML response in spanish.
         """
-        content = {"Digits": "0", "From": "+17601231234"}
+        content = {"From": "+17603214321"}
         response = self.client.post('/answer/', content)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -58,7 +85,6 @@ class TwilioViewsTestCase(TestCase):
         self.assertIn("For english press 0.", content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
-        self.assertEqual(User.objects.get(phone_number="+17601231234").language, "es")
 
     def test_answer_call_faq(self):
         """
