@@ -162,4 +162,22 @@ urlpatterns = [
      path("single_log_view/<int:log_id>/",
           views.single_log_view,
           name="single_log_view"),
+
+     # Account Approval
+     path("account_approval/",
+          views.account_approval_page,
+          name="account_approval"),
+     path("deny_account/<int:account_id>/",
+          views.deny_account,
+          name="deny_account"),
+     path("approve_account/<int:account_id>/",
+         views.approve_account,
+         name="approve_account"
+     ),
+     path("delete_account/<int:account_id>/",
+          views.delete_account,
+          name="delete_account"),
+     path("add_account/",
+          views.add_account_page,
+          name="add_account_page"),
 ]
