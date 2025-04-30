@@ -44,26 +44,34 @@ def account_approval_page(request):
     print(context)
     return render(request, "account_approval.html", context) 
 
-def deny_account(request):
+def deny_account(request, account_id):
     """
     Deny an account that is approved or awaiting approval. Prohibits access to admin panel.
     """
+    account = get_object_or_404(Admin, id=account_id)
+    account.approved_for_admin_panel = None
+    account.save()
 
-    return HttpResponse("Denied")
+    return redirect("account_approval")
 
-def approve_account(request):
+def approve_account(request,  account_id):
     """
     Approve an account that is denied or awaiting approval. Allows access to admin panel.
     """
+    account = get_object_or_404(Admin, id=account_id)
+    account.approved_for_admin_panel = True
+    account.save()
 
-    return HttpResponse("Approved")
+    return redirect("account_approval")
 
-def delete_account(request):
+def delete_account(request,  account_id):
     """
     Delete account that is approved, denied, or awaiting approval.
     """
+    account = get_object_or_404(Admin, id=account_id)
+    account.delete()
 
-    return HttpResponse("Deleted")
+    return redirect("account_approval")
 
 def add_account_page(request):
     """
