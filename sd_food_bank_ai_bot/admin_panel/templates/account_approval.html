@@ -2,24 +2,24 @@
 {% load static %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/faq_page.css' %}">
+<link rel="stylesheet" href="{% static 'css/account_approval.css' %}">
 
-<div class="faq-container">
+<div class="admin-container">
     <div class="title-and-search">
         <h1>Account Approval Page</h1>
         <form class="search-and-button" method="get" action="">
             <input type="text" name="q" placeholder="Search..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
-            <select name="status" class="tag-dropdown">
+            <select name="status" class="status-dropdown">
                 <option value="" {% if selected_status == "" %}selected{% endif %}>All</option>
                 <option value="True" {% if selected_status == "True" %}selected{% endif %}>Approved</option>
                 <option value="False" {% if selected_status == "False" %}selected{% endif %}>Pending</option>
-                <option value="None" {% if selected_status == "None" %}selected{% endif %}>Declined</option> <!-- FIX THIS-->
+                <option value="None" {% if selected_status == "None" %}selected{% endif %}>Declined</option>
             </select>
             <button type="submit" class="search-button">Search</button>
         </form>
         <h1 style="color: white;">Account Approval Page</h1>
     </div>
-    <div class="faq-table">
+    <div class="admin-table">
         {% if accounts %}
         <table>
             <thead>
@@ -38,16 +38,21 @@
                     {% if account.approved_for_admin_panel == True %}<td>Approved</td>{% endif %}
                     {% if account.approved_for_admin_panel == False %}<td>Pending</td>{% endif %}
                     {% if account.approved_for_admin_panel == None %}<td>Declined</td>{% endif %}
-                    <td style="display: flex; gap: 10px; align-items: center;">
-                        {% if account.approved_for_admin_panel == True %}
-                            <a href="{% url 'deny_account' account.id %}" class="edit-btn">Deny</a>
-                        {% elif account.approved_for_admin_panel == False %}
-                            <a href="{% url 'approve_account' account.id %}" class="edit-btn">Approve</a>
-                            <a href="{% url 'deny_account' account.id %}" class="edit-btn">Deny</a>
-                        {% else %}
-                            <a href="{% url 'approve_account' account.id %}" class="edit-btn">Approve</a>
-                        {% endif %}
-                        <a href="{% url 'delete_account' account.id %}" class="delete-btn"><img alt="Delete" src="{% static '/Trash.svg' %}"></a>
+                    <td style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+                        <div class="approve-deny-btns">
+                            {% if account.approved_for_admin_panel == True %}
+                                <a href="{% url 'deny_account' account.id %}" class="deny-btn">Deny</a>
+                            {% elif account.approved_for_admin_panel == False %}
+                                <a href="{% url 'approve_account' account.id %}" class="approve-btn">Approve</a>
+                                <a href="{% url 'deny_account' account.id %}" class="deny-btn">Deny</a>
+                            {% else %}
+                                <a href="{% url 'approve_account' account.id %}" class="approve-btn">Approve</a>
+                            {% endif %}
+                        </div>
+                        <div class = "spacer"></div>
+                        <div class="delete-btn">
+                            <a href="{% url 'delete_account' account.id %}"><img alt="Delete" src="{% static '/Trash.svg' %}"></a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -94,8 +99,8 @@
     </div>
     {% endif %}
 
-    <div class="create-faq">
-        <a href="{% url 'add_account_page' %}" class="create-btn">Add Employee</a>
+    <div class="add-acc">
+        <a href="{% url 'add_account_page' %}" class="add-acc-btn">Add Employee</a>
     </div>
 
 </div>
