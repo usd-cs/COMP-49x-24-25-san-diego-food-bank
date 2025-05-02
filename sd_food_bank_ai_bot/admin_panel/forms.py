@@ -1,5 +1,5 @@
 from django import forms
-from .models import FAQ, Tag
+from .models import FAQ, Tag, Admin
 
 
 class FAQForm(forms.ModelForm):
@@ -19,3 +19,13 @@ class FAQForm(forms.ModelForm):
     class Meta:
         model = FAQ
         fields = ['question', 'answer', 'existing_tags', 'new_tags']
+
+
+class AccountForm(forms.ModelForm):
+    class Meta:
+        model = Admin
+        fields = ['foodbank_email', 'foodbank_id']
+        widgets = {
+            'foodbank_email': forms.EmailInput(attrs={'placeholder': 'Enter food bank email'}), 
+            'foodbank_id': forms.TextInput(attrs={'placeholder': 'Enter food bank ID'}),
+        }

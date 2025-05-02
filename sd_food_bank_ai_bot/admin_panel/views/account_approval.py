@@ -1,13 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import permission_required
 from ..models import Admin
 from django.db.models import Q
-from django.http import HttpResponse
+from ..forms import AccountForm
 
-# TODO: Update all admin pages (except login and creation) to check that it is a verified account
-#           Possibly just update log in to only allow user ot log in when account is approved
-@login_required # TODO: Add permission only for admin account later
+
+@permission_required("admin_panel.can_approve_users", raise_exception=True)
 def account_approval_page(request):
     """
     Display the account approval page. Only available to one Admin.
@@ -41,9 +40,9 @@ def account_approval_page(request):
         "query": query,
         "selected_status": selected_status
     }
-    print(context)
     return render(request, "account_approval.html", context) 
 
+@permission_required("admin_panel.can_approve_users", raise_exception=True)
 def deny_account(request, account_id):
     """
     Deny an account that is approved or awaiting approval. Prohibits access to admin panel.
@@ -54,6 +53,7 @@ def deny_account(request, account_id):
 
     return redirect("account_approval")
 
+@permission_required("admin_panel.can_approve_users", raise_exception=True)
 def approve_account(request,  account_id):
     """
     Approve an account that is denied or awaiting approval. Allows access to admin panel.
@@ -64,6 +64,7 @@ def approve_account(request,  account_id):
 
     return redirect("account_approval")
 
+@permission_required("admin_panel.can_approve_users", raise_exception=True)
 def delete_account(request,  account_id):
     """
     Delete account that is approved, denied, or awaiting approval.
@@ -73,9 +74,17 @@ def delete_account(request,  account_id):
 
     return redirect("account_approval")
 
+@permission_required("admin_panel.can_approve_users", raise_exception=True)
 def add_account_page(request):
     """
-    Put text here.
+    A page to add an employee to the Admin database to allow them to create an account.
     """
+    if request.method == "POST":
+        form = AccountForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("account_approval")
+    else:
+        form = AccountForm()
 
-    return HttpResponse("Add account page")
+    return render(request, 'add_account.html', {'form': form})

@@ -35,12 +35,14 @@
                 <tr>
                     <td>{{ account.foodbank_email }}</td>
                     <td>{{ account.foodbank_id }}</td>
-                    {% if account.approved_for_admin_panel == True %}<td>Approved</td>{% endif %}
-                    {% if account.approved_for_admin_panel == False %}<td>Pending</td>{% endif %}
-                    {% if account.approved_for_admin_panel == None %}<td>Declined</td>{% endif %}
+                    {% if account.username == "" and account.password == "" %}<td>Awaiting Creation</td>
+                    {% elif account.approved_for_admin_panel == True %}<td>Approved</td>
+                    {% elif account.approved_for_admin_panel == False %}<td>Pending</td>
+                    {% elif account.approved_for_admin_panel == None %}<td>Declined</td>{% endif %}
                     <td style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
                         <div class="approve-deny-btns">
-                            {% if account.approved_for_admin_panel == True %}
+                            {% if account.username == "" and account.password == "" %}
+                            {% elif account.approved_for_admin_panel == True %}
                                 <a href="{% url 'deny_account' account.id %}" class="deny-btn">Deny</a>
                             {% elif account.approved_for_admin_panel == False %}
                                 <a href="{% url 'approve_account' account.id %}" class="approve-btn">Approve</a>
