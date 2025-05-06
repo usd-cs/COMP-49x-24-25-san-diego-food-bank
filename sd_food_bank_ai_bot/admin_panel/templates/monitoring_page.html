@@ -4,18 +4,18 @@
 {% load static %}
   <link rel="stylesheet" href="{% static 'css/monitoring_page.css' %}">
 
+  <div class="controls">
+    <label for="granularity">View by:</label>
+    <select id="granularity">
+      <option value="year">Year</option>
+      <option value="month">Month</option>
+      <option value="day">Day</option>
+    </select>
+  </div>
+  
   <div class="metric-card">
     
     <h2 id="totalCallsTitle">Total Calls: –</h2>
-
-    <div class="controls">
-      <label for="granularity">View by:</label>
-      <select id="granularity">
-        <option value="year">Year</option>
-        <option value="month">Month</option>
-        <option value="day">Day</option>
-      </select>
-    </div>
     
     <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
   </div>
