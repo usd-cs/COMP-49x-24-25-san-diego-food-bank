@@ -50,7 +50,6 @@ class TwilioViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
         # Check for expected greeting and the TwiML tags
-        self.assertIn("Thank you for calling the San Diego Food Bank!", content)
         msg = "press 1 to schedule an appointment, press 2 to reschedule an appointment,\
                     press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
                     or press 5 to be forwarded to an operator."
@@ -82,7 +81,6 @@ class TwilioViewsTestCase(TestCase):
         content = response.content.decode('utf-8')
 
         # Check for expected greeting and the TwiML tags
-        self.assertIn("Gracias por llamar al banco de alimentos de San Diego!", content)
         self.assertIn("For english press 0.", content)
         self.assertIn("<Response>", content)
         self.assertIn("</Response>", content)
@@ -527,6 +525,19 @@ class PhoneFAQService(TestCase):
         response = process_post_answer(request)
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("Have a great day!", response.content.decode())
+        self.assertIn("Hangup", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
+    def test_process_post_answer_hang_up_spanish(self, mock_get_prompted_choice):
+        """Test when user requests to end the call."""
+        mock_get_prompted_choice.return_value = False
+
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "End call.", "From": "+17603214321"})
+        response = process_post_answer(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("tengas un lindo", response.content.decode())
         self.assertIn("Hangup", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_prompted_choice")

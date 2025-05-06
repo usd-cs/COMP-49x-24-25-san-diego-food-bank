@@ -25,8 +25,22 @@ def init_answer(request):
     phone_number = get_phone_number(request)
     caller_response = VoiceResponse()
 
+    user, created = User.objects.get_or_create(
+        phone_number=phone_number,
+        defaults={
+            "first_name": "NaN",
+            "last_name": "NaN",
+        }
+    )
+
     if phone_number:
         log = Log.objects.create(phone_number=phone_number)
+        if user.language == "en":
+            caller_response.say("Thank you for calling the San Diego Food Bank!", language="en")
+            write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
+        else:
+            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
+            write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
         caller_response.redirect("/answer/")
     else:
         caller_response.say("Sorry, we are unable to help you at this time.")
@@ -43,16 +57,10 @@ def answer_call(request):
     caller_response = VoiceResponse()
     phone_number = get_phone_number(request)
 
-    user, created = User.objects.get_or_create(
-        phone_number=phone_number,
-        defaults={
-            "first_name": "NaN",
-            "last_name": "NaN",
-        }
-    )
-
     log = Log.objects.filter(phone_number=phone_number).last()
     log.time_started = timezone.now()
+
+    user = User.objects.get(phone_number=phone_number)
 
     digit_input = request.POST.get('Digits', '')
     if digit_input:
@@ -80,8 +88,6 @@ def answer_call(request):
 
     if digit_input == "":
         if user.language == "en":
-            gather.say("Thank you for calling the San Diego Food Bank!", language="en")
-            write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
             gather.say("Para español presione 0.", language="es-MX")
             write_to_log(log, BOT, "Para español presione 0.")
             gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
@@ -91,8 +97,6 @@ def answer_call(request):
                         press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
                         or press 5 to be forwarded to an operator.")
         else:
-            gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
-            write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
             gather.say("For english press 0.", language="en")
             write_to_log(log, BOT, "For english press 0.")
             gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
@@ -334,6 +338,10 @@ def process_post_answer(request):
     if choice == True:
         caller_response.redirect("/prompt_question/")
     elif choice == False:
+        if user.language == "en":
+            caller_response.say("Have a great day!")
+        else:
+            caller_response.say("¡Qué tengas un lindo día!", language="es-MX")
         caller_response.hangup()
     else:
         caller_response.redirect("/answer/")
