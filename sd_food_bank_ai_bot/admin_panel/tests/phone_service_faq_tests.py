@@ -510,7 +510,7 @@ class PhoneFAQService(TestCase):
         """Test when user requests another question."""
         mock_get_prompted_choice.return_value = True
 
-        request = self.factory.post("/process_post_answer/", {"SpeechResult": "Annother question.", "From": "+17603214321"})
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "Annother question.", "From": "+17601231234"})
         response = process_post_answer(request)
 
         self.assertEqual(response.status_code, 200)
@@ -529,13 +529,16 @@ class PhoneFAQService(TestCase):
         self.assertIn("Hangup", response.content.decode())
     
     @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
-    def test_process_post_answer_hang_up_spanish(self, mock_get_prompted_choice):
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_process_post_answer_hang_up_spanish(self, mock_translate_to_language, mock_get_prompted_choice):
         """Test when user requests to end the call."""
         mock_get_prompted_choice.return_value = False
+        mock_translate_to_language.return_value = "Translated to Spanish"
 
         request = self.factory.post("/process_post_answer/", {"SpeechResult": "End call.", "From": "+17603214321"})
         response = process_post_answer(request)
 
+        mock_translate_to_language.assert_called()
         self.assertEqual(response.status_code, 200)
         self.assertIn("tengas un lindo", response.content.decode())
         self.assertIn("Hangup", response.content.decode())
