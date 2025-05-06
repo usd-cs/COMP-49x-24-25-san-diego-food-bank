@@ -7,7 +7,7 @@ import urllib.parse
 from django.utils import timezone
 from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
-                        get_matching_question, get_corresponding_answer)
+                        get_matching_question, get_corresponding_answer, get_prompted_choice)
 from .phone_service_schedule import CALLER, BOT
 from .utilities import get_phone_number, translate_to_language
 from ..models import User
@@ -254,7 +254,7 @@ def confirm_question(request, question):
                 caller_response.say(answer, language="es-MX")
             write_to_log(log, BOT, answer)
 
-            caller_response.redirect("/prompt_question/")
+            caller_response.redirect("/prompt_post_answer/")
         # If caller has indicated unsatisfactory response, add a string
         # and retry
         else:
@@ -276,4 +276,66 @@ def confirm_question(request, question):
             write_to_log(log, BOT, "Lo siento, no pude entender eso. Por favor inténtalo de nuevo.")
         caller_response.redirect("/prompt_question/")
 
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+
+@csrf_exempt
+def prompt_post_answer(request):
+    """
+    Prompts user after answering the quesiton with options to return to main menu,
+    ask another question, or end the call.
+    """
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
+    user = User.objects.get(phone_number=phone_number)
+    caller_response = VoiceResponse()
+
+    gather = None
+    
+    if user.language == "en":
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/process_post_answer/", language="en")
+        options = "Would you like to return to the main menu, ask another question, or end the call?"
+        gather.say(options)
+        write_to_log(log, BOT, options)
+    else:
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/process_post_answer/", language="es-MX")
+        options = "¿Desea regresar al menú principal, hacer otra pregunta o finalizar la llamada?"
+        gather.say(options, language="es-MX")
+        write_to_log(log, BOT, options)
+    
+    caller_response.append(gather)
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+
+@csrf_exempt
+def process_post_answer(request):
+    """
+    Processes the users response to the given options.
+    """
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
+    user = User.objects.get(phone_number=phone_number)
+    caller_response = VoiceResponse()
+    speech_result = request.POST.get("SpeechResult", "").strip()
+
+    write_to_log(log, CALLER, speech_result)
+    
+    if not speech_result:
+        caller_response.redirect('/prompt_post_answer/')
+        return HttpResponse(str(caller_response), content_type='text/xml')
+    
+    if user.language == "es":
+        speech_result = translate_to_language(source_lang="es", target_lang="en", text=speech_result)
+    choice = get_prompted_choice(speech_result)
+
+    if choice == True:
+        caller_response.redirect("/prompt_question/")
+    elif choice == False:
+        caller_response.hangup()
+    else:
+        caller_response.redirect("/answer/")
+    
     return HttpResponse(str(caller_response), content_type='text/xml')

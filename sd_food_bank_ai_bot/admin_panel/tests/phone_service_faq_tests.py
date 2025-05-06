@@ -2,7 +2,8 @@ from django.test import TestCase, Client, RequestFactory
 from unittest.mock import patch, MagicMock
 from admin_panel.views.phone_service_faq import (answer_call, confirm_question, get_matching_question,
                                                  get_question_from_user, strike_system_handler,
-                                                 get_corresponding_answer)
+                                                 get_corresponding_answer, prompt_post_answer,
+                                                 process_post_answer)
 from admin_panel.models import Log, FAQ, User
 from django.urls import reverse
 from django.utils import timezone
@@ -316,6 +317,7 @@ class PhoneFAQService(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("The food bank is open Monday-Friday from 9:00 AM to 5:00 PM", response.content.decode())
+        self.assertIn("/prompt_post_answer/", response.content.decode())
     
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.translate_to_language")
@@ -333,6 +335,7 @@ class PhoneFAQService(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Translated to Spanish", response.content.decode())
+        self.assertIn("/prompt_post_answer/", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.get_corresponding_answer")
@@ -383,7 +386,7 @@ class PhoneFAQService(TestCase):
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     @patch("admin_panel.views.phone_service_faq.translate_to_language")
-    def test_confirm_question_unheard(self, mock_translate_to_language, mock_get_response_sentiment):
+    def test_confirm_question_unheard_spanish(self, mock_translate_to_language, mock_get_response_sentiment):
         """Test for when the bot receives no input"""
         mock_translate_to_language.return_value = "Translated to Spanish"
         mock_get_response_sentiment.return_value = False
@@ -477,6 +480,79 @@ class PhoneFAQService(TestCase):
         strike_system_handler(log_mock, reset=True)
 
         log_mock.reset_strikes.assert_called_once()
+    
+    def test_prompt_post_answer(self):
+        """Test that the user is prompted with options after receiveg their answer"""
+        request = self.factory.post("/prompt_post_answer/", {"From": "+17601231234"})
+        response = prompt_post_answer(request)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Would you like to return to the main menu, ask another question, or end the call?", response.content.decode())
+        self.assertIn("process_post_answer", response.content.decode())
+
+    def test_prompt_post_answer_spanisher(self):
+        """Test that the user is prompted with options after receiveg their answer in spanish"""
+        request = self.factory.post("/prompt_post_answer/", {"From": "+17603214321"})
+        response = prompt_post_answer(request)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Desea regresar al", response.content.decode())
+        self.assertIn("process_post_answer", response.content.decode())
+    
+    def test_process_post_answer_no_input(self):
+        """Test when no answer is given to the prompt."""
+        request = self.factory.post("/process_post_answer/", {"From": "+17601231234"})
+        response = process_post_answer(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/prompt_post_answer/", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
+    def test_process_post_answer_question(self, mock_get_prompted_choice):
+        """Test when user requests another question."""
+        mock_get_prompted_choice.return_value = True
+
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "Annother question.", "From": "+17603214321"})
+        response = process_post_answer(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/prompt_question/", response.content.decode())
+    
+    @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
+    def test_process_post_answer_hang_up(self, mock_get_prompted_choice):
+        """Test when user requests to end the call."""
+        mock_get_prompted_choice.return_value = False
+
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "End call.", "From": "+17601231234"})
+        response = process_post_answer(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Hangup", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
+    def test_process_post_answer_menu(self, mock_get_prompted_choice):
+        """Test when user requests to end the call."""
+        mock_get_prompted_choice.return_value = None
+
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "End call.", "From": "+17601231234"})
+        response = process_post_answer(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/answer/", response.content.decode())
+
+    @patch("admin_panel.views.phone_service_faq.get_prompted_choice")
+    @patch("admin_panel.views.phone_service_faq.translate_to_language")
+    def test_process_post_answer_spanish(self, mock_translate_to_language, mock_get_prompted_choice):
+        """Test for when the user speaks spanish and selects to ask another question"""
+        mock_translate_to_language.return_vaue = "Translated to Spanish"
+        mock_get_prompted_choice.return_value = True
+
+        request = self.factory.post("/process_post_answer/", {"SpeechResult": "Annother question.", "From": "+17603214321"})
+        response = process_post_answer(request)
+
+        mock_translate_to_language.assert_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/prompt_question/", response.content.decode())
 
 class CallStatusUpdateTests(TestCase):
     def setUp(self):
