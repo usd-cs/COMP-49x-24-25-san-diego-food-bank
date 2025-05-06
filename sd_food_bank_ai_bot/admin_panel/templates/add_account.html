@@ -1,0 +1,29 @@
+{% extends 'nav_bar.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/add_account.css' %}">
+
+<button class="back-button" onclick="window.history.back();">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
+
+<div class="main-body">
+    <h1>Add Account</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-row">
+            <label for="{{ form.foodbank_email.id_for_label }}">Food Bank Email</label>
+            {{ form.foodbank_email }}
+        </div>
+
+        <div class="form-row">
+            <label for="{{ form.foodbank_id.id_for_label }}">Food Bank ID</label>
+            {{ form.foodbank_id }}
+        </div>
+
+        <button type="submit" class="create-btn">Submit</button>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,3 +1,22 @@
+.back-button {
+    padding: 10px 15px;
+    font-size: 18px;
+    background-color: #82B65B;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.back-button:hover {
+    background-color: #218838;
+}
 
 body { 
     margin: 0;

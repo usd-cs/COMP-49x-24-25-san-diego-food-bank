@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from datetime import datetime, timedelta
 from django.utils import timezone
 
@@ -14,8 +14,13 @@ class Admin(AbstractUser):
         - TRUE: account creation has been approved so this account has access to admin panel
     """
     foodbank_email = models.EmailField(blank=True, max_length=254, verbose_name="foodbank email")
-    foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="unknown")
+    foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="")
     approved_for_admin_panel = models.BooleanField(null=True, default=None, verbose_name="approved for admin panel")
+
+    class Meta:
+        permissions = [
+            ("can_approve_users", "Can approve users to access the admin panel.")
+        ]
 
 
 class User(models.Model):
