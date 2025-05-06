@@ -1,0 +1,109 @@
+{% extends 'nav_bar.html' %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/account_approval.css' %}">
+
+<div class="admin-container">
+    <div class="title-and-search">
+        <h1>Account Approval Page</h1>
+        <form class="search-and-button" method="get" action="">
+            <input type="text" name="q" placeholder="Search..." class="search-bar" {% if query %} value="{{ query }}" {% endif %}>
+            <select name="status" class="status-dropdown">
+                <option value="" {% if selected_status == "" %}selected{% endif %}>All</option>
+                <option value="True" {% if selected_status == "True" %}selected{% endif %}>Approved</option>
+                <option value="False" {% if selected_status == "False" %}selected{% endif %}>Pending</option>
+                <option value="None" {% if selected_status == "None" %}selected{% endif %}>Declined</option>
+            </select>
+            <button type="submit" class="search-button">Search</button>
+        </form>
+        <h1 style="color: white;">Account Approval Page</h1>
+    </div>
+    <div class="admin-table">
+        {% if accounts %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for account in accounts %}
+                <tr>
+                    <td>{{ account.foodbank_email }}</td>
+                    <td>{{ account.foodbank_id }}</td>
+                    {% if account.username == "" and account.password == "" %}<td>Awaiting Creation</td>
+                    {% elif account.approved_for_admin_panel == True %}<td>Approved</td>
+                    {% elif account.approved_for_admin_panel == False %}<td>Pending</td>
+                    {% elif account.approved_for_admin_panel == None %}<td>Declined</td>{% endif %}
+                    <td style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+                        <div class="approve-deny-btns">
+                            {% if account.username == "" and account.password == "" %}
+                            {% elif account.approved_for_admin_panel == True %}
+                                <a href="{% url 'deny_account' account.id %}" class="deny-btn">Deny</a>
+                            {% elif account.approved_for_admin_panel == False %}
+                                <a href="{% url 'approve_account' account.id %}" class="approve-btn">Approve</a>
+                                <a href="{% url 'deny_account' account.id %}" class="deny-btn">Deny</a>
+                            {% else %}
+                                <a href="{% url 'approve_account' account.id %}" class="approve-btn">Approve</a>
+                            {% endif %}
+                        </div>
+                        <div class = "spacer"></div>
+                        <div class="delete-btn">
+                            <a href="{% url 'delete_account' account.id %}"><img alt="Delete" src="{% static '/Trash.svg' %}"></a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <h3>No accounts found in database</h3>
+        {% endif %}
+    </div>
+
+    {% if accounts %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if accounts.has_previous %}
+                <button type="submit" class="search-button">
+                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        &laquo; First
+                    </a>
+                </button>
+                <button type="submit" class="search-button">
+                    <a href="?page={{ accounts.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        Previous
+                    </a>
+                </button>
+            {% endif %}
+
+            <span class="current">
+                Page {{ accounts.number }} of {{ accounts.paginator.num_pages }}
+            </span>
+
+            {% if accounts.has_next %}
+                <button type="submit" class="search-button">
+                    <a href="?page={{ accounts.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        Next
+                    </a>
+                </button>
+                <button type="submit" class="search-button">
+                    <a href="?page={{ accounts.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                        Last &raquo;
+                    </a>
+                </button>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    <div class="add-acc">
+        <a href="{% url 'add_account_page' %}" class="add-acc-btn">Add Employee</a>
+    </div>
+
+</div>
+{% endblock %}
