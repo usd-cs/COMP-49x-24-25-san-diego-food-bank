@@ -1,0 +1,28 @@
+.metric-card {
+    background: #fff;
+    border-radius: 1.5rem;   
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    max-width: 600px; 
+    max-height: 500px;          
+    margin: 2rem 0 2rem 2rem;  
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05),
+              0 2px 4px rgba(0, 0, 0, 0.05);        
+  }
+  
+  .metric-card h2 {
+    font-size: 1.75rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  
+  .metric-card .controls {
+    margin-bottom: 1rem;
+  }
+  
+  .metric-card canvas {
+    display: block;
+    width: 100% !important;
+    height: 300px !important;  
+  }
+  

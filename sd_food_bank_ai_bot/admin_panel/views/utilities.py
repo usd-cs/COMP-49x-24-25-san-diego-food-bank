@@ -204,6 +204,33 @@ def get_corresponding_answer(question):
     return answer
 
 
+def get_prompted_choice(sentence):
+    """
+    Takes in a users input and returns the corresponding request.
+    Resturns True for ask another question, False for hang up, and None for main menu.
+    """
+    client = OpenAI()
+    # Set the system prompt to provide instructions on what to do
+    system_prompt = "Based on the users response, say whether they are most likely asking for the main menu, to ask another question, or to end the call. Respond only with MENU, QUESTION, or END for the corresponding classification."
+
+    # Make an API call to find the question
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )
+
+    pred = completion.choices[0].message.content
+    if pred.upper() == "QUESTION":
+        return True
+    elif pred.upper() == "END":
+        return False
+    else:
+        return None
+
+
 def get_day(speech_result):
     """
     Extracts the day of the week from a given message.
