@@ -8,8 +8,7 @@ from openai import OpenAI
 import urllib.parse
 from datetime import datetime
 from .phone_service_schedule import CALLER, BOT
-
-TIMEOUT_LENGTH = 4
+from sd_food_bank_ai_bot.settings import TIMEOUT, SPEECHTIMEOUT
 
 
 @csrf_exempt
@@ -25,14 +24,14 @@ def prompt_reschedule_appointment_over_one(request):
     response = VoiceResponse()
     
     if user.language == "en":
-        gather = Gather(input="speech",
-                    timeout=TIMEOUT_LENGTH, action="/generate_requested_date/")
-        gather.say("Which appointment would you like to reschedule?")
+        gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
+                        action="/generate_requested_date/")
+        gather.say("Which appointment would you like to reschedule?", voice="Polly.Joanna")
         write_to_log(log, BOT, "Which appointment would you like to reschedule?")
     else:
-        gather = Gather(input="speech",
-                    timeout=TIMEOUT_LENGTH, action="/generate_requested_date/", language = 'es-MX')
-        gather.say("Que cita le gustaria reprogramar?", language = 'es-MX')
+        gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
+                        action="/generate_requested_date/", language = 'es-MX')
+        gather.say("Que cita le gustaria reprogramar?", language = 'es-MX', voice="Polly.Mia")
         write_to_log(log, BOT, "Que cita le gustaria reprogramar?")
     response.append(gather)
     response.redirect("/prompt_reschedule_appointment_over_one/")
@@ -74,17 +73,15 @@ def generate_requested_date(request):
         date_encoded = urllib.parse.quote(response_pred)
 
         if user.language == "en":
-            gather = Gather(input="speech",
-                        timeout=TIMEOUT_LENGTH,
+            gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                         action=f"/confirm_requested_date/{date_encoded}/")
-            gather.say(f"Your requested day was {response_pred}. Is that correct?")
+            gather.say(f"Your requested day was {response_pred}. Is that correct?", voice="Polly.Joanna")
             write_to_log(log, BOT, f"Your requested day was {response_pred}. Is that correct?")
         else:
-            gather = Gather(input="speech",
-                        timeout=TIMEOUT_LENGTH,
+            gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                         action=f"/confirm_requested_date/{date_encoded}/", language = 'es-MX')
             out_speech_es = translate_to_language("en", "es", f"Your requested day was {response_pred}. Is that correct?")
-            gather.say(out_speech_es, language = 'es-MX')
+            gather.say(out_speech_es, language = 'es-MX', voice="Polly.Mia")
             write_to_log(log, BOT, out_speech_es)
         response.append(gather)
         response.redirect("/prompt_reschedule_appointment_over_one/")
@@ -115,10 +112,10 @@ def confirm_requested_date(request, date_encoded):
         requested_date = datetime.strptime(requested_date_str, "%Y-%m-%d").date()  # From str to date
     except (ValueError, TypeError):
         if user.language == "en":
-            response.say("Sorry, we could not understand the date. Let's try again.")
+            response.say("Sorry, we could not understand the date. Let's try again.", voice="Polly.Joanna")
             write_to_log(log, BOT, "Sorry, we could not understand the date. Let's try again.")
         else:
-            response.say("Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.", language = 'es-MX')
+            response.say("Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.", language = 'es-MX', voice="Polly.Mia")
             write_to_log(log, BOT, "Lo sentimos, no pudimos entender la fecha. Intentalo de nuevo.")
         response.redirect("/prompt_reschedule_appointment_over_one/")
         return HttpResponse(str(response), content_type="text/xml")
@@ -132,10 +129,10 @@ def confirm_requested_date(request, date_encoded):
 
         else:
             if user.language == "en":
-                response.say("Sorry, this is not in your appointments.")
+                response.say("Sorry, this is not in your appointments.", voice="Polly.Joanna")
                 write_to_log(log, BOT, "Sorry, this is not in your appointments.")
             else:
-                response.say("Lo sentimos, esto no esta en tus citas.", language = 'es-MX')
+                response.say("Lo sentimos, esto no esta en tus citas.", language = 'es-MX', voice="Polly.Mia")
                 write_to_log(log, BOT, "Lo sentimos, esto no esta en tus citas.")
             response.redirect("/prompt_reschedule_appointment_over_one")
             return HttpResponse(str(response), content_type="text/xml")

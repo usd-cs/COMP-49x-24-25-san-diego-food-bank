@@ -7,8 +7,7 @@ from ..models import User, AppointmentTable, Log
 from django.http import HttpResponse
 from openai import OpenAI
 from .utilities import format_date_for_response, write_to_log
-
-TIMEOUT_LENGTH = 4  # The length of time the bot waits for a response
+from sd_food_bank_ai_bot.settings import TIMEOUT, SPEECHTIMEOUT
 
 
 @csrf_exempt
@@ -48,7 +47,7 @@ def ask_appointment_to_cancel(request):
     user = User.objects.get(phone_number=caller_number)
     appointments = AppointmentTable.objects.filter(user=user)
 
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+    gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                     action="/process_appointment_selection/")
 
     appointments_formatted = []
@@ -57,7 +56,7 @@ def ask_appointment_to_cancel(request):
         date_str = format_date_for_response(appointment.date)
         appointments_formatted.append(f"{date_str} at {time_str}")
 
-    gather.say("Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
+    gather.say("Which appointment would you like to cancel? " + ", ".join(appointments_formatted), voice="Polly.Joanna")
     write_to_log(log, BOT, "Which appointment would you like to cancel? " + ", ".join(appointments_formatted))
 
     response.append(gather)
@@ -106,11 +105,11 @@ def process_appointment_selection(request):
         response_pred = completion.choices[0].message.content.strip()
 
         if response_pred.upper() == "UNCERTAIN":
-            response.say("I didn't catch that. Please try again.")
+            response.say("I didn't catch that. Please try again.", voice="Polly.Joanna")
             write_to_log(log, BOT, "I didn't catch that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         elif response_pred.upper() == "NONE":
-            response.say("Sorry, we don't have you scheduled for that. Please try again.")
+            response.say("Sorry, we don't have you scheduled for that. Please try again.", voice="Polly.Joanna")
             write_to_log(log, BOT, "Sorry, we don't have you scheduled for that. Please try again.")
             response.redirect("/ask_appointment_to_cancel/")
         else:
@@ -123,7 +122,7 @@ def process_appointment_selection(request):
                 else:
                     raise ValueError
             except ValueError:
-                response.say("I didn't catch that. Please try again.")
+                response.say("I didn't catch that. Please try again.", voice="Polly.Joanna")
                 write_to_log(log, BOT,
                              "I didn't catch that. Please try again.")
                 response.redirect("/ask_appointment_to_cancel/")
@@ -147,10 +146,9 @@ def prompt_cancellation_confirmation(request, appointment_id):
     time_str = start_time.strftime('%I:%M %p')
     date_str = format_date_for_response(date)
 
-    gather = Gather(input="speech",
-                    timeout=TIMEOUT_LENGTH,
+    gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                     action=f"/cancellation_confirmation/{appointment_id}/")
-    gather.say(f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
+    gather.say(f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?", voice="Polly.Joanna")
     write_to_log(log, BOT, f"Are you sure you want to cancel your appointment on {date_str} at {time_str}?")
     response.append(gather)
     response.redirect(f"/prompt_cancellation_confirmation/{appointment_id}/")
@@ -173,10 +171,9 @@ def cancellation_confirmation(request, appointment_id):
         if declaration:
             response.redirect(f"/cancel_appointment/{appointment_id}/")
         else:
-            gather = Gather(input="speech",
-                            timeout=TIMEOUT_LENGTH,
+            gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                             action="/return_main_menu_response/")
-            gather.say("Would you like to go back to the main menu?")
+            gather.say("Would you like to go back to the main menu?", voice="Polly.Joanna")
             write_to_log(log, BOT,
                          "Would you like to go back to the main menu?")
             response.append(gather)
@@ -204,13 +201,13 @@ def return_main_menu_response(request):
         if declaration:
             response.redirect("/answer/")
         else:
-            response.say("Have a great day!")
+            response.say("Have a great day!", voice="Polly.Joanna")
             write_to_log(log, BOT, "Have a great day!")
             response.hangup()
     else:
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+        gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                         action="/return_main_menu_response/")
-        gather.say("Would you like to go back to the main menu?")
+        gather.say("Would you like to go back to the main menu?", voice="Polly.Joanna")
         write_to_log(log, BOT, "Would you like to go back to the main menu?")
         response.append(gather)
 
@@ -227,12 +224,12 @@ def reroute_no_appointment(request):
     log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
 
-    response.say("We do not have an appointment registered with your number.")
+    response.say("We do not have an appointment registered with your number.", voice="Polly.Joanna")
     write_to_log(log, BOT,
                  "We do not have an appointment registered with your number.")
-    gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+    gather = Gather(input="speech", speechTimeout=SPEECHTIMEOUT, timeout=TIMEOUT,
                     action="/return_main_menu_response/")
-    gather.say("Would you like to go back to the main menu?")
+    gather.say("Would you like to go back to the main menu?", voice="Polly.Joanna")
     write_to_log(log, BOT, "Would you like to go back to the main menu?")
     response.append(gather)
     response.redirect("/reroute_no_appointment/")
