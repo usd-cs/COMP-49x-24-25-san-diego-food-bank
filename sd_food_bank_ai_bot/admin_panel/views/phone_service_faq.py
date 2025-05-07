@@ -296,13 +296,13 @@ def prompt_post_answer(request):
     gather = None
     
     if user.language == "en":
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+        gather = Gather(input="speech", timeout=TIMEOUT,
                         action="/process_post_answer/", language="en")
         options = "Would you like to return to the main menu, ask another question, or end the call?"
         gather.say(options)
         write_to_log(log, BOT, options)
     else:
-        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+        gather = Gather(input="speech", timeout=TIMEOUT,
                         action="/process_post_answer/", language="es-MX")
         options = "¿Desea regresar al menú principal, hacer otra pregunta o finalizar la llamada?"
         gather.say(options, language="es-MX")
