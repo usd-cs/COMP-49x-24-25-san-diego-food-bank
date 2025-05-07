@@ -102,7 +102,7 @@ def forward_operator(log=None):
     """
     caller_response = VoiceResponse()
 
-    caller_response.say("I'm transferring you to an operator now. Please hold.")
+    caller_response.say("I'm transferring you to an operator now. Please hold.", voice="Polly.Joanna")
     if log:
         write_to_log(log,
                     "bot",
