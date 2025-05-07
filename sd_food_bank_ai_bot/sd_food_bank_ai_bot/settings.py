@@ -39,6 +39,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+# Global parameters for the speech recognition aspect of bot's 'say' function to detect when to act
 SPEECHTIMEOUT=0.5
 TIMEOUT="auto"
 
