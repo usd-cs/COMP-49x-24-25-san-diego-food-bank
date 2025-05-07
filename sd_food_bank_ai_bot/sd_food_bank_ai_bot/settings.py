@@ -37,8 +37,10 @@ SECRET_KEY = 'django-insecure-9-^=r3!5a^d+8*$q' \
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
+SPEECHTIMEOUT=0.5
+TIMEOUT="auto"
 
 # Application definition
 
