@@ -3,7 +3,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-from .views.monitoring_page import get_total_calls, monitoring_dashboard
+from .views.monitoring_page import get_total_calls, monitoring_dashboard, get_call_language
 
 urlpatterns = [
     # Utilities
@@ -31,10 +31,15 @@ urlpatterns = [
     path("create_faq/",
          views.admin_panel_faq.create_faq,
          name="create_faq"),
-     path('monitoring/', monitoring_dashboard, name="monitoring_dashboard"),
+     path('monitoring/', 
+          monitoring_dashboard, 
+          name="monitoring_dashboard"),
      path('api/total-calls/', 
           get_total_calls, 
           name='get_total_calls'),
+     path('api/call-language/', 
+          get_call_language, 
+          name="get_call_language"),
     path("edit_faq/<int:faq_id>/",
          views.admin_panel_faq.edit_faq,
          name="edit_faq"),

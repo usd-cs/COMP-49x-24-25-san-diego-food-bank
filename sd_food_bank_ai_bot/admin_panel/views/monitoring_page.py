@@ -55,3 +55,17 @@ def get_total_calls(request):
         'labels': labels,
         'counts': counts,
     })
+
+def get_call_language(request):
+    """
+    Returns the count of calls grouped by language (english or spanish)
+    """
+
+    qs = (Log.objects.values('language').annotate(count=Count('id')))
+    labels, counts = [], [] 
+    for entry in qs:
+        lang = entry['language']
+        labels.append("Spanish" if lang == "es" else "English")
+        counts.append(entry['count'])
+
+    return JsonResponse({'labels': labels, 'counts': counts})

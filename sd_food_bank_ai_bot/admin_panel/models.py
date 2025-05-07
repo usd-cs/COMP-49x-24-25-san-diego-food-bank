@@ -67,6 +67,7 @@ class Log(models.Model):
     length_of_call = models.DurationField(default=timedelta(seconds=0))
     strikes = models.PositiveIntegerField(default=0)
     intents = models.JSONField(default=dict)
+    language = models.CharField(max_length=5, choices=[('en','English'),('es-MX','Spanish')], default='en', help_text="Caller language preference")
 
     def add_intent(self, intent):
         """

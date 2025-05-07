@@ -34,7 +34,7 @@ def init_answer(request):
     )
 
     if phone_number:
-        log = Log.objects.create(phone_number=phone_number)
+        log = Log.objects.create(phone_number=phone_number, language=user.language)
         if user.language == "en":
             caller_response.say("Thank you for calling the San Diego Food Bank!", language="en")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")

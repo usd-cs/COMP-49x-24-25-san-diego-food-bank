@@ -12,68 +12,122 @@
       <option value="day">Day</option>
     </select>
   </div>
+
+  <div class="metrics-container">
+    <div class="metric-card">
+      <h2 id="totalCallsTitle">Total Calls: –</h2>
+      <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
+    </div>
   
-  <div class="metric-card">
-    
-    <h2 id="totalCallsTitle">Total Calls: –</h2>
-    
-    <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
-  </div>
-  <!-- Script to fetch data, update the title, and draw the chart -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const ctx = document.getElementById('totalCallsChart').getContext('2d'); 
-    const titleEl = document.getElementById('totalCallsTitle');
-    let chart;
-
-    async function loadData(gran) {
-      try {
-        const res = await fetch(`/api/total-calls/?granularity=${gran}`);
-        const { labels, counts, total } = await res.json();
-
-        // update the title
-        titleEl.textContent = `Total Calls: ${total}`;
-
-        // initialize or update the chart
-        if (!chart) {
-          chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels,
-              datasets: [{
-                label: 'Total Calls',
-                data: counts,
-                borderRadius: 4,
-                backgroundColor: 'rgba(100, 180, 100, 0.6)',
-                barPercentage: 0.4, 
-                categoryPercentage: 0.6,
-              }]
-            },
-            options: {
-              scales: {
-                x: { title: { display: true, text: gran } },
-                y: { title: { display: true, text: 'Calls' }, beginAtZero: true }
+    <div class="metric-card">
+      <h2 id="callLanguageTitle">Call Language</h2>
+      <canvas id="callLanguageChart"></canvas>
+    </div>
+  
+    <!-- Script to fetch data, update the title, and draw the chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const ctx = document.getElementById('totalCallsChart').getContext('2d'); 
+      const titleEl = document.getElementById('totalCallsTitle');
+      let chart;
+  
+      async function loadData(gran) {
+        try {
+          const res = await fetch(`/api/total-calls/?granularity=${gran}`);
+          const { labels, counts, total } = await res.json();
+  
+          // update the title
+          titleEl.textContent = `Total Calls: ${total}`;
+  
+          // initialize or update the chart
+          if (!chart) {
+            chart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Total Calls',
+                  data: counts,
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(100, 180, 100, 0.6)',
+                  barPercentage: 0.4, 
+                  categoryPercentage: 0.6,
+                }]
               },
-              plugins: {
-                legend: { display: false }
-              },
-              responsive: true,
-            }
-          });
-        } else {
-          chart.data.labels = labels;
-          chart.data.datasets[0].data = counts;
-          chart.options.scales.x.title.text = gran;
-          chart.update();
+              options: {
+                scales: {
+                  x: { title: { display: true, text: gran } },
+                  y: { title: { display: true, text: 'Calls' }, beginAtZero: true }
+                },
+                plugins: {
+                  legend: { display: false }
+                },
+                responsive: true,
+              }
+            });
+          } else {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = counts;
+            chart.options.scales.x.title.text = gran;
+            chart.update();
+          }
+        } catch (err) {
+          console.error(err);
+          titleEl.textContent = 'Error loading data';
         }
-      } catch (err) {
-        console.error(err);
-        titleEl.textContent = 'Error loading data';
       }
-    }
-    
-    const sel = document.getElementById('granularity');
-    sel.addEventListener('change', () => loadData(sel.value)); 
-    loadData(sel.value);
-  </script>
+      
+      const sel = document.getElementById('granularity');
+      sel.addEventListener('change', () => loadData(sel.value)); 
+      loadData(sel.value);
+    </script>
+    <script>
+      const ctxLang = document.getElementById('callLanguageChart').getContext('2d');
+      let chartLang;
+
+      async function loadCallLanguage() {
+        try {
+          const res = await fetch('/api/call-language/');
+          const { labels, counts } = await res.json();
+
+          if (!chartLang) {
+            chartLang = new Chart(ctxLang, {
+              type: 'doughnut',
+              data: {
+                labels,
+                datasets: [{
+                  data: counts,
+                  backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)', // English
+                    'rgba(255, 159, 64, 0.7)' // Spanish
+                  ],
+                  borderWidth: 1
+                }]
+              }, 
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom'
+                  }
+                }
+              }
+            });
+          } else {
+            chartLang.data.labels = labels;
+            chartLang.data.datasets[0].data =counts;
+            chartLang.update();
+          }
+        } catch (err) {
+          console.error("Error loading the call-language data", err);
+          document.getElementById('callLanguageTitle').textContent = 'Error loading call language';
+        }
+      }
+
+      loadCallLanguage();
+    </script>
+
+  </div>
+  
 {% endblock %}
