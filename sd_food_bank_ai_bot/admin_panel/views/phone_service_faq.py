@@ -7,7 +7,7 @@ import urllib.parse
 from django.utils import timezone
 from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
-                        get_matching_question, get_corresponding_answer)
+                        get_matching_question, get_corresponding_answer, get_prompted_choice)
 from .phone_service_schedule import CALLER, BOT
 from .utilities import get_phone_number, translate_to_language
 from ..models import User
@@ -24,8 +24,22 @@ def init_answer(request):
     phone_number = get_phone_number(request)
     caller_response = VoiceResponse()
 
+    user, created = User.objects.get_or_create(
+        phone_number=phone_number,
+        defaults={
+            "first_name": "NaN",
+            "last_name": "NaN",
+        }
+    )
+
     if phone_number:
         log = Log.objects.create(phone_number=phone_number)
+        if user.language == "en":
+            caller_response.say("Thank you for calling the San Diego Food Bank!", language="en")
+            write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
+        else:
+            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
+            write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
         caller_response.redirect("/answer/")
     else:
         caller_response.say("Sorry, we are unable to help you at this time.", voice="Polly.Joanna")
@@ -42,16 +56,10 @@ def answer_call(request):
     caller_response = VoiceResponse()
     phone_number = get_phone_number(request)
 
-    user, created = User.objects.get_or_create(
-        phone_number=phone_number,
-        defaults={
-            "first_name": "NaN",
-            "last_name": "NaN",
-        }
-    )
-
     log = Log.objects.filter(phone_number=phone_number).last()
     log.time_started = timezone.now()
+
+    user = User.objects.get(phone_number=phone_number)
 
     digit_input = request.POST.get('Digits', '')
     if digit_input:
@@ -79,8 +87,6 @@ def answer_call(request):
 
     if digit_input == "":
         if user.language == "en":
-            gather.say("Thank you for calling the San Diego Food Bank!", language="en", voice="Polly.Joanna")
-            write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
             gather.say("Para español presione 0.", language="es-MX", voice="Polly.Mia")
             write_to_log(log, BOT, "Para español presione 0.")
             gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
@@ -90,8 +96,6 @@ def answer_call(request):
                         press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
                         or press 5 to be forwarded to an operator.")
         else:
-            gather.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX", voice="Polly.Mia")
-            write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
             gather.say("For english press 0.", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "For english press 0.")
             gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
@@ -253,7 +257,7 @@ def confirm_question(request, question):
                 caller_response.say(answer, language="es-MX", voice="Polly.Mia")
             write_to_log(log, BOT, answer)
 
-            caller_response.redirect("/prompt_question/")
+            caller_response.redirect("/prompt_post_answer/")
         # If caller has indicated unsatisfactory response, add a string
         # and retry
         else:
@@ -275,4 +279,70 @@ def confirm_question(request, question):
             write_to_log(log, BOT, "Lo siento, no pude entender eso. Por favor inténtalo de nuevo.")
         caller_response.redirect("/prompt_question/")
 
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+
+@csrf_exempt
+def prompt_post_answer(request):
+    """
+    Prompts user after answering the quesiton with options to return to main menu,
+    ask another question, or end the call.
+    """
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
+    user = User.objects.get(phone_number=phone_number)
+    caller_response = VoiceResponse()
+
+    gather = None
+    
+    if user.language == "en":
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/process_post_answer/", language="en")
+        options = "Would you like to return to the main menu, ask another question, or end the call?"
+        gather.say(options)
+        write_to_log(log, BOT, options)
+    else:
+        gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
+                        action="/process_post_answer/", language="es-MX")
+        options = "¿Desea regresar al menú principal, hacer otra pregunta o finalizar la llamada?"
+        gather.say(options, language="es-MX")
+        write_to_log(log, BOT, options)
+    
+    caller_response.append(gather)
+
+    return HttpResponse(str(caller_response), content_type='text/xml')
+
+
+@csrf_exempt
+def process_post_answer(request):
+    """
+    Processes the users response to the given options.
+    """
+    phone_number = request.POST.get('From')
+    log = Log.objects.filter(phone_number=phone_number).last()
+    user = User.objects.get(phone_number=phone_number)
+    caller_response = VoiceResponse()
+    speech_result = request.POST.get("SpeechResult", "").strip()
+
+    write_to_log(log, CALLER, speech_result)
+    
+    if not speech_result:
+        caller_response.redirect('/prompt_post_answer/')
+        return HttpResponse(str(caller_response), content_type='text/xml')
+    
+    if user.language == "es":
+        speech_result = translate_to_language(source_lang="es", target_lang="en", text=speech_result)
+    choice = get_prompted_choice(speech_result)
+
+    if choice == True:
+        caller_response.redirect("/prompt_question/")
+    elif choice == False:
+        if user.language == "en":
+            caller_response.say("Have a great day!")
+        else:
+            caller_response.say("¡Qué tengas un lindo día!", language="es-MX")
+        caller_response.hangup()
+    else:
+        caller_response.redirect("/answer/")
+    
     return HttpResponse(str(caller_response), content_type='text/xml')

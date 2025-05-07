@@ -7,7 +7,7 @@ from admin_panel.models import Log, Admin
 
 class AuditLogsE2ETest(StaticLiveServerTestCase):
     """
-    End-to-end test for the audit log page. Navigates throug teh login page to the faq page and finally ends at the audit log page where it confirms the dummy log is there and all relevant information is displayed as intended
+    End-to-end test for the audit log page. Navigates through the login page to the faq page and finally ends at the audit log page where it confirms the dummy log is there and all relevant information is displayed as intended
     """
     @classmethod
     def setUpClass(cls):
