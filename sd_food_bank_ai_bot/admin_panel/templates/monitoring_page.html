@@ -81,52 +81,56 @@
       sel.addEventListener('change', () => loadData(sel.value)); 
       loadData(sel.value);
     </script>
-    <script>
-      const ctxLang = document.getElementById('callLanguageChart').getContext('2d');
-      let chartLang;
+  <script>
+    const select = document.getElementById('granularity'); 
+    const ctxLang = document.getElementById('callLanguageChart').getContext('2d');
+    const titleLang = document.getElementById('callLanguageTitle');
+    let chartLang;
 
-      async function loadCallLanguage() {
-        try {
-          const res = await fetch('/api/call-language/');
-          const { labels, counts } = await res.json();
+    async function refreshCallLanguage(gran) {
+      try {
+        const res = await fetch(`/api/call-language/?granularity=${gran}`);
+        const { labels, counts } = await res.json();
 
-          if (!chartLang) {
-            chartLang = new Chart(ctxLang, {
-              type: 'doughnut',
-              data: {
-                labels,
-                datasets: [{
-                  data: counts,
-                  backgroundColor: [
-                    'rgba(54, 162, 235, 0.7)', // English
-                    'rgba(255, 159, 64, 0.7)' // Spanish
-                  ],
-                  borderWidth: 1
-                }]
-              }, 
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: 'bottom'
-                  }
-                }
+        // update title to reflect period
+        const caps = { year: 'Year', month: 'Month', day: 'Day' };
+        titleLang.textContent = `Call Language (Current ${caps[gran]})`;
+
+        if (!chartLang) {
+          chartLang = new Chart(ctxLang, {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{
+                data: counts,
+                backgroundColor: [
+                  'rgba(54, 162, 235, 0.7)',
+                  'rgba(255, 159, 64, 0.7)'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom' }
               }
-            });
-          } else {
-            chartLang.data.labels = labels;
-            chartLang.data.datasets[0].data =counts;
-            chartLang.update();
-          }
-        } catch (err) {
-          console.error("Error loading the call-language data", err);
-          document.getElementById('callLanguageTitle').textContent = 'Error loading call language';
+            }
+          });
+        } else {
+          chartLang.data.datasets[0].data = counts;
+          chartLang.update();
         }
+      } catch (err) {
+        console.error("Error loading call-language data", err);
+        titleLang.textContent = 'Error loading call language';
       }
+    }
 
-      loadCallLanguage();
-    </script>
+    // wire up the dropdown menu change and the initial load
+    select.addEventListener('change', () => refreshCallLanguage(select.value));
+    refreshCallLanguage(select.value);
+  </script>
 
   </div>
   
