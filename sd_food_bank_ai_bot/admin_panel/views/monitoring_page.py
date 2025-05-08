@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.views import View
+from django.utils import timezone
 from django.utils.timezone import now
 from django.db.models import Count
 from django.db.models.functions import TruncYear, TruncMonth, TruncDay
@@ -54,4 +55,34 @@ def get_total_calls(request):
         'total': total,
         'labels': labels,
         'counts': counts,
+    })
+
+def get_call_language(request):
+    """
+    Returns the count of calls grouped by language (english or spanish)
+    """
+    gran = request.GET.get('granularity', 'year')
+    now = timezone.now()
+    qs = Log.objects.all()
+
+    if gran == 'year':
+        qs = qs.filter(time_started__year=now.year)
+    elif gran == 'month':
+        qs = qs.filter(time_started__year=now.year, time_started__month=now.month)
+    elif gran == 'day':
+        qs = qs.filter(time_started__date=now.date())
+    
+    else: 
+        return JsonResponse({"error": "Invalid"}, status=400)
+    
+    # count by language
+    data = qs.values('language').annotate(count=Count('id'))
+    
+    counts = {'en': 0, 'es': 0}
+    for row in data:
+        counts[row['language']] = row['count']
+
+    return JsonResponse({
+        'labels': ['English', 'Spanish'],
+        'counts': [counts['en'], counts['es']],
     })
