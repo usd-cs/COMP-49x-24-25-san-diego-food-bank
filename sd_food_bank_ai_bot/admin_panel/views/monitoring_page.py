@@ -86,3 +86,30 @@ def get_call_language(request):
         'labels': ['English', 'Spanish'],
         'counts': [counts['en'], counts['es']],
     })
+
+def get_calls_forwarded(request):
+    """
+    Returns counts of forwarded calls split by caller's request vs. automatic (based on strikes).
+    """
+    qs = Log.objects.filter(forwarded=True)
+    data = (
+        qs.values('forwarded_reason')
+          .annotate(count=Count('id'))
+          .order_by('-count')
+    )
+
+    labels, counts = [], []
+    total = 0
+    for row in data:
+        labels.append(
+            "Caller Requested" if row['forwarded_reason']=='caller'
+            else "Automatic"
+        )
+        counts.append(row['count'])
+        total += row['count']
+
+    return JsonResponse({
+        'total': total,
+        'labels': labels,
+        'counts': counts,
+    })

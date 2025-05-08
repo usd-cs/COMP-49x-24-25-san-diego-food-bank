@@ -3,7 +3,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-from .views.monitoring_page import get_total_calls, monitoring_dashboard, get_call_language
+from .views.monitoring_page import get_total_calls, monitoring_dashboard, get_call_language, get_calls_forwarded
 
 urlpatterns = [
     # Utilities
@@ -40,6 +40,9 @@ urlpatterns = [
      path('api/call-language/', 
           get_call_language, 
           name="get_call_language"),
+     path("api/calls-forwarded/", 
+          get_calls_forwarded, 
+          name="get_calls_forwarded"),
     path("edit_faq/<int:faq_id>/",
          views.admin_panel_faq.edit_faq,
          name="edit_faq"),

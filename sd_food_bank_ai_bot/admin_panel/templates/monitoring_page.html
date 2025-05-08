@@ -23,6 +23,11 @@
       <h2 id="callLanguageTitle">Call Language</h2>
       <canvas id="callLanguageChart"></canvas>
     </div>
+
+    <div class="metric-card">
+      <h2 id="forwardedTitle">Calls Forwarded to Operator: -</h2>
+      <canvas id="forwardedChart"></canvas>
+    </div>
   
     <!-- Script to fetch data, update the title, and draw the chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -130,6 +135,56 @@
     // wire up the dropdown menu change and the initial load
     select.addEventListener('change', () => refreshCallLanguage(select.value));
     refreshCallLanguage(select.value);
+  </script>
+
+  <script>
+    const ctxF   = document.getElementById('forwardedChart').getContext('2d');
+    const titleF = document.getElementById('forwardedTitle');
+    let chartF;
+
+    async function loadForwarded() {
+      try {
+        const res = await fetch('/api/calls-forwarded/');
+        const { total, labels, counts } = await res.json();
+
+        titleF.textContent = `Calls Forwarded to Operator: ${total}`;
+
+        if (!chartF) {
+          chartF = new Chart(ctxF, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                data: counts,
+                backgroundColor: [
+                  'rgba(220, 53, 69, 0.7)',    // red for user-request
+                  'rgba(255, 205, 86, 0.7)'    // yellow for automatic
+                ]
+              }]
+            },
+            options: {
+              indexAxis: 'y',               // horizontal bar
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: { beginAtZero: true, title:{ display:true, text:'Calls' } },
+                y: { title:{ display:false } }
+              },
+              plugins: { legend:{ display:false } }
+            }
+          });
+        } else {
+          chartF.data.labels = labels;
+          chartF.data.datasets[0].data = counts;
+          chartF.update();
+        }
+      } catch (err) {
+        console.error("Error loading forwarded data", err);
+        titleF.textContent = 'Error loading data';
+      }
+    }
+
+    loadForwarded();
   </script>
 
   </div>
