@@ -5,28 +5,52 @@
   <link rel="stylesheet" href="{% static 'css/monitoring_page.css' %}">
 
   <div class="controls">
-    <label for="granularity">View by:</label>
-    <select id="granularity">
-      <option value="year">Year</option>
-      <option value="month">Month</option>
-      <option value="day">Day</option>
-    </select>
+    <div class="options">
+      <label for="granularity">View by:</label>
+      <select id="granularity">
+        <option value="year">Year</option>
+        <option value="month">Month</option>
+        <option value="day">Day</option>
+      </select>
+    </div>
+    <div class="monitoring-title">
+      <h1>Monitoring</h1>
+    </div>
+    <div class="spacer"></div>
   </div>
 
   <div class="metrics-container">
-    <div class="metric-card">
-      <h2 id="totalCallsTitle">Total Calls: –</h2>
-      <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
-    </div>
-  
-    <div class="metric-card">
-      <h2 id="callLanguageTitle">Call Language</h2>
-      <canvas id="callLanguageChart"></canvas>
-    </div>
+    <div class="metrics-upper">
+      <div class="metric-card">
+        <h2 id="totalCallsTitle">Total Calls: –</h2>
+        <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
+      </div>
 
-    <div class="metric-card">
-      <h2 id="forwardedTitle">Calls Forwarded to Operator: -</h2>
-      <canvas id="forwardedChart"></canvas>
+      <div class="metric-card" id="center">
+        <!-- Put avg call length here-->
+      </div>
+
+      <div class="metric-card">
+        <h2 id="callTimeOfDayTitle">Time Of Day:</h2>
+        <canvas id="callTimeOfDayChart"></canvas>
+      </div>
+    </div>
+    <div class="metric-lower">
+
+      <div class="metric-card">
+        <!-- Put reason for calling here-->
+      </div>
+
+      <div class="metric-card" id="center">
+        <h2 id="callLanguageTitle">Call Language:</h2>
+        <canvas id="callLanguageChart"></canvas>
+      </div>
+
+      <div class="metric-card">
+        <h2 id="forwardedTitle">Calls Forwarded to Operator: -</h2>
+        <canvas id="forwardedChart"></canvas>
+      </div>
+
     </div>
   
     <!-- Script to fetch data, update the title, and draw the chart -->
@@ -68,6 +92,7 @@
                   legend: { display: false }
                 },
                 responsive: true,
+                maintainAspectRatio: false,
               }
             });
           } else {
@@ -99,7 +124,7 @@
 
         // update title to reflect period
         const caps = { year: 'Year', month: 'Month', day: 'Day' };
-        titleLang.textContent = `Call Language (Current ${caps[gran]})`;
+        titleLang.textContent = `Call Language: (Current ${caps[gran]})`;
 
         if (!chartLang) {
           chartLang = new Chart(ctxLang, {
@@ -133,8 +158,64 @@
     }
 
     // wire up the dropdown menu change and the initial load
-    select.addEventListener('change', () => refreshCallLanguage(select.value));
+    select.addEventListener('change', () => {
+      refreshCallLanguage(select.value)
+      loadCallTimeOfDay(sel.value);
+    });
     refreshCallLanguage(select.value);
+  </script>
+  <script>
+    const ctxToD = document.getElementById('callTimeOfDayChart').getContext('2d');
+    const titleToD = document.getElementById('callTimeOfDayTitle');
+    let chartToD;
+
+    async function loadCallTimeOfDay(gran) {
+      try {
+        const res = await fetch(`/api/call-time-of-day/?granularity=${gran}`);
+        const { labels, counts } = await res.json();
+
+        // update title to reflect period
+        const caps = { year: 'Year', month: 'Month', day: 'Day' };
+        titleToD.textContent = `Time of Day: (Current ${caps[gran]})`;
+
+        if (!chartToD) {
+          chartToD = new Chart(ctxToD, {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{
+                data: counts,
+                backgroundColor: [
+                  'rgba(54, 162, 235, 0.7)',
+                  'rgba(255, 159, 64, 0.7)',
+                  'rgba(64, 255, 64, 0.7)',
+                  'rgba(255, 78, 78, 0.7)'
+                ],
+                borderWidth: 1
+              }]
+            }, 
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        } else {
+          chartToD.data.labels = labels;
+          chartToD.data.datasets[0].data =counts;
+          chartToD.update();
+        }
+      } catch (err) {
+        console.error("Error loading the call-time-of-day data", err);
+        titleToD.textContent = 'Error loading call time of day';
+      }
+    }
+
+    loadCallTimeOfDay(sel.value);
   </script>
 
   <script>

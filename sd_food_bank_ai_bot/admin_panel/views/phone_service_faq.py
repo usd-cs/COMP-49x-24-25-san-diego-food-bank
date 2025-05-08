@@ -69,6 +69,8 @@ def answer_call(request):
             else:
                 user.language = "en"
             user.save()
+            log.language = user.language
+            log.save()
             caller_response.redirect("/answer/")
         elif digit_input == "1":
             caller_response.redirect("/check_account/?action=schedule")

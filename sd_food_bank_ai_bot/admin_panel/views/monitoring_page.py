@@ -5,6 +5,7 @@ from django.utils.timezone import now
 from django.db.models import Count
 from django.db.models.functions import TruncYear, TruncMonth, TruncDay
 from django.shortcuts import render
+from zoneinfo import ZoneInfo
 from ..models import Log  
 
 def monitoring_dashboard(request):
@@ -62,7 +63,8 @@ def get_call_language(request):
     Returns the count of calls grouped by language (english or spanish)
     """
     gran = request.GET.get('granularity', 'year')
-    now = timezone.now()
+    pst = ZoneInfo("America/Los_Angeles")
+    now = timezone.now().astimezone(pst)
     qs = Log.objects.all()
 
     if gran == 'year':
@@ -113,3 +115,51 @@ def get_calls_forwarded(request):
         'labels': labels,
         'counts': counts,
     })
+
+def get_time_of_day(request):
+    """
+    Returns the count of calls grouped by time of day.
+    """
+
+    gran = request.GET.get('granularity', 'year')
+    qs = Log.objects.all()
+    
+    pst = ZoneInfo("America/Los_Angeles")
+    now = timezone.now().astimezone(pst)
+
+    if gran == 'year':
+        qs = qs.filter(time_started__year=now.year)
+    elif gran == 'month':
+        qs = qs.filter(time_started__year=now.year, time_started__month=now.month)
+    elif gran == 'day':
+        qs = qs.filter(time_started__date=now.date())
+    else:
+        return JsonResponse({'error': 'Invalid granularity'}, status=400)
+    
+    buckets = {
+        "8am-12pm": 0,
+        "12pm-4pm": 0,
+        "4pm-8pm": 0,
+        "8pm-8am": 0
+    }
+    
+    for entry in qs:
+        ts = entry.time_started
+        ts_pst = ts.astimezone(pst)
+        hour = ts_pst.hour
+
+        if 8 <= hour < 12:
+            bucket = "8am-12pm"
+        elif 12 <= hour < 16:
+            bucket = "12pm-4pm"
+        elif 16 <= hour < 20:
+            bucket = "4pm-8pm"
+        else:
+            bucket = "8pm-8am"
+
+        buckets[bucket] += 1
+    
+    labels = list(buckets.keys())
+    counts = list(buckets.values())
+
+    return JsonResponse({"labels": labels, "counts": counts})
