@@ -5,29 +5,53 @@
   <link rel="stylesheet" href="{% static 'css/monitoring_page.css' %}">
 
   <div class="controls">
-    <label for="granularity">View by:</label>
-    <select id="granularity">
-      <option value="year">Year</option>
-      <option value="month">Month</option>
-      <option value="day">Day</option>
-    </select>
+    <div class="options">
+      <label for="granularity">View by:</label>
+      <select id="granularity">
+        <option value="year">Year</option>
+        <option value="month">Month</option>
+        <option value="day">Day</option>
+      </select>
+    </div>
+    <div class="monitoring-title">
+      <h1>Monitoring</h1>
+    </div>
+    <div class="spacer"></div>
   </div>
 
   <div class="metrics-container">
-    <div class="metric-card">
-      <h2 id="totalCallsTitle">Total Calls: –</h2>
-      <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
+    <div class="metrics-upper">
+      <div class="metric-card">
+        <h2 id="totalCallsTitle">Total Calls: –</h2>
+        <canvas id="totalCallsChart"></canvas> <!-- Render the chart-->
+      </div>
+
+      <div class="metric-card" id="center">
+        <!-- Put avg call length here-->
+      </div>
+
+      <div class="metric-card">
+        <h2 id="callTimeOfDayTitle">Time Of Day:</h2>
+        <canvas id="callTimeOfDayChart"></canvas>
+      </div>
     </div>
-  
-    <div class="metric-card">
-      <h2 id="callLanguageTitle">Call Language:</h2>
-      <canvas id="callLanguageChart"></canvas>
+    <div class="metric-lower">
+
+      <div class="metric-card">
+        <!-- Put reason for calling here-->
+      </div>
+
+      <div class="metric-card" id="center">
+        <h2 id="callLanguageTitle">Call Language:</h2>
+        <canvas id="callLanguageChart"></canvas>
+      </div>
+
+      <div class="metric-card">
+        <!-- Put forwarded to opertor here-->
+      </div>
+
     </div>
 
-    <div class="metric-card">
-      <h2 id="callTimeOfDayTitle">Time Of Day:</h2>
-      <canvas id="callTimeOfDayChart"></canvas>
-    </div>
   
     <!-- Script to fetch data, update the title, and draw the chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -68,6 +92,7 @@
                   legend: { display: false }
                 },
                 responsive: true,
+                maintainAspectRatio: false,
               }
             });
           } else {
