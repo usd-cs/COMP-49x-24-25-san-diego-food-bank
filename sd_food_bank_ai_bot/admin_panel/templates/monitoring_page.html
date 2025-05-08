@@ -143,48 +143,65 @@
     let chartF;
 
     async function loadForwarded() {
-      try {
-        const res = await fetch('/api/calls-forwarded/');
-        const { total, labels, counts } = await res.json();
+    try {
+      const res = await fetch('/api/calls-forwarded/');
+      const { total, labels, counts } = await res.json();
 
-        titleF.textContent = `Calls Forwarded to Operator: ${total}`;
+      titleF.textContent = `Calls Forwarded to Operator: ${total}`;
 
-        if (!chartF) {
-          chartF = new Chart(ctxF, {
-            type: 'bar',
-            data: {
-              labels,
-              datasets: [{
-                data: counts,
-                backgroundColor: [
-                  'rgba(220, 53, 69, 0.7)',    // red for user-request
-                  'rgba(255, 205, 86, 0.7)'    // yellow for automatic
-                ]
-              }]
+      const cfg = {
+        type: 'bar',
+        data: {
+          labels,        
+          datasets: [{
+            data: counts,
+            backgroundColor: [
+              'rgba(220, 53, 69, 0.7)',   // user-requested
+              'rgba(255, 205, 86, 0.7)'   // automatic
+            ],
+            barPercentage: 0.5,
+            categoryPercentage: 0.5,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: false },
+              ticks: { autoSkip: false }
             },
-            options: {
-              indexAxis: 'y',               // horizontal bar
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                x: { beginAtZero: true, title:{ display:true, text:'Calls' } },
-                y: { title:{ display:false } }
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Calls'      
               },
-              plugins: { legend:{ display:false } }
+              ticks: {
+                stepSize: 1,
+                precision: 0
+              }
             }
-          });
-        } else {
-          chartF.data.labels = labels;
-          chartF.data.datasets[0].data = counts;
-          chartF.update();
+          },
+          plugins: {
+            legend: { display: false }
+          }
         }
-      } catch (err) {
-        console.error("Error loading forwarded data", err);
-        titleF.textContent = 'Error loading data';
-      }
-    }
+      };
 
-    loadForwarded();
+      if (!chartF) {
+        chartF = new Chart(ctxF, cfg);
+      } else {
+        chartF.data      = cfg.data;
+        chartF.options   = cfg.options;
+        chartF.update();
+      }
+    } catch (err) {
+      console.error("Error loading forwarded data", err);
+      titleF.textContent = 'Error loading data';
+    }
+  }
+  loadForwarded();
   </script>
 
   </div>
