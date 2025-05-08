@@ -37,7 +37,7 @@ SECRET_KEY = 'django-insecure-9-^=r3!5a^d+8*$q' \
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = []
 
 # Global parameters for the speech recognition aspect of bot's 'say' function to detect when to act
 SPEECHTIMEOUT=0.5
@@ -121,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Los_Angeles'
 
 USE_I18N = True
 

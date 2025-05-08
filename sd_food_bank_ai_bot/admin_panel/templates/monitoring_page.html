@@ -20,8 +20,13 @@
     </div>
   
     <div class="metric-card">
-      <h2 id="callLanguageTitle">Call Language</h2>
+      <h2 id="callLanguageTitle">Call Language:</h2>
       <canvas id="callLanguageChart"></canvas>
+    </div>
+
+    <div class="metric-card">
+      <h2 id="callTimeOfDayTitle">Time Of Day:</h2>
+      <canvas id="callTimeOfDayChart"></canvas>
     </div>
   
     <!-- Script to fetch data, update the title, and draw the chart -->
@@ -94,7 +99,7 @@
 
         // update title to reflect period
         const caps = { year: 'Year', month: 'Month', day: 'Day' };
-        titleLang.textContent = `Call Language (Current ${caps[gran]})`;
+        titleLang.textContent = `Call Language: (Current ${caps[gran]})`;
 
         if (!chartLang) {
           chartLang = new Chart(ctxLang, {
@@ -128,8 +133,64 @@
     }
 
     // wire up the dropdown menu change and the initial load
-    select.addEventListener('change', () => refreshCallLanguage(select.value));
+    select.addEventListener('change', () => {
+      refreshCallLanguage(select.value)
+      loadCallTimeOfDay(sel.value);
+    });
     refreshCallLanguage(select.value);
+  </script>
+  <script>
+    const ctxToD = document.getElementById('callTimeOfDayChart').getContext('2d');
+    const titleToD = document.getElementById('callTimeOfDayTitle');
+    let chartToD;
+
+    async function loadCallTimeOfDay(gran) {
+      try {
+        const res = await fetch(`/api/call-time-of-day/?granularity=${gran}`);
+        const { labels, counts } = await res.json();
+
+        // update title to reflect period
+        const caps = { year: 'Year', month: 'Month', day: 'Day' };
+        titleToD.textContent = `Time of Day: (Current ${caps[gran]})`;
+
+        if (!chartToD) {
+          chartToD = new Chart(ctxToD, {
+            type: 'doughnut',
+            data: {
+              labels,
+              datasets: [{
+                data: counts,
+                backgroundColor: [
+                  'rgba(54, 162, 235, 0.7)',
+                  'rgba(255, 159, 64, 0.7)',
+                  'rgba(64, 255, 64, 0.7)',
+                  'rgba(255, 78, 78, 0.7)'
+                ],
+                borderWidth: 1
+              }]
+            }, 
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom'
+                }
+              }
+            }
+          });
+        } else {
+          chartToD.data.labels = labels;
+          chartToD.data.datasets[0].data =counts;
+          chartToD.update();
+        }
+      } catch (err) {
+        console.error("Error loading the call-time-of-day data", err);
+        titleToD.textContent = 'Error loading call time of day';
+      }
+    }
+
+    loadCallTimeOfDay(sel.value);
   </script>
 
   </div>
