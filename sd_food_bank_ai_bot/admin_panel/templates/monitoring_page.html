@@ -12,6 +12,13 @@
         <option value="month">Month</option>
         <option value="day">Day</option>
       </select>
+      <label for="topic">Topic:</label>
+      <select id="topic">
+        <option value="faq">FAQs</option>
+        <option value="schedule">Schedule</option>
+        <option value="reschedule">Reschedule</option>
+        <option value="cancel">Cancel</option>
+      </select>
     </div>
     <div class="monitoring-title">
       <h1>Monitoring</h1>
@@ -27,7 +34,8 @@
       </div>
 
       <div class="metric-card" id="center">
-        <!-- Put avg call length here-->
+        <h2 id="callAvgLengthTitle">Total Calls: –</h2>
+        <canvas id="callAvgLengthChart"></canvas>
       </div>
 
       <div class="metric-card">
@@ -38,7 +46,8 @@
     <div class="metric-lower">
 
       <div class="metric-card">
-        <!-- Put reason for calling here-->
+        <h2 id="callReasonTitle">Reason for Calling:</h2>
+        <canvas id="callReasonChart"></canvas>
       </div>
 
       <div class="metric-card" id="center">
@@ -47,11 +56,11 @@
       </div>
 
       <div class="metric-card">
-        <!-- Put forwarded to opertor here-->
+        <h2 id="forwardedTitle">Calls Forwarded to Operator: -</h2>
+        <canvas id="forwardedChart"></canvas>
       </div>
 
     </div>
-
   
     <!-- Script to fetch data, update the title, and draw the chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -111,112 +120,331 @@
       sel.addEventListener('change', () => loadData(sel.value)); 
       loadData(sel.value);
     </script>
-  <script>
-    const select = document.getElementById('granularity'); 
-    const ctxLang = document.getElementById('callLanguageChart').getContext('2d');
-    const titleLang = document.getElementById('callLanguageTitle');
-    let chartLang;
 
-    async function refreshCallLanguage(gran) {
-      try {
-        const res = await fetch(`/api/call-language/?granularity=${gran}`);
-        const { labels, counts } = await res.json();
+    <script>
+      const ctxAvg = document.getElementById('callAvgLengthChart').getContext('2d'); 
+      const titleAvg = document.getElementById('callAvgLengthTitle');
+      let chartAvg;
+  
+      async function loadAvg(gran) {
+        try {
+          const res = await fetch(`/api/call-avg-length/?granularity=${gran}`);
+          const { labels, average_lengths, total_average_lengths } = await res.json();
+          console.log(average_lengths);
+  
+          // update the title
+          titleAvg.textContent = `Avg Call Length: ${total_average_lengths}`;
+  
+          // initialize or update the chart
+          if (!chartAvg) {
+            chartAvg = new Chart(ctxAvg, {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Average Call Length',
+                  data: average_lengths,
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(100, 180, 100, 0.6)',
+                  barPercentage: 0.4, 
+                  categoryPercentage: 0.6,
+                }]
+              },
+              options: {
+                scales: {
+                  x: { title: { display: true, text: gran } },
+                  y: {
+                    title: { display: true, text: 'Call Length' },
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function(value) {
+                        const minutes = Math.floor(value / 60);
+                        const seconds = Math.floor(value % 60);
+                        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                      }
+                    }
+                  }
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(ctx) {
+                        const totalSeconds = ctx.raw;
+                        const minutes = Math.floor(totalSeconds / 60);
+                        const seconds = Math.floor(totalSeconds % 60);
+                        return `${ctx.dataset.label}: ${minutes}m ${seconds}s`;
+                      }
+                    }
+                  }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+              }
+            });
+          } else {
+            chartAvg.data.labels = labels;
+            chartAvg.data.datasets[0].data = average_lengths;
+            chartAvg.options.scales.x.title.text = gran;
+            chartAvg.update();
+          }
+        } catch (err) {
+          console.error(err);
+          titleAvg.textContent = 'Error loading data';
+        }
+      }
+      
+      const select = document.getElementById('granularity');
+      loadAvg(select.value);
+    </script>
 
-        // update title to reflect period
-        const caps = { year: 'Year', month: 'Month', day: 'Day' };
-        titleLang.textContent = `Call Language: (Current ${caps[gran]})`;
+    <script>
+      const ctxLang = document.getElementById('callLanguageChart').getContext('2d');
+      const titleLang = document.getElementById('callLanguageTitle');
+      let chartLang;
 
-        if (!chartLang) {
-          chartLang = new Chart(ctxLang, {
-            type: 'doughnut',
+      async function refreshCallLanguage(gran) {
+        try {
+          const res = await fetch(`/api/call-language/?granularity=${gran}`);
+          const { labels, counts } = await res.json();
+
+          // update title to reflect period
+          const caps = { year: 'Year', month: 'Month', day: 'Day' };
+          titleLang.textContent = `Call Language: (Current ${caps[gran]})`;
+
+          if (!chartLang) {
+            chartLang = new Chart(ctxLang, {
+              type: 'doughnut',
+              data: {
+                labels,
+                datasets: [{
+                  data: counts,
+                  backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 159, 64, 0.7)'
+                  ]
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { position: 'bottom' }
+                }
+              }
+            });
+          } else {
+            chartLang.data.datasets[0].data = counts;
+            chartLang.update();
+          }
+        } catch (err) {
+          console.error("Error loading call-language data", err);
+          titleLang.textContent = 'Error loading call language';
+        }
+      }
+
+      // wire up the dropdown menu change and the initial load
+      select.addEventListener('change', () => {
+        refreshCallLanguage(select.value),
+        loadCallTimeOfDay(select.value),
+        loadForwarded(select.value),
+        loadReason(select.value),
+        loadAvg(select.value);;
+      });
+      refreshCallLanguage(select.value);
+    </script>
+
+    <script>
+      const ctxToD = document.getElementById('callTimeOfDayChart').getContext('2d');
+      const titleToD = document.getElementById('callTimeOfDayTitle');
+      let chartToD;
+
+      async function loadCallTimeOfDay(gran) {
+        try {
+          const res = await fetch(`/api/call-time-of-day/?granularity=${gran}`);
+          const { labels, counts } = await res.json();
+
+          // update title to reflect period
+          const caps = { year: 'Year', month: 'Month', day: 'Day' };
+          titleToD.textContent = `Time of Day: (Current ${caps[gran]})`;
+
+          if (!chartToD) {
+            chartToD = new Chart(ctxToD, {
+              type: 'doughnut',
+              data: {
+                labels,
+                datasets: [{
+                  data: counts,
+                  backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(64, 255, 64, 0.7)',
+                    'rgba(255, 78, 78, 0.7)'
+                  ],
+                  borderWidth: 2
+                }]
+              }, 
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'bottom'
+                  }
+                }
+              }
+            });
+          } else {
+            chartToD.data.labels = labels;
+            chartToD.data.datasets[0].data =counts;
+            chartToD.update();
+          }
+        } catch (err) {
+          console.error("Error loading the call-time-of-day data", err);
+          titleToD.textContent = 'Error loading call time of day';
+        }
+      }
+
+      loadCallTimeOfDay(select.value);
+    </script>
+
+    <script>
+      const ctxF   = document.getElementById('forwardedChart').getContext('2d');
+      const titleF = document.getElementById('forwardedTitle');
+      let chartF;
+
+      async function loadForwarded(gran) {
+        try {
+          const res = await fetch(`/api/calls-forwarded/?granularity=${gran}`);
+          const { total, labels, counts } = await res.json();
+
+          titleF.textContent = `Calls Forwarded to Operator: ${total}`;
+
+          const cfg = {
+            type: 'doughnut',        
             data: {
-              labels,
+              labels,           
               datasets: [{
                 data: counts,
                 backgroundColor: [
-                  'rgba(54, 162, 235, 0.7)',
-                  'rgba(255, 159, 64, 0.7)'
-                ]
+                  'rgba(220, 53, 69, 0.7)',   
+                  'rgba(255, 205, 86, 0.7)'   
+                ],
+                borderColor: '#fff',
+                borderWidth: 2
               }]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                legend: { position: 'bottom' }
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 12,
+                    padding: 16
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const count = ctx.parsed;
+                      const percent = ((count / total) * 100).toFixed(0);
+                      return `${ctx.label}: ${count} (${percent}%)`;
+                    }
+                  }
+                }
               }
             }
-          });
-        } else {
-          chartLang.data.datasets[0].data = counts;
-          chartLang.update();
+          };
+
+          if (!chartF) {
+            chartF = new Chart(ctxF, cfg);
+          } else {
+            // update existing pie
+            chartF.data      = cfg.data;
+            chartF.options   = cfg.options;
+            chartF.update();
+          }
+        } catch (err) {
+          console.error("Error loading forwarded data", err);
+          titleF.textContent = 'Error loading data';
         }
-      } catch (err) {
-        console.error("Error loading call-language data", err);
-        titleLang.textContent = 'Error loading call language';
       }
-    }
 
-    // wire up the dropdown menu change and the initial load
-    select.addEventListener('change', () => {
-      refreshCallLanguage(select.value)
-      loadCallTimeOfDay(sel.value);
-    });
-    refreshCallLanguage(select.value);
-  </script>
-  <script>
-    const ctxToD = document.getElementById('callTimeOfDayChart').getContext('2d');
-    const titleToD = document.getElementById('callTimeOfDayTitle');
-    let chartToD;
+      // initial draw
+      loadForwarded(select.value);
+    </script>
 
-    async function loadCallTimeOfDay(gran) {
-      try {
-        const res = await fetch(`/api/call-time-of-day/?granularity=${gran}`);
-        const { labels, counts } = await res.json();
+    <script>
+      const ctxReason   = document.getElementById('callReasonChart').getContext('2d');
+      const titleReason = document.getElementById('callReasonTitle');
+      let chartReason;
 
-        // update title to reflect period
-        const caps = { year: 'Year', month: 'Month', day: 'Day' };
-        titleToD.textContent = `Time of Day: (Current ${caps[gran]})`;
+      async function loadReason(gran) {
+        try {
+          const res = await fetch(`/api/call-reasons/?granularity=${gran}`);
+          const { total, labels, counts } = await res.json();
+          const caps = { year: 'Year', month: 'Month', day: 'Day' };
+          titleReason.textContent = `Reason for Calling: (Current ${caps[gran]})`;
 
-        if (!chartToD) {
-          chartToD = new Chart(ctxToD, {
-            type: 'doughnut',
+          const cfg = {
+            type: 'doughnut',        
             data: {
-              labels,
+              labels,           
               datasets: [{
                 data: counts,
                 backgroundColor: [
-                  'rgba(54, 162, 235, 0.7)',
-                  'rgba(255, 159, 64, 0.7)',
-                  'rgba(64, 255, 64, 0.7)',
-                  'rgba(255, 78, 78, 0.7)'
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(64, 255, 64, 0.7)',
+                    'rgba(255, 78, 78, 0.7)'  
                 ],
-                borderWidth: 1
+                borderColor: '#fff',
+                borderWidth: 2
               }]
-            }, 
+            },
             options: {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
                 legend: {
-                  position: 'bottom'
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 12,
+                    padding: 16
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const count = ctx.parsed;
+                      const percent = ((count / total) * 100).toFixed(0);
+                      return `${ctx.label}: ${count} (${percent}%)`;
+                    }
+                  }
                 }
               }
             }
-          });
-        } else {
-          chartToD.data.labels = labels;
-          chartToD.data.datasets[0].data =counts;
-          chartToD.update();
-        }
-      } catch (err) {
-        console.error("Error loading the call-time-of-day data", err);
-        titleToD.textContent = 'Error loading call time of day';
-      }
-    }
+          };
 
-    loadCallTimeOfDay(sel.value);
-  </script>
+          if (!chartReason) {
+            chartReason = new Chart(ctxReason, cfg);
+          } else {
+            // update existing pie
+            chartReason.data      = cfg.data;
+            chartReason.options   = cfg.options;
+            chartReason.update();
+          }
+        } catch (err) {
+          console.error("Error loading forwarded data", err);
+          titleReason.textContent = 'Error loading data';
+        }
+      }
+
+      // initial draw
+      loadReason(select.value);
+    </script>
 
   </div>
   

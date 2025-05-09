@@ -27,6 +27,9 @@ def strike_system_handler(log, reset=False):
             log.reset_strikes()
         else:
             if log.add_strike():
+                log.forwarded = True
+                log.forwarded_reason = 'auto'
+                log.save()
                 return True
     return False
 
@@ -247,56 +250,46 @@ def get_day(speech_result):
     return response_pred
 
 
-def check_available_date(target_weekday):
+def check_available_date(date):
     """
     Return if the given date has available timeslots or not.
     """
-    today = now().date()
-    max_weeks_ahead = 4
     number_available_appointments = 0
 
-    for week in range(max_weeks_ahead):
-        # Calculate the next occurrence of the requested weekday
-        days_ahead = (target_weekday - today.weekday()) % 7
-        if days_ahead == 0 and week == 0:
-            days_ahead = 7
+    # Retrieve existing appointments for this date
+    existing_appointments = AppointmentTable.objects.filter(
+        date__date=date).order_by('start_time')
 
-        appointment_date = today + timedelta(days=days_ahead + (week * 7))
+    # For no appointments that day yet
+    if not existing_appointments:
+        # TODO: mod by n = fixed appt. length
+        number_available_appointments = 4
+        return True, date, number_available_appointments
 
-        # Retrieve existing appointments for this date
-        existing_appointments = AppointmentTable.objects.filter(
-            date__date=appointment_date).order_by('start_time')
+    current_time = EARLIEST_TIME
 
-        # For no appointments that day yet
-        if not existing_appointments:
-            # TODO: mod by n = fixed appt. length
-            number_available_appointments = 4
-            return True, appointment_date, number_available_appointments
-
-        current_time = EARLIEST_TIME
-
-        # Check for time slots before appointments until the latest appointment
-        for appointment in existing_appointments:
-            while current_time < appointment.start_time:
-                number_available_appointments += 1
-                # Increment by fixed appt time
-                current_time = (datetime.combine(datetime.today(),
-                                                 current_time) +
-                                FIXED_APPT_DURATION).time()
-            current_time = appointment.end_time
-
-        # Checks for time slots after last appointment
-        # is iterated in the for loop above
-        while current_time < LATEST_TIME:
+    # Check for time slots before appointments until the latest appointment
+    for appointment in existing_appointments:
+        while current_time < appointment.start_time:
             number_available_appointments += 1
-            current_time = (datetime.combine(datetime.today(), current_time) +
+            # Increment by fixed appt time
+            current_time = (datetime.combine(datetime.today(),
+                                                current_time) +
                             FIXED_APPT_DURATION).time()
+        current_time = appointment.end_time
 
-        # If there are available timeslots return True and additional var.
-        if number_available_appointments > 0:
-            return True, appointment_date, number_available_appointments
+    # Checks for time slots after last appointment
+    # is iterated in the for loop above
+    while current_time < LATEST_TIME:
+        number_available_appointments += 1
+        current_time = (datetime.combine(datetime.today(), current_time) +
+                        FIXED_APPT_DURATION).time()
 
-    # If no available timeslots for the next month on request day return False
+    # If there are available timeslots return True and additional var.
+    if number_available_appointments > 0:
+        return True, date, number_available_appointments
+
+    # If no available timeslots on the date return False
     return False, None, 0
 
 

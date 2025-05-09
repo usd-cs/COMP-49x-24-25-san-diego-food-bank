@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather
 import urllib.parse
 from django.utils import timezone
+from zoneinfo import ZoneInfo
 from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
                         get_matching_question, get_corresponding_answer, get_prompted_choice)
@@ -23,6 +24,7 @@ def init_answer(request):
     """
     phone_number = get_phone_number(request)
     caller_response = VoiceResponse()
+    pst = ZoneInfo("America/Los_Angeles")
 
     user, created = User.objects.get_or_create(
         phone_number=phone_number,
@@ -33,7 +35,7 @@ def init_answer(request):
     )
 
     if phone_number:
-        log = Log.objects.create(phone_number=phone_number, language=user.language)
+        log = Log.objects.create(phone_number=phone_number, language=user.language, time_started=timezone.now().astimezone(pst))
         if user.language == "en":
             caller_response.say("Thank you for calling the San Diego Food Bank!", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
@@ -57,7 +59,6 @@ def answer_call(request):
     phone_number = get_phone_number(request)
 
     log = Log.objects.filter(phone_number=phone_number).last()
-    log.time_started = timezone.now()
 
     user = User.objects.get(phone_number=phone_number)
 
@@ -73,15 +74,24 @@ def answer_call(request):
             log.save()
             caller_response.redirect("/answer/")
         elif digit_input == "1":
+            log.add_intent("schedule")
             caller_response.redirect("/check_account/?action=schedule")
         elif digit_input == "2":  # Reschedule
+            log.add_intent("reschedule")
             caller_response.redirect("/check_account/?action=reschedule")
         elif digit_input == "3":  # Cancel
+            log.add_intent("cancel")
             caller_response.redirect("/check_account/?action=cancel")
         elif digit_input == "4":  # FAQs
+            log.add_intent("faq")
             caller_response.redirect("/prompt_question/")
         elif digit_input == "5":
-            forward_operator(log)
+            if log:
+                log.forwarded = True
+                log.forwarded_reason = 'caller'
+                log.save()
+            return forward_operator(log)
+
         else:
             caller_response.say("Please choose a valid option.", voice="Polly.Joanna")
 
@@ -129,7 +139,8 @@ def call_status_update(request):
         if call_status == 'completed':
             log = Log.objects.filter(phone_number=phone_number).last()
             if log:
-                log.time_ended = timezone.now()
+                pst = ZoneInfo("America/Los_Angeles")
+                log.time_ended = timezone.now().astimezone(pst)
 
                 if log.time_started:
                     call_duration = log.time_ended - log.time_started
@@ -254,9 +265,14 @@ def confirm_question(request, question):
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
+                if log:
+                    log_forwarded = True
+                    log.forwarded_reason = 'caller'
+                    log.save()
                 return forward_operator(log)
 
             answer = get_corresponding_answer(question)
+            log.add_question(question)
 
             if user.language == "en":
                 caller_response.say(answer, voice="Polly.Joanna")

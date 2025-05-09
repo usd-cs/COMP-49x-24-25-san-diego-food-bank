@@ -4,6 +4,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from . import views
 
+
 urlpatterns = [
     # Utilities
     path("return_main_menu/", views.return_main_menu, name="return_main_menu"),
@@ -76,13 +77,16 @@ urlpatterns = [
     path("request_date_availability/",
          views.request_date_availability,
          name="request_date_availability"),
+     path("generate_requested_date/",
+         views.generate_requested_date,
+         name="request_date_availability"),
     path("confirm_request_date_availability/",
          views.confirm_request_date_availability,
          name="confirm_request_date_availability"),
     path("confirm_available_date/",
          views.confirm_available_date,
          name="confirm_available_date"),
-    path("check_for_appointment/",
+    path("check_for_appointment/<str:date_encoded>/",
          views.check_for_appointment,
          name="check_for_appointment"),
     path("request_preferred_time_under_four/",
@@ -156,9 +160,9 @@ urlpatterns = [
     path("prompt_reschedule_appointment_over_one/",
          views.prompt_reschedule_appointment_over_one,
          name="prompt_reschedule_appointment_over_one"),
-    path("generate_requested_date/",
-         views.generate_requested_date,
-         name="generate_requested_date"),
+    path("generate_date/",
+         views.generate_date,
+         name="generate_date"),
     path("confirm_requested_date/<str:date_encoded>/",
          views.confirm_requested_date,
          name="confirm_requested_date"),
@@ -205,4 +209,13 @@ urlpatterns = [
      path('forward_operator/',
           views.forward_operator,
           name='forward_operator'),
+    path("api/calls-forwarded/", 
+          views.get_calls_forwarded, 
+          name="get_calls_forwarded"),
+    path("api/call-reasons/",
+         views.get_reason_for_calling,
+         name="get_reason_for_calling"),
+    path('api/call-avg-length/', 
+          views.get_avg_length, 
+          name='get_avg_length'),
 ]
