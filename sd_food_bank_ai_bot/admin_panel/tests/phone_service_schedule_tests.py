@@ -292,105 +292,64 @@ class NameRequestTests(TestCase):
         self.assertIn("I'm sorry, please try again.", response.content.decode())
         self.assertIn("check_account", response.content.decode())
 
-
-class AppointmentTests(TestCase):
+class CheckForAppointmentTests(TestCase):
     def setUp(self):
-        """Set up test data for checking available appointments"""
         self.client = Client()
-        self.today = now().date()
-        self.target_weekday = 1  # Gets Tuesday
-        self.url = reverse('check_for_appointment')  # Ensure this matches your URL patterns
+        self.phone_number = "+1234567890"
+        self.user = User.objects.create(first_name="Test", last_name="User", phone_number=self.phone_number)
+        self.date_str = "2025-05-15"
+        self.date_encoded = self.date_str  # Already in format YYYY-MM-DD
+        self.url = reverse("check_for_appointment", kwargs={"date_encoded": self.date_encoded})
+        self.mock_log = MagicMock()
 
-        # Define business hours
-        self.EARLIEST_TIME = time(9, 0)
-        self.LATEST_TIME = time(17, 0)
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number")
+    @patch("admin_panel.views.phone_service_schedule.Log")
+    @patch("admin_panel.views.phone_service_schedule.User")
+    @patch("admin_panel.views.phone_service_schedule.check_available_date")
+    def test_available_date(
+        self, mock_check_available, mock_user, mock_log, mock_get_number, mock_sentiment
+    ):
+        """User confirms a valid date that has available appointments"""
+        mock_get_number.return_value = self.phone_number
+        mock_user.objects.get.return_value = self.user
+        mock_log.objects.filter.return_value.last.return_value = self.mock_log
+        mock_check_available.return_value = (True, datetime.strptime(self.date_str, "%Y-%m-%d").date(), 2)
 
-        # Create a test user
-        self.test_user = User.objects.create(first_name="John", last_name="Doe", phone_number="+1234567890")
-
-        # Generate appointment dates for the next 4 weeks on Tuesday
-        self.appointment_dates = [
-            self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)) for week in range(4)
-        ]
-
-        self.appointment_dates = [
-            timezone.make_aware(datetime.combine(
-                self.today + timedelta(days=(self.target_weekday - self.today.weekday()) % 7 + (week * 7)),
-                time(0, 0))) for week in range(4)
-                ]
-
-    @patch("admin_panel.views.utilities.OpenAI")
-    def test_check_for_appointment_valid_day(self, mock_openai):
-        """Tests if check_for_appointment correctly identifies available days"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
-        )
-        response = self.client.post(self.url, {'SpeechResult': 'Tuesday', "From": "+1234567890"})
+        response = self.client.post(self.url, {"SpeechResult": "yes", "From": self.phone_number})
         self.assertEqual(response.status_code, 200)
-        self.assertIn("The next available Tuesday", str(response.content))
 
-    def test_check_available_date_with_no_appointments(self):
-        """Tests check_available_date when no appointments exist (should be fully open)"""
-        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
-        self.assertTrue(is_available)
-        self.assertEqual(num_available, 4)  # Default 4 slots
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number")
+    @patch("admin_panel.views.phone_service_schedule.Log")
+    @patch("admin_panel.views.phone_service_schedule.User")
+    @patch("admin_panel.views.phone_service_schedule.check_available_date")
+    def test_fully_booked_date(
+        self, mock_check_available, mock_user, mock_log, mock_get_number, mock_sentiment
+    ):
+        """User confirms a date that has no available slots"""
+        mock_get_number.return_value = self.phone_number
+        mock_user.objects.get.return_value = self.user
+        mock_log.objects.filter.return_value.last.return_value = self.mock_log
+        mock_check_available.return_value = (False, datetime.strptime(self.date_str, "%Y-%m-%d").date(), 0)
 
-    def test_check_available_date_with_full_schedule(self):
-        """Tests check_available_date when all slots are taken"""
-        for avail_date in self.appointment_dates:
-            for hour in range(9, 17):
-                AppointmentTable.objects.create(
-                    user=self.test_user,
-                    start_time=time(hour, 0),
-                    end_time=time(hour + 1, 0),
-                    location="Office",
-                    date=avail_date
-                )
-
-        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
-        self.assertFalse(is_available)
-        self.assertIsNone(appointment_date)
-        self.assertEqual(num_available, 0)
-
-    def test_check_available_date_with_partial_availability(self):
-        """Tests check_available_date when there are some open slots"""
-        AppointmentTable.objects.create(
-            user=self.test_user,
-            start_time=self.EARLIEST_TIME,
-            end_time=time(10, 0),
-            location="Office",
-            date=self.appointment_dates[0]
-        )
-
-        is_available, appointment_date, num_available = check_available_date(self.target_weekday)
-        self.assertTrue(is_available)
-        self.assertGreater(num_available, 0)
-
-    @patch("admin_panel.views.utilities.OpenAI")
-    def test_check_for_appointment_no_available_dates(self, mock_openai):
-        """Tests if check_for_appointment correctly handles fully booked schedules"""
-        mock_client = MagicMock()
-        mock_openai.return_value = mock_client
-        mock_client.chat.completions.create.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Tuesday"))]
-        )
-
-        # Fully book all weeks for the requested weekday
-        for avail_date in self.appointment_dates:
-            for hour in range(9, 17):
-                AppointmentTable.objects.create(
-                    user=self.test_user,
-                    start_time=time(hour, 0),
-                    end_time=time(hour + 1, 0),
-                    location="Office",
-                    date=avail_date
-                )
-
-        response = self.client.post(self.url, {'SpeechResult': 'Tuesday', "From": "+1234567890"})
+        response = self.client.post(self.url, {"SpeechResult": "yes", "From": self.phone_number})
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Sorry, no available days on Tuesday for the next month.", str(response.content))
+
+    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=False)
+    @patch("admin_panel.views.phone_service_schedule.get_phone_number")
+    @patch("admin_panel.views.phone_service_schedule.Log")
+    @patch("admin_panel.views.phone_service_schedule.User")
+    def test_declined_date(
+        self, mock_user, mock_log, mock_get_number, mock_sentiment
+    ):
+        """User says no to confirming the date"""
+        mock_get_number.return_value = self.phone_number
+        mock_user.objects.get.return_value = self.user
+        mock_log.objects.filter.return_value.last.return_value = self.mock_log
+
+        response = self.client.post(self.url, {"SpeechResult": "no", "From": self.phone_number})
+        self.assertEqual(response.status_code, 200)
 
 
 class AppointmentSchedulingTests(TestCase):

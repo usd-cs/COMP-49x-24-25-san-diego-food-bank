@@ -24,6 +24,7 @@ def init_answer(request):
     """
     phone_number = get_phone_number(request)
     caller_response = VoiceResponse()
+    pst = ZoneInfo("America/Los_Angeles")
 
     user, created = User.objects.get_or_create(
         phone_number=phone_number,
@@ -34,7 +35,7 @@ def init_answer(request):
     )
 
     if phone_number:
-        log = Log.objects.create(phone_number=phone_number, language=user.language)
+        log = Log.objects.create(phone_number=phone_number, language=user.language, time_started=timezone.now().astimezone(pst))
         if user.language == "en":
             caller_response.say("Thank you for calling the San Diego Food Bank!", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
@@ -58,8 +59,6 @@ def answer_call(request):
     phone_number = get_phone_number(request)
 
     log = Log.objects.filter(phone_number=phone_number).last()
-    pst = ZoneInfo("America/Los_Angeles")
-    log.time_started = timezone.now().astimezone(pst)
 
     user = User.objects.get(phone_number=phone_number)
 
