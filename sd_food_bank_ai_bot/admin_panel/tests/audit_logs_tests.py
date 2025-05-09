@@ -3,6 +3,7 @@ from admin_panel.models import Admin, Log
 from datetime import timedelta
 from django.utils import timezone
 from django.urls import reverse
+from zoneinfo import ZoneInfo
 
 
 class MainPageTests(TestCase):
@@ -12,7 +13,8 @@ class MainPageTests(TestCase):
         self.admin = Admin.objects.create_user(username='user1',
                                             password='pass123')
         
-        self.log_starts = timezone.now()
+        pst = ZoneInfo("America/Los_Angeles")
+        self.log_starts = timezone.now().astimezone(pst)
         self.log_1 = Log.objects.create(
             phone_number="+16191231234",
             time_started = self.log_starts,

@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from twilio.twiml.voice_response import VoiceResponse, Gather
 import urllib.parse
 from django.utils import timezone
+from zoneinfo import ZoneInfo
 from .utilities import (strike_system_handler, forward_operator, write_to_log,
                         get_response_sentiment,
                         get_matching_question, get_corresponding_answer, get_prompted_choice)
@@ -57,7 +58,8 @@ def answer_call(request):
     phone_number = get_phone_number(request)
 
     log = Log.objects.filter(phone_number=phone_number).last()
-    log.time_started = timezone.now()
+    pst = ZoneInfo("America/Los_Angeles")
+    log.time_started = timezone.now().astimezone(pst)
 
     user = User.objects.get(phone_number=phone_number)
 
@@ -129,7 +131,8 @@ def call_status_update(request):
         if call_status == 'completed':
             log = Log.objects.filter(phone_number=phone_number).last()
             if log:
-                log.time_ended = timezone.now()
+                pst = ZoneInfo("America/Los_Angeles")
+                log.time_ended = timezone.now().astimezone(pst)
 
                 if log.time_started:
                     call_duration = log.time_ended - log.time_started
