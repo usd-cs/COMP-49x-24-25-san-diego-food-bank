@@ -76,16 +76,16 @@ def answer_call(request):
         elif digit_input == "1":
             log.add_intent("schedule")
             caller_response.redirect("/check_account/?action=schedule")
-        elif digit_input == "2":  # Reschedule
-            log.add_intent("reschedule")
-            caller_response.redirect("/check_account/?action=reschedule")
-        elif digit_input == "3":  # Cancel
-            log.add_intent("cancel")
-            caller_response.redirect("/check_account/?action=cancel")
-        elif digit_input == "4":  # FAQs
+        # elif digit_input == "2":  # Reschedule
+        #     log.add_intent("reschedule")
+        #     caller_response.redirect("/check_account/?action=reschedule")
+        # elif digit_input == "3":  # Cancel
+        #     log.add_intent("cancel")
+        #     caller_response.redirect("/check_account/?action=cancel")
+        elif digit_input == "2":  # FAQs
             log.add_intent("faq")
             caller_response.redirect("/prompt_question/")
-        elif digit_input == "5":
+        elif digit_input == "3":
             if log:
                 log.forwarded = True
                 log.forwarded_reason = 'caller'
@@ -101,21 +101,13 @@ def answer_call(request):
         if user.language == "en":
             gather.say("Para español presione 0.", language="es-MX", voice="Polly.Mia")
             write_to_log(log, BOT, "Para español presione 0.")
-            gather.say("press 1 to schedule an appointment, press 2 to reschedule an appointment,\
-                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                        or press 5 to be forwarded to an operator.", language="en", voice="Polly.Joanna")
-            write_to_log(log, BOT, "press 1 to schedule an appointment, press 2 to reschedule an appointment,\
-                        press 3 to cancel an appointment, press 4 to ask about specific inquiries,\
-                        or press 5 to be forwarded to an operator.")
+            gather.say("Press 1 to schedule an appointment, press 2 to ask about specific inquiries, or press 3 to be forwarded to an operator.", language="en", voice="Polly.Joanna")
+            write_to_log(log, BOT, "Para español presione 0. Press 1 to schedule an appointment, press 2 to ask about specific inquiries, or press 3 to be forwarded to an operator.")
         else:
             gather.say("For english press 0.", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "For english press 0.")
-            gather.say("presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
-                        3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
-                        o presione 5 para ser remitido a un operador.", language="es-MX", voice="Polly.Mia")
-            write_to_log(log, BOT, "presione 1 para programar una cita, presione 2 para reprogramar una cita, presione\
-                        3 para cancelar una cita, presione 4 para preguntar sobre consultas específicas\
-                        o presione 5 para ser remitido a un operador.")
+            gather.say("Presione 1 para programar una cita, presione 2 para preguntar sobre consultas específicas, presione 3 para ser remitido a un operador.", language="es-MX", voice="Polly.Mia")
+            write_to_log(log, BOT, "For english press 0. Presione 1 para programar una cita, presione 2 para preguntar sobre consultas específicas, presione 3 para ser remitido a un operador.")
 
     caller_response.append(gather)
     
