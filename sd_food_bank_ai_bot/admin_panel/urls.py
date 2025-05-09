@@ -4,6 +4,7 @@ from django.urls import path
 from django.shortcuts import redirect
 from . import views
 
+
 urlpatterns = [
     # Utilities
     path("return_main_menu/", views.return_main_menu, name="return_main_menu"),
@@ -33,6 +34,8 @@ urlpatterns = [
     path("edit_faq/<int:faq_id>/",
          views.admin_panel_faq.edit_faq,
          name="edit_faq"),
+
+     # Phone Service FAQ
     path("init_answer/",
           views.init_answer,
           name="init_answer"),
@@ -48,6 +51,12 @@ urlpatterns = [
     path("prompt_question/",
          views.phone_service_faq.prompt_question,
          name="prompt_question"),
+    path("prompt_post_answer/",
+         views.prompt_post_answer,
+         name="prompt_post_answer"),
+    path("process_post_answer/",
+         views.process_post_answer,
+         name="process_post_answer"),
     path("call_status_update/",
          views.phone_service_faq.call_status_update,
          name="call_status_update"),
@@ -165,4 +174,42 @@ urlpatterns = [
      path("single_log_view/<int:log_id>/",
           views.single_log_view,
           name="single_log_view"),
+
+     # Account Approval
+     path("account_approval/",
+          views.account_approval_page,
+          name="account_approval"),
+     path("deny_account/<int:account_id>/",
+          views.deny_account,
+          name="deny_account"),
+     path("approve_account/<int:account_id>/",
+         views.approve_account,
+         name="approve_account"
+     ),
+     path("delete_account/<int:account_id>/",
+          views.delete_account,
+          name="delete_account"),
+     path("add_account/",
+          views.add_account_page,
+          name="add_account_page"),
+     
+     # Monitoring
+     path('monitoring/', 
+          views.monitoring_dashboard, 
+          name="monitoring_dashboard"),
+     path('api/total-calls/', 
+          views.get_total_calls, 
+          name='get_total_calls'),
+     path('api/call-language/', 
+          views.get_call_language, 
+          name="get_call_language"),
+     path('api/call-time-of-day/', 
+          views.get_time_of_day, 
+          name="get_time_of_day"),
+    path("api/calls-forwarded/", 
+          views.get_calls_forwarded, 
+          name="get_calls_forwarded"),
+    path("api/call-reasons/",
+         views.get_reason_for_calling,
+         name="get_reason_for_calling"),
 ]

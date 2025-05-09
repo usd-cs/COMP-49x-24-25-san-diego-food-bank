@@ -10,7 +10,8 @@ class LoginViewsTestCase(TestCase):
         """Set up a test client & user"""
         self.client = Client()
         self.admin = Admin.objects.create_user(username='user1',
-                                               password='pass123')
+                                               password='pass123',
+                                               approved_for_admin_panel = True)
 
     def test_get_request(self):
         """Test the GET request for the login view"""

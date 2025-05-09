@@ -21,8 +21,12 @@ def login_view(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
-            return redirect('faq_page')
+            if user.approved_for_admin_panel:
+                login(request, user)
+                return redirect('faq_page')
+            else:
+                form._errors.pop('__all__', None)
+                form.add_error(None, "Please wait for your account to be confirmed.")
         else:
             # clear the errors generated for the form and add custom message to display on login page about what went wrong
             form._errors.pop('__all__', None)
@@ -66,11 +70,20 @@ def create_account_view(request):
             return render(request, "create_account.html")
 
         if admin_candidate.approved_for_admin_panel is None:
-            messages.error(request, "You are not approved to access the admin panel. Please request for approval.")
+            admin_candidate.username = username
+            admin_candidate.password = make_password(password) # Hash password for security purposes
+            admin_candidate.approved_for_admin_panel = False
+            admin_candidate.save()
+            
+            messages.error(request, "You're account has been created but not approved. Please request approval.")
             return render(request, "create_account.html")
         
         elif admin_candidate.approved_for_admin_panel is False:
-            messages.error(request, "Your admin account creation is pending approval. Please wait for confirmation.")
+            admin_candidate.username = username
+            admin_candidate.password = make_password(password) # Hash password for security purposes
+            admin_candidate.save()
+
+            messages.error(request, "You're account has been created and is pending approval. Please wait for approval.")
             return render(request, "create_account.html")
         
         if Admin.objects.filter(username=username).exists():

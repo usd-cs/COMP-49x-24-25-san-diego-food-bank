@@ -70,7 +70,10 @@
       <a class="pantry-bot-header">Pantry Bot</a>
       <a href="{% url 'audit_logs' %}" {% if request.path == '/audit_logs/' %} id="active" {% endif %}>Audit Logs</a>
       <a href="{% url 'faq_page' %}" {% if request.path == '/faqs/' %} id="active" {% endif %}>FAQs</a>
-      <a>Monitoring</a>
+      <a href="{% url 'monitoring_dashboard' %}" {% if request.path == '/monitoring/' %} id="active" {% endif %}>Monitoring</a>
+      {% if perms.admin_panel.can_approve_users %}
+      <a href="{% url 'account_approval' %}" {% if request.path == '/account_approval/' %} id="active" {% endif %}>Account Approval</a>
+      {% endif %}
     </div>
     <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
   </div>

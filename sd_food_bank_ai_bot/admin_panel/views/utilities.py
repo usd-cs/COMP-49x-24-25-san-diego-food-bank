@@ -26,9 +26,11 @@ def strike_system_handler(log, reset=False):
         if reset:
             log.reset_strikes()
         else:
-
             if log.add_strike():
-                forward_operator(log)
+                log.forwarded = True
+                log.forwarded_reason = 'auto'
+                log.save()
+                return forward_operator(log)
 
 
 def get_phone_number(request):
@@ -102,7 +104,7 @@ def forward_operator(log=None):
     """
     caller_response = VoiceResponse()
 
-    caller_response.say("I'm transferring you to an operator now. Please hold.")
+    caller_response.say("I'm transferring you to an operator now. Please hold.", voice="Polly.Joanna")
     if log:
         write_to_log(log,
                     "bot",
@@ -202,6 +204,33 @@ def get_corresponding_answer(question):
     """
     answer = FAQ.objects.filter(question__iexact=question).first().answer
     return answer
+
+
+def get_prompted_choice(sentence):
+    """
+    Takes in a users input and returns the corresponding request.
+    Resturns True for ask another question, False for hang up, and None for main menu.
+    """
+    client = OpenAI()
+    # Set the system prompt to provide instructions on what to do
+    system_prompt = "Based on the users response, say whether they are most likely asking for the main menu, to ask another question, or to end the call. Respond only with MENU, QUESTION, or END for the corresponding classification."
+
+    # Make an API call to find the question
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": sentence}
+        ]
+    )
+
+    pred = completion.choices[0].message.content
+    if pred.upper() == "QUESTION":
+        return True
+    elif pred.upper() == "END":
+        return False
+    else:
+        return None
 
 
 def get_day(speech_result):

@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
 from datetime import datetime, timedelta
 from django.utils import timezone
 
@@ -14,8 +14,13 @@ class Admin(AbstractUser):
         - TRUE: account creation has been approved so this account has access to admin panel
     """
     foodbank_email = models.EmailField(blank=True, max_length=254, verbose_name="foodbank email")
-    foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="unknown")
+    foodbank_id = models.CharField(max_length=50, verbose_name="foodbank employee ID", default="")
     approved_for_admin_panel = models.BooleanField(null=True, default=None, verbose_name="approved for admin panel")
+
+    class Meta:
+        permissions = [
+            ("can_approve_users", "Can approve users to access the admin panel.")
+        ]
 
 
 class User(models.Model):
@@ -62,13 +67,27 @@ class Log(models.Model):
     length_of_call = models.DurationField(default=timedelta(seconds=0))
     strikes = models.PositiveIntegerField(default=0)
     intents = models.JSONField(default=dict)
+    language = models.CharField(max_length=5, choices=[('en','English'),('es-MX','Spanish')], default='en', help_text="Caller language preference")
+    forwarded = models.BooleanField(default=False)
+    forwarded_reason = models.CharField(max_length=10, choices=[('caller', 'Caller Requested'), ('auto', 'Automatic'),],null=True,blank=True)
 
     def add_intent(self, intent):
         """
         Increment count for intent identified during dialogue
         """
-        self.intents[intent] = self.intents.get(intent, 0) + 1
+        if intent == "faq":
+            self.intents[intent] = self.intents.get(intent, {})
+        else:
+            self.intents[intent] = self.intents.get(intent, 0) + 1
         self.save()
+    
+    def add_question(self, question):
+        """
+        Increment count for question identified during dialogue
+        """
+        if self.intents.get("faq") == None:
+            self.intents["faq"] = {}
+        self.intents["faq"][question] = self.intents["faq"].get(question, 0) + 1
 
     def add_strike(self):
         """Failed intent identification so increment strike count and check

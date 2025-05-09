@@ -39,6 +39,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Global parameters for the speech recognition aspect of bot's 'say' function to detect when to act
+SPEECHTIMEOUT=0.5
+TIMEOUT="auto"
 
 # Application definition
 
@@ -118,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Los_Angeles'
 
 USE_I18N = True
 
