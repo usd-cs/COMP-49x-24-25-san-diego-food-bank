@@ -75,7 +75,8 @@ def answer_call(request):
             caller_response.redirect("/answer/")
         elif digit_input == "1":
             log.add_intent("schedule")
-            caller_response.redirect("/check_account/?action=schedule")
+            caller_response.redirect("/send_scheduling_link/")
+            # caller_response.redirect("/check_account/?action=schedule")
         # elif digit_input == "2":  # Reschedule
         #     log.add_intent("reschedule")
         #     caller_response.redirect("/check_account/?action=reschedule")

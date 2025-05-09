@@ -23,6 +23,19 @@ FIXED_APPT_DURATION = timedelta(minutes=15)
 
 
 @csrf_exempt
+def send_scheduling_link(request):
+    caller_number = get_phone_number(request)
+    if caller_number:
+        response = VoiceResponse()
+        log = Log.objects.filter(phone_number=caller_number).last()
+        response.say("You will receive a link to schedule an appointment shortly.", voice="Polly.Joanna")
+        write_to_log(log, BOT, "You will receive a link to schedule an appointment shortly.")
+        send_sms(caller_number, "Thank you for calling the San Diego Food Bank! You can schedule an appointment at your convenience using this link: https://calendly.com/ncpantry. We look forward to assisting you.")
+    else:
+        response.say("Sorry, we are experiencing technical difficulties at this time and this feature is currently not available.", voice="Polly.Joanna")
+        write_to_log(log, BOT, "Sorry, we are experiencing technical difficulties at this time and this feature is currently not available.")
+
+@csrf_exempt
 def check_account(request):
     """
     Check the User table for phone number to check if the account exists.
