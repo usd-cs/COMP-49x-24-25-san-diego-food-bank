@@ -207,15 +207,21 @@ def get_question_from_user(request):
             caller_response.redirect("/prompt_question/")
         else:  # No matching question found
             # Add a strike
-            strike_system_handler(log)
-            if user.language == "en":
-                caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.", voice="Polly.Joanna")
-                write_to_log(log, BOT, "Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+            result = strike_system_handler(log)
+            if result:
+                caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
+                write_to_log(log, "bot",
+                    "Sorry. I cannot process your request at this time.")
+                forward_operator(caller_response, log)
             else:
-                caller_response.say("Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.", language="es-MX", voice="Polly.Mia")
-                write_to_log(log, BOT, "Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.")
+                if user.language == "en":
+                    caller_response.say("Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.", voice="Polly.Joanna")
+                    write_to_log(log, BOT, "Sorry, I don't have the answer to that at this time. Maybe try rephrasing your question.")
+                else:
+                    caller_response.say("Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.", language="es-MX", voice="Polly.Mia")
+                    write_to_log(log, BOT, "Lo siento, no tengo la respuesta en este momento. Quizás podrías intentar reformular tu pregunta.")
 
-            caller_response.redirect("/prompt_question/")
+                caller_response.redirect("/prompt_question/")
     else:
         if user.language == "en":
             caller_response.say("Sorry, I couldn't understand that.", voice="Polly.Joanna")
@@ -264,14 +270,20 @@ def confirm_question(request, question):
         # and retry
         else:
             # Add a strike
-            strike_system_handler(log)
-            if user.language == "en":
-                caller_response.say("Sorry about that. Please try asking again or rephrasing.", voice="Polly.Joanna")
-                write_to_log(log, BOT, "Sorry about that. Please try asking again or rephrasing.")
+            result = strike_system_handler(log)
+            if result:
+                caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
+                write_to_log(log, "bot",
+                    "Sorry. I cannot process your request at this time.")
+                forward_operator(log)
             else:
-                caller_response.say("Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.", language="es-MX", voice="Polly.Mia")
-                write_to_log(log, BOT, "Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.")
-            caller_response.redirect("/prompt_question/")
+                if user.language == "en":
+                    caller_response.say("Sorry about that. Please try asking again or rephrasing.", voice="Polly.Joanna")
+                    write_to_log(log, BOT, "Sorry about that. Please try asking again or rephrasing.")
+                else:
+                    caller_response.say("Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.", language="es-MX", voice="Polly.Mia")
+                    write_to_log(log, BOT, "Lo siento. Intenta preguntar de nuevo o reformula tu pregunta.")
+                caller_response.redirect("/prompt_question/")
     else:
         if user.language == "en":
             caller_response.say("Sorry, I couldn't understand that. Please try again.",voice="Polly.Joanna")
@@ -297,6 +309,9 @@ def prompt_post_answer(request):
 
     gather = None
     
+    # reset strike system since we successfully handed the FAQ
+    strike_system_handler(log, reset=True)
+
     if user.language == "en":
         gather = Gather(input="speech", timeout=TIMEOUT,
                         action="/process_post_answer/", language="en")

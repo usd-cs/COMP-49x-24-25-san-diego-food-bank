@@ -202,4 +202,7 @@ urlpatterns = [
      path('api/call-time-of-day/', 
           views.get_time_of_day, 
           name="get_time_of_day"),
+     path('forward_operator/',
+          views.forward_operator,
+          name='forward_operator'),
 ]

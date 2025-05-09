@@ -66,6 +66,7 @@ class Log(models.Model):
     time_ended = models.DateTimeField(default=timezone.now)
     length_of_call = models.DurationField(default=timedelta(seconds=0))
     strikes = models.PositiveIntegerField(default=0)
+    total_strikes = models.PositiveIntegerField(default=0)
     intents = models.JSONField(default=dict)
     language = models.CharField(max_length=5, choices=[('en','English'),('es-MX','Spanish')], default='en', help_text="Caller language preference")
 
@@ -80,6 +81,7 @@ class Log(models.Model):
         """Failed intent identification so increment strike count and check
         if forwarding to an operator is necessary"""
         self.strikes += 1
+        self.total_strikes += 1
         self.save()
         # Failed intent recognition too many times, forward to operator if
         # this returns True
