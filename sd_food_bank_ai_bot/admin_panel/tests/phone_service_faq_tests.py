@@ -181,7 +181,9 @@ class PhoneFAQService(TestCase):
                                         answer="To schedule an appointment, visit calendly.com/sdfb.")
         
         self.user_eng = User.objects.create(first_name="John", last_name="Doe", phone_number="+17601231234")
+        dummy_log = Log.objects.create(phone_number="+17601231234")
         self.user_span = User.objects.create(first_name="Jane", last_name="Doe", phone_number="+17603214321", language="es")
+        dummy_log2 = Log.objects.create(phone_number="+17603214321")
 
     @patch("admin_panel.views.phone_service_faq.get_matching_question")
     def test_get_question_from_user_valid(self, mock_get_matching_question):
