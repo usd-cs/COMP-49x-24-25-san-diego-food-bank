@@ -80,7 +80,7 @@ def check_account(request):
             response.say("Sorry, we are unable to help you at this time.", voice="Polly.Joanna")
             write_to_log(log, BOT,
                          "Sorry, we are unable to help you at this time.")
-            forward_operator(log)
+            forward_operator(response, log)
     # Inform caller that there wasn't an account found
     except User.DoesNotExist:
         # User does not exist to being registration process
@@ -443,14 +443,14 @@ def final_confirmation(request, time_encoded, date):
                 response.say("An error has occurred when attempting to schedule your appointment.", voice="Polly.Joanna")  # Forward to operator
                 write_to_log(log, BOT,
                             "An error has occurred when attempting to schedule your appointment.")
-                forward_operator(log)
+                forward_operator(response, log)
                 return HttpResponse(str(response), content_type="text/xml")
             else:
                 response.say(translate_to_language("en", "es", 
                         "An error has occurred when attempting to schedule your appointment."), language='es-MX', voice="Polly.Mia")  # Forward to operator
                 write_to_log(log, BOT, translate_to_language("en", "es", 
                         "An error has occurred when attempting to schedule your appointment."))
-                forward_operator(log)
+                forward_operator(response, log)
                 return HttpResponse(str(response), content_type="text/xml")                
 
         AppointmentTable.objects.create(

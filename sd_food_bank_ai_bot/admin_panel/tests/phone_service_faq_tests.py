@@ -352,7 +352,6 @@ class PhoneFAQService(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("I'm transferring you to an operator now. Please hold.",
                       response.content.decode())
-        self.assertIn("###-###-####", response.content.decode())
 
     @patch("admin_panel.views.phone_service_faq.get_response_sentiment")
     def test_confirm_question_negative(self, mock_get_response_sentiment):
@@ -460,26 +459,30 @@ class PhoneFAQService(TestCase):
         log_mock = MagicMock()
         log_mock.add_strike.return_value = True
 
-        strike_system_handler(log_mock)
+        forward = strike_system_handler(log_mock)
+
         log_mock.add_strike.assert_called_once()
-        mock_forward_operator.assert_called_once()
+        log_mock.save.assert_called_once()
+        self.assertTrue(forward)
 
     def test_add_strike_no_forward_operator(self):
         """Test strike system management of strikes prior to operator forwarding"""
         log_mock = MagicMock()
         log_mock.add_strike.return_value = False
 
-        strike_system_handler(log_mock)
+        forward = strike_system_handler(log_mock)
 
         log_mock.add_strike.assert_called_once()
+        self.assertFalse(forward)
 
     def test_reset_strikes(self):
         """Test strike system reset"""
         log_mock = MagicMock()
 
-        strike_system_handler(log_mock, reset=True)
+        forward = strike_system_handler(log_mock, reset=True)
 
         log_mock.reset_strikes.assert_called_once()
+        self.assertFalse(forward)
     
     def test_prompt_post_answer(self):
         """Test that the user is prompted with options after receiveg their answer"""

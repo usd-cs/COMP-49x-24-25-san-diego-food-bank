@@ -109,7 +109,7 @@ def forward_operator(caller_response, log=None):
         write_to_log(log,
                     "bot",
                     "I'm transferring you to an operator now. Please hold.")
-    caller_response.dial("702-858-6982")
+    caller_response.dial("###-###-####")
 
     return HttpResponse(str(caller_response), content_type="text/xml")
 

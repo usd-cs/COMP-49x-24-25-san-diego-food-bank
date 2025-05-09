@@ -45,7 +45,7 @@ def init_answer(request):
         caller_response.redirect("/answer/")
     else:
         caller_response.say("Sorry, we are unable to help you at this time.", voice="Polly.Joanna")
-        forward_operator()
+        forward_operator(caller_response, log)
     
     return HttpResponse(str(caller_response), content_type='text/xml')
 
@@ -90,7 +90,7 @@ def answer_call(request):
                 log.forwarded = True
                 log.forwarded_reason = 'caller'
                 log.save()
-            return forward_operator(log)
+            return forward_operator(caller_response, log)
 
         else:
             caller_response.say("Please choose a valid option.", voice="Polly.Joanna")
@@ -270,7 +270,7 @@ def confirm_question(request, question):
                     log_forwarded = True
                     log.forwarded_reason = 'caller'
                     log.save()
-                return forward_operator(log)
+                return forward_operator(caller_response, log)
 
             answer = get_corresponding_answer(question)
             log.add_question(question)
@@ -293,7 +293,7 @@ def confirm_question(request, question):
                 caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
                 write_to_log(log, "bot",
                     "Sorry. I cannot process your request at this time.")
-                forward_operator(log)
+                forward_operator(caller_response, log)
             else:
                 if user.language == "en":
                     caller_response.say("Sorry about that. Please try asking again or rephrasing.", voice="Polly.Joanna")
