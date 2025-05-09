@@ -301,14 +301,14 @@ def request_date_availability(request):
 
     if user.language == "en":
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                        action="/check_for_appointment/")
-        gather.say("What day are you available for your appointment?")
+                        action="/generate_date/")
+        gather.say("What date are you available for your appointment? Please give month and day.")
         write_to_log(log, BOT, "What day are you available for your appointment?")
         response.append(gather)
     else:
         gather = Gather(input="speech", timeout=TIMEOUT_LENGTH,
-                        action="/check_for_appointment/")
-        gather.say(translate_to_language("en", "es", "What day are you available for your appointment?"), language='es-MX')
+                        action="/generate_date/")
+        gather.say(translate_to_language("en", "es", "What date are you available for your appointment? Please give month and day."), language='es-MX')
         write_to_log(log, BOT, translate_to_language("en", "es", "What day are you available for your appointment?"))
         response.append(gather)
 
@@ -579,9 +579,54 @@ def suggested_time_response(request, time_encoded, date):
 
     return HttpResponse(str(response), content_type="text/xml")
 
+@csrf_exempt
+def generate_date(request):
+    """
+    Uses OpenAI to retrieve a date from user's response. Formats date into a displayable text response.
+    """
+    caller_number = get_phone_number(request)
+    user = User.objects.get(phone_number=caller_number)
+    log = Log.objects.filter(phone_number=caller_number).last()
+    speech_result = request.POST.get('SpeechResult', '')
+    write_to_log(log, CALLER, speech_result)
+    response = VoiceResponse()
+
+    if speech_result:
+        # Query GPT for time to be able to cover statement variations
+        client = OpenAI()
+        system_prompt = ("Please extract the most likely intended appointment date from this message. Choose the closest soonest date in the future."
+            "Respond with a date in the format YYYY-MM-DD. If no date is present or it is a undistinguishable format, return NONE.")
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": speech_result}
+            ]
+        )
+        response_pred = completion.choices[0].message.content
+        date_obj = datetime.strptime(response_pred, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%B %d, %Y")
+        date_encoded = urllib.parse.quote(date_obj)
+
+        if user.language == "en":
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/check_for_appointment/{date_encoded}/")
+            gather.say(f"Your requested date was {formatted_date}. Is that correct?")
+            write_to_log(log, BOT, f"Your requested date was {formatted_date}. Is that correct?")
+            response.append(gather)
+            response.redirect("/request_date_availability/")
+        else:
+            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=f"/check_for_appointment/{date_encoded}/")
+            gather.say(translate_to_language("en", "es", f"Your requested date was {formatted_date}. Is that correct?"), language='es-MX')
+            write_to_log(log, BOT, translate_to_language("en", "es", f"Your requested date was {formatted_date}. Is that correct?"))
+            response.append(gather)
+            response.redirect("/request_date_availability/")
+    else:
+        response.redirect("/request_date_availability/")
+
+    return HttpResponse(str(response), content_type="text/xml")
 
 @csrf_exempt
-def check_for_appointment(request):
+def check_for_appointment(request, date_encoded):
     """
     Searches appointment table for an available day that
     the caller requested.
@@ -590,65 +635,48 @@ def check_for_appointment(request):
     user = User.objects.get(phone_number=caller_number)
     log = Log.objects.filter(phone_number=caller_number).last()
     response = VoiceResponse()
+    speech_result = request.POST.get('SpeechResult', '')
+    declaration = get_response_sentiment(speech_result)
+    date_unencoded = urllib.parse.unquote(date_encoded)
+    date = datetime.strptime(date_unencoded, "%Y-%m-%d")
 
-    speech_result = request.POST.get('SpeechResult', '').strip().lower()
-    write_to_log(log, CALLER, speech_result)
-    speech_result = get_day(speech_result)
-    speech_result = speech_result.lower()
-
-    weekdays = {day.lower(): index for index, day in enumerate(calendar.day_name)}
-
-    if speech_result not in weekdays:
-        if user.language == "en":
-            response.say("I did not recognize that day. Can you say a weekday like Monday or Friday?")
-            write_to_log(log, BOT,
-                        "I did not recognize that day. Can you say a weekday like Monday or Friday?")
-            response.redirect("/request_date_availability/")
-            return HttpResponse(str(response), content_type="text/xml")
+    if declaration:
+        is_available, appointment_date, number_available_appointments = check_available_date(date)
+        if is_available:
+            if user.language == "en":
+                action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
+                gather.say(f"There is availability during {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
+                write_to_log(log, BOT, f"The is availability during {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
+                response.append(gather)
+                response.redirect("/request_date_availability/")
+            else:
+                action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
+                gather.say(translate_to_language("en", "es", 
+                        f"There is availability during {appointment_date.strftime('%B %d, %Y')}. Does that work for you?"), language='es-MX')
+                write_to_log(log, BOT, 
+                        translate_to_language("en", "es", 
+                        f"There is availability during {appointment_date.strftime('%B %d, %Y')}. Does that work for you?"))
+                response.append(gather)
+                response.redirect("/request_date_availability/")
         else:
-            response.say(translate_to_language("en", "es", "I did not recognize that day. Can you say a weekday like Monday or Friday?"), language='es-MX')
-            write_to_log(log, BOT,
-                        translate_to_language("en", "es", "I did not recognize that day. Can you say a weekday like Monday or Friday?"))
-            response.redirect("/request_date_availability/")
-            return HttpResponse(str(response), content_type="text/xml")
-
-    target_weekday = weekdays[speech_result]
-
-    # Check if there are time slots on that day
-    is_available, appointment_date, number_available_appointments = check_available_date(target_weekday)
-    if is_available:
-        if user.language == "en":
-            action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
-            gather.say(f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
-            write_to_log(log, BOT, f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?")
-            response.append(gather)
-            response.redirect("/request_date_availability/")
-        else:
-            action_url = f"/confirm_available_date/?date={appointment_date}&num={number_available_appointments}"
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action=action_url, method="POST")
-            gather.say(translate_to_language("en", "es", 
-                    f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?"), language='es-MX')
-            write_to_log(log, BOT, 
-                    translate_to_language("en", "es", 
-                    f"The next available {speech_result.capitalize()} is at {appointment_date.strftime('%B %d, %Y')}. Does that work for you?"))
-            response.append(gather)
-            response.redirect("/request_date_availability/")
+            if user.language == "en":
+                response.say(f"Sorry, no available days on {appointment_date.strftime('%B %d, %Y')}. Would you like to choose another date?")
+                write_to_log(log, BOT, f"Sorry, no available days on {appointment_date.strftime('%B %d, %Y')}. Would you like to choose another date?")
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
+                response.append(gather)
+                response.redirect("/request_date_availability/")
+            else:
+                response.say(translate_to_language("en", "es", 
+                            f"Sorry, no available days on {appointment_date.strftime('%B %d, %Y')}. Would you like to choose another date?"), language='es-MX')
+                write_to_log(log, BOT, translate_to_language("en", "es", 
+                            f"Sorry, no available days on {appointment_date.strftime('%B %d, %Y')}. Would you like to choose another date?"))
+                gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
+                response.append(gather)
+                response.redirect("/request_date_availability/")
     else:
-        if user.language == "en":
-            response.say(f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
-            write_to_log(log, BOT, f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?")
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
-            response.append(gather)
-            response.redirect("/request_date_availability/")
-        else:
-            response.say(translate_to_language("en", "es", 
-                        f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?"), language='es-MX')
-            write_to_log(log, BOT, translate_to_language("en", "es", 
-                        f"Sorry, no available days on {speech_result.capitalize()} for the next month. Would you like to choose another day?"))
-            gather = Gather(input="speech", timeout=TIMEOUT_LENGTH, action="/confirm_request_date_availability/")
-            response.append(gather)
-            response.redirect("/request_date_availability/")
+        response.redirect("/request_date_availability/")  
 
     return HttpResponse(str(response), content_type="text/xml")
 
