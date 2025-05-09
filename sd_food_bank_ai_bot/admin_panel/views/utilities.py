@@ -28,6 +28,10 @@ def strike_system_handler(log, reset=False):
         else:
 
             if log.add_strike():
+                caller_response = VoiceResponse()
+                caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
+                write_to_log(log, "bot",
+                    "Sorry. I cannot process your request at this time.")
                 forward_operator(log)
 
 
