@@ -68,6 +68,8 @@ class Log(models.Model):
     strikes = models.PositiveIntegerField(default=0)
     intents = models.JSONField(default=dict)
     language = models.CharField(max_length=5, choices=[('en','English'),('es-MX','Spanish')], default='en', help_text="Caller language preference")
+    forwarded = models.BooleanField(default=False)
+    forwarded_reason = models.CharField(max_length=10, choices=[('caller', 'Caller Requested'), ('auto', 'Automatic'),],null=True,blank=True)
 
     def add_intent(self, intent):
         """

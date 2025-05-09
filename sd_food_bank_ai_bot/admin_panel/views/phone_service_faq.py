@@ -81,7 +81,12 @@ def answer_call(request):
         elif digit_input == "4":  # FAQs
             caller_response.redirect("/prompt_question/")
         elif digit_input == "5":
-            forward_operator(log)
+            if log:
+                log.forwarded = True
+                log.forwarded_reason = 'caller'
+                log.save()
+            return forward_operator(log)
+
         else:
             caller_response.say("Please choose a valid option.", voice="Polly.Joanna")
 
@@ -248,6 +253,10 @@ def confirm_question(request, question):
             question = urllib.parse.unquote(question)
 
             if "operator" in question:
+                if log:
+                    log_forwarded = True
+                    log.forwarded_reason = 'caller'
+                    log.save()
                 return forward_operator(log)
 
             answer = get_corresponding_answer(question)

@@ -47,11 +47,11 @@
       </div>
 
       <div class="metric-card">
-        <!-- Put forwarded to opertor here-->
+        <h2 id="forwardedTitle">Calls Forwarded to Operator: -</h2>
+        <canvas id="forwardedChart"></canvas>
       </div>
 
     </div>
-
   
     <!-- Script to fetch data, update the title, and draw the chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -159,8 +159,9 @@
 
     // wire up the dropdown menu change and the initial load
     select.addEventListener('change', () => {
-      refreshCallLanguage(select.value)
-      loadCallTimeOfDay(sel.value);
+      refreshCallLanguage(select.value),
+      loadCallTimeOfDay(select.value),
+      loadForwarded(select.value);
     });
     refreshCallLanguage(select.value);
   </script>
@@ -191,7 +192,7 @@
                   'rgba(64, 255, 64, 0.7)',
                   'rgba(255, 78, 78, 0.7)'
                 ],
-                borderWidth: 1
+                borderWidth: 2
               }]
             }, 
             options: {
@@ -215,7 +216,75 @@
       }
     }
 
-    loadCallTimeOfDay(sel.value);
+    loadCallTimeOfDay(select.value);
+  </script>
+
+  <script>
+    const ctxF   = document.getElementById('forwardedChart').getContext('2d');
+    const titleF = document.getElementById('forwardedTitle');
+    let chartF;
+
+    async function loadForwarded(gran) {
+      try {
+        const res = await fetch(`/api/calls-forwarded/?granularity=${gran}`);
+        const { total, labels, counts } = await res.json();
+
+        titleF.textContent = `Calls Forwarded to Operator: ${total}`;
+
+        const cfg = {
+          type: 'doughnut',        
+          data: {
+            labels,           
+            datasets: [{
+              data: counts,
+              backgroundColor: [
+                'rgba(220, 53, 69, 0.7)',   
+                'rgba(255, 205, 86, 0.7)'   
+              ],
+              borderColor: '#fff',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12,
+                  padding: 16
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    const count = ctx.parsed;
+                    const percent = ((count / total) * 100).toFixed(0);
+                    return `${ctx.label}: ${count} (${percent}%)`;
+                  }
+                }
+              }
+            }
+          }
+        };
+
+        if (!chartF) {
+          chartF = new Chart(ctxF, cfg);
+        } else {
+          // update existing pie
+          chartF.data      = cfg.data;
+          chartF.options   = cfg.options;
+          chartF.update();
+        }
+      } catch (err) {
+        console.error("Error loading forwarded data", err);
+        titleF.textContent = 'Error loading data';
+      }
+    }
+
+    // initial draw
+    loadForwarded(select.value);
   </script>
 
   </div>

@@ -89,6 +89,44 @@ def get_call_language(request):
         'counts': [counts['en'], counts['es']],
     })
 
+def get_calls_forwarded(request):
+    """
+    Returns counts of forwarded calls split by caller's request vs. automatic (based on strikes).
+    """
+    qs = Log.objects.filter(forwarded=True)
+    pst = ZoneInfo("America/Los_Angeles")
+    now = timezone.now().astimezone(pst)
+    gran = request.GET.get('granularity', 'year')
+
+    if gran == 'year':
+        qs = qs.filter(time_started__year=now.year)
+    elif gran == 'month':
+        qs = qs.filter(time_started__year=now.year, time_started__month=now.month)
+    elif gran == 'day':
+        qs = qs.filter(time_started__date=now.date())
+
+    data = (
+        qs.values('forwarded_reason')
+          .annotate(count=Count('id'))
+          .order_by('-count')
+    )
+
+    labels, counts = [], []
+    total = 0
+    for row in data:
+        labels.append(
+            "Caller Requested" if row['forwarded_reason']=='caller'
+            else "Automatic"
+        )
+        counts.append(row['count'])
+        total += row['count']
+
+    return JsonResponse({
+        'total': total,
+        'labels': labels,
+        'counts': counts,
+    })
+
 def get_time_of_day(request):
     """
     Returns the count of calls grouped by time of day.

@@ -26,9 +26,11 @@ def strike_system_handler(log, reset=False):
         if reset:
             log.reset_strikes()
         else:
-
             if log.add_strike():
-                forward_operator(log)
+                log.forwarded = True
+                log.forwarded_reason = 'auto'
+                log.save()
+                return forward_operator(log)
 
 
 def get_phone_number(request):
