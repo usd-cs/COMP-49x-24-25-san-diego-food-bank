@@ -260,7 +260,7 @@ def confirm_question(request, question):
 
             if "operator" in question:
                 if log:
-                    log_forwarded = True
+                    log.forwarded = True
                     log.forwarded_reason = 'caller'
                     log.save()
                 return forward_operator(log)

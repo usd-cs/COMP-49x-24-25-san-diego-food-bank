@@ -14,6 +14,7 @@
       </select>
       <label for="topic">Topic:</label>
       <select id="topic">
+        <option value="All">All</option>
         <option value="faq">FAQs</option>
         <option value="schedule">Schedule</option>
         <option value="reschedule">Reschedule</option>
@@ -71,7 +72,8 @@
   
       async function loadData(gran) {
         try {
-          const res = await fetch(`/api/total-calls/?granularity=${gran}`);
+          const topic = document.getElementById('topic').value;
+          const res = await fetch(`/api/total-calls/?granularity=${gran}&topic=${topic}`);
           const { labels, counts, total } = await res.json();
   
           // update the title
@@ -128,7 +130,8 @@
   
       async function loadAvg(gran) {
         try {
-          const res = await fetch(`/api/call-avg-length/?granularity=${gran}`);
+          const topic = document.getElementById('topic').value;
+          const res = await fetch(`/api/call-avg-length/?granularity=${gran}&topic=${topic}`);
           const { labels, average_lengths, total_average_lengths } = await res.json();
           console.log(average_lengths);
   
@@ -205,12 +208,13 @@
 
       async function refreshCallLanguage(gran) {
         try {
-          const res = await fetch(`/api/call-language/?granularity=${gran}`);
+          const topic = document.getElementById('topic').value;
+          const res = await fetch(`/api/call-language/?granularity=${gran}&topic=${topic}`);
           const { labels, counts } = await res.json();
 
           // update title to reflect period
           const caps = { year: 'Year', month: 'Month', day: 'Day' };
-          titleLang.textContent = `Call Language: (Current ${caps[gran]})`;
+          titleLang.textContent = `Call Language: (Current ${caps[gran]}, Topic: ${topic.charAt(0).toUpperCase() + topic.slice(1)})`;
 
           if (!chartLang) {
             chartLang = new Chart(ctxLang, {
@@ -244,14 +248,22 @@
       }
 
       // wire up the dropdown menu change and the initial load
-      select.addEventListener('change', () => {
-        refreshCallLanguage(select.value),
-        loadCallTimeOfDay(select.value),
-        loadForwarded(select.value),
-        loadReason(select.value),
-        loadAvg(select.value);;
-      });
-      refreshCallLanguage(select.value);
+      function reloadAll() {
+        const gran = document.getElementById('granularity').value;
+        loadData(gran);
+        loadAvg(gran);
+        refreshCallLanguage(gran);
+        loadCallTimeOfDay(gran);
+        loadForwarded(gran);
+        loadReason(gran);
+      }
+
+      // Hook both dropdowns to reload all graphs
+      document.getElementById('granularity').addEventListener('change', reloadAll);
+      document.getElementById('topic').addEventListener('change', reloadAll);
+
+      // Initial load
+      reloadAll();
     </script>
 
     <script>
@@ -261,12 +273,13 @@
 
       async function loadCallTimeOfDay(gran) {
         try {
-          const res = await fetch(`/api/call-time-of-day/?granularity=${gran}`);
+          const topic = document.getElementById('topic').value;
+          const res = await fetch(`/api/call-time-of-day/?granularity=${gran}&topic=${topic}`);
           const { labels, counts } = await res.json();
 
           // update title to reflect period
           const caps = { year: 'Year', month: 'Month', day: 'Day' };
-          titleToD.textContent = `Time of Day: (Current ${caps[gran]})`;
+          titleToD.textContent = `Time of Day: (Current ${caps[gran]}, Topic: ${topic.charAt(0).toUpperCase() + topic.slice(1)})`;
 
           if (!chartToD) {
             chartToD = new Chart(ctxToD, {
@@ -315,10 +328,11 @@
 
       async function loadForwarded(gran) {
         try {
-          const res = await fetch(`/api/calls-forwarded/?granularity=${gran}`);
+          const topic = document.getElementById('topic').value;
+          const res = await fetch(`/api/calls-forwarded/?granularity=${gran}&topic=${topic}`);
           const { total, labels, counts } = await res.json();
 
-          titleF.textContent = `Calls Forwarded to Operator: ${total}`;
+          titleF.textContent = `Calls Forwarded to Operator: ${total}, Topic: ${topic.charAt(0).toUpperCase() + topic.slice(1)}`;
 
           const cfg = {
             type: 'doughnut',        
@@ -383,28 +397,39 @@
 
       async function loadReason(gran) {
         try {
-          const res = await fetch(`/api/call-reasons/?granularity=${gran}`);
-          const { total, labels, counts } = await res.json();
+          const topic = document.getElementById('topic').value;
           const caps = { year: 'Year', month: 'Month', day: 'Day' };
-          titleReason.textContent = `Reason for Calling: (Current ${caps[gran]})`;
+          titleReason.textContent = `Reason for Calling: (Current ${caps[gran]}, Topic: ${topic.charAt(0).toUpperCase() + topic.slice(1)})`;
 
-          const cfg = {
-            type: 'doughnut',        
-            data: {
-              labels,           
+          const res = await fetch(`/api/call-reasons/?granularity=${gran}&topic=${topic}`);
+          const { type, labels, counts } = await res.json();
+          const chartType = type === "faq" ? "pie" : "bar";
+
+          const colors = [
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 159, 64, 0.7)',
+            'rgba(64, 255, 64, 0.7)',
+            'rgba(255, 78, 78, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 206, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(201, 203, 207, 0.7)'
+          ];
+
+          let data, options;
+
+          if (chartType === "pie") {
+            data = {
+              labels: labels,
               datasets: [{
                 data: counts,
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 159, 64, 0.7)',
-                    'rgba(64, 255, 64, 0.7)',
-                    'rgba(255, 78, 78, 0.7)'  
-                ],
+                backgroundColor: labels.map((_, i) => colors[i % colors.length]),
                 borderColor: '#fff',
                 borderWidth: 2
               }]
-            },
-            options: {
+            };
+
+            options = {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
@@ -418,29 +443,71 @@
                 tooltip: {
                   callbacks: {
                     label: function(ctx) {
-                      const count = ctx.parsed;
-                      const percent = ((count / total) * 100).toFixed(0);
+                      const count = ctx.raw;
+                      const total = counts.reduce((a, b) => a + b, 0);
+                      const percent = total ? ((count / total) * 100).toFixed(0) : 0;
                       return `${ctx.label}: ${count} (${percent}%)`;
                     }
                   }
                 }
               }
-            }
-          };
+            };
+          } else {
+            // bar chart
+            data = {
+              labels: [""],  // single group
+              datasets: labels.map((label, i) => ({
+                label: label,
+                data: [counts[i]],
+                backgroundColor: colors[i % colors.length],
+                borderColor: '#fff',
+                borderWidth: 2
+              }))
+            };
+
+            options = {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 12,
+                    padding: 16
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const count = ctx.raw;
+                      const total = counts.reduce((a, b) => a + b, 0);
+                      const percent = total ? ((count / total) * 100).toFixed(0) : 0;
+                      return `${ctx.dataset.label}: ${count} (${percent}%)`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: { display: false },
+                y: { beginAtZero: true }
+              }
+            };
+          }
+
+          const cfg = { type: chartType, data, options };
 
           if (!chartReason) {
             chartReason = new Chart(ctxReason, cfg);
           } else {
-            // update existing pie
-            chartReason.data      = cfg.data;
-            chartReason.options   = cfg.options;
-            chartReason.update();
+            chartReason.destroy();  // important: destroy old chart if type changes (bar <-> pie)
+            chartReason = new Chart(ctxReason, cfg);
           }
         } catch (err) {
-          console.error("Error loading forwarded data", err);
+          console.error("Error loading reason data", err);
           titleReason.textContent = 'Error loading data';
         }
       }
+
 
       // initial draw
       loadReason(select.value);
