@@ -6,7 +6,9 @@ from django.db.models import Count
 from django.db.models.functions import TruncYear, TruncMonth, TruncDay
 from django.shortcuts import render
 from zoneinfo import ZoneInfo
-from ..models import Log  
+from ..models import Log
+from collections import defaultdict
+
 
 def monitoring_dashboard(request):
     """
@@ -195,7 +197,19 @@ def get_reason_for_calling(request):
     else:
         return JsonResponse({'error': 'Invalid granularity'}, status=400)
     
-    labels = None
-    counts = None
+    total = 0
+    intent_counts = defaultdict(int)
+    for entry in qs:
+        intents = entry.intents
+        for key, value in intents.items():
+            if isinstance(value, dict):
+                intent_counts[key] += len(value)
+                total += len(value)
+            else:
+                intent_counts[key] += value
+                total += value
+    
+    labels = list(intent_counts.keys())
+    counts = list(intent_counts.values())
 
-    return JsonResponse({"labels": labels, "counts": counts})
+    return JsonResponse({"total": total, "labels": labels, "counts": counts})
