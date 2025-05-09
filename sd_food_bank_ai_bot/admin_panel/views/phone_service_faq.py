@@ -219,6 +219,7 @@ def get_question_from_user(request):
         else:  # No matching question found
             # Add a strike
             result = strike_system_handler(log)
+            # strike limit reached
             if result:
                 caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
                 write_to_log(log, "bot",
@@ -287,6 +288,7 @@ def confirm_question(request, question):
         else:
             # Add a strike
             result = strike_system_handler(log)
+            # strike limit reached
             if result:
                 caller_response.say("Sorry. I cannot process your request at this time.", voice="Polly.Joanna")
                 write_to_log(log, "bot",
