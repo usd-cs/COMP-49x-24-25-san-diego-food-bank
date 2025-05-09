@@ -3,7 +3,7 @@
 from django.urls import path
 from django.shortcuts import redirect
 from . import views
-from .views.monitoring_page import get_total_calls, monitoring_dashboard, get_call_language, get_calls_forwarded
+
 
 urlpatterns = [
     # Utilities
@@ -204,6 +204,9 @@ urlpatterns = [
           views.get_time_of_day, 
           name="get_time_of_day"),
     path("api/calls-forwarded/", 
-          get_calls_forwarded, 
+          views.get_calls_forwarded, 
           name="get_calls_forwarded"),
+    path("api/call-reasons/",
+         views.get_reason_for_calling,
+         name="get_reason_for_calling"),
 ]
