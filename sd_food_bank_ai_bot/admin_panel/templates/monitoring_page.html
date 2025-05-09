@@ -159,8 +159,9 @@
 
     // wire up the dropdown menu change and the initial load
     select.addEventListener('change', () => {
-      refreshCallLanguage(select.value)
-      loadCallTimeOfDay(sel.value);
+      refreshCallLanguage(select.value),
+      loadCallTimeOfDay(select.value),
+      loadForwarded(select.value);
     });
     refreshCallLanguage(select.value);
   </script>
@@ -191,7 +192,7 @@
                   'rgba(64, 255, 64, 0.7)',
                   'rgba(255, 78, 78, 0.7)'
                 ],
-                borderWidth: 1
+                borderWidth: 2
               }]
             }, 
             options: {
@@ -215,7 +216,7 @@
       }
     }
 
-    loadCallTimeOfDay(sel.value);
+    loadCallTimeOfDay(select.value);
   </script>
 
   <script>
@@ -223,15 +224,15 @@
     const titleF = document.getElementById('forwardedTitle');
     let chartF;
 
-    async function loadForwarded() {
+    async function loadForwarded(gran) {
       try {
-        const res = await fetch('/api/calls-forwarded/');
+        const res = await fetch(`/api/calls-forwarded/?granularity=${gran}`);
         const { total, labels, counts } = await res.json();
 
         titleF.textContent = `Calls Forwarded to Operator: ${total}`;
 
         const cfg = {
-          type: 'pie',        
+          type: 'doughnut',        
           data: {
             labels,           
             datasets: [{
@@ -283,7 +284,7 @@
     }
 
     // initial draw
-    loadForwarded();
+    loadForwarded(select.value);
   </script>
 
   </div>
