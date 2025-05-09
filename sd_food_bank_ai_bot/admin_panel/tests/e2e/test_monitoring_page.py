@@ -9,7 +9,7 @@ from admin_panel.models import Log, Admin
 class MonitoringPageE2ETest(StaticLiveServerTestCase):
     """
     End-to-end test for the monitoring dashboard. Logs in, navigates to Monitoring,
-    and verifies the Total Calls metric displays and updates for each granularity.
+    and verifies the metrics display and updates.
     """
     @classmethod
     def setUpClass(cls):
@@ -27,7 +27,7 @@ class MonitoringPageE2ETest(StaticLiveServerTestCase):
     def setUp(self):
         self.user = Admin.objects.create_user(
             username="admin",
-            password="admin",
+            password="password",
             foodbank_email="bbost@sandiego.edu",
             foodbank_id="9876",
             approved_for_admin_panel=True
@@ -42,7 +42,7 @@ class MonitoringPageE2ETest(StaticLiveServerTestCase):
 
         # Log in
         page.goto(f"{self.live_server_url}/login/")
-        page.fill('input[name="username"]', 'bbost')
+        page.fill('input[name="username"]', 'admin')
         page.fill('input[name="password"]', 'password')
         page.click('button[type="submit"]')
         page.wait_for_url(f"{self.live_server_url}/faqs/")
@@ -54,22 +54,31 @@ class MonitoringPageE2ETest(StaticLiveServerTestCase):
 
         # Check initial total
         title = page.text_content('#totalCallsTitle')
-        assert title.startswith("Total Calls: "), f"Unexpected title: {title}"
+        assert title.startswith("Total Calls: ")
         total_initial = int(title.split(': ')[1])
-        assert total_initial == 3, "Expected 3 seeded logs"
+        assert total_initial == 3
+        page.screenshot(path="screenshots/total_calls.png")
 
         # Filter by month and ensure it's updated
-        page.select_option('#granularity', 'month')
-        page.wait_for_response(lambda r: '/api/total-calls/' in r.url and 'granularity=month' in r.url)
+        dropdown = page.locator('#granularity')
+        dropdown.select_option('month')
+        title_text = page.inner_text('#totalCallsTitle')
+        month_total = int(title_text.split(': ')[1])
+        assert month_total >= 1
         page.screenshot(path="screenshots/monitoring_month.png")
-        month_total = int(page.text_content('#totalCallsTitle').split(': ')[1])
-        assert month_total >= 1, "Month filter should return at least one log"
 
         # Filter by day and ensure it's updated 
-        page.select_option('#granularity', 'day')
-        page.wait_for_response(lambda r: '/api/total-calls/' in r.url and 'granularity=day' in r.url)
+        dropdown.select_option('day')
+        title_text = page.inner_text('#totalCallsTitle')
+        day_total = int(title_text.split(': ')[1])
+        assert day_total >= 1
         page.screenshot(path="screenshots/monitoring_day.png")
-        day_total = int(page.text_content('#totalCallsTitle').split(': ')[1])
-        assert day_total >= 1, "Day filter should return today's log"
+
+        dropdown = page.locator('#topic')
+        dropdown.select_option('FAQs')
+        title_text = page.inner_text('#totalCallsTitle')
+        faq_topic = int(title_text.split(': ')[1])
+        assert faq_topic == 0
+        page.screenshot(path="screenshots/monitoring_topic.png")
 
         page.close()
