@@ -35,10 +35,10 @@ def init_answer(request):
     if phone_number:
         log = Log.objects.create(phone_number=phone_number, language=user.language)
         if user.language == "en":
-            caller_response.say("Thank you for calling the San Diego Food Bank!", language="en")
+            caller_response.say("Thank you for calling the San Diego Food Bank!", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
         else:
-            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX")
+            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX", voice="Polly.Mia")
             write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
         caller_response.redirect("/answer/")
     else:
