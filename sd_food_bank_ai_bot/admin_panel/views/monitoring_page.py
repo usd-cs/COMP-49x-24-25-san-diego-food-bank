@@ -2,12 +2,13 @@ from django.http import JsonResponse
 from django.views import View
 from django.utils import timezone
 from django.utils.timezone import now
-from django.db.models import Count
+from django.db.models import Count, Avg
 from django.db.models.functions import TruncYear, TruncMonth, TruncDay
 from django.shortcuts import render
 from zoneinfo import ZoneInfo
 from ..models import Log
 from collections import defaultdict
+from datetime import timedelta
 
 
 def monitoring_dashboard(request):
@@ -213,3 +214,52 @@ def get_reason_for_calling(request):
     counts = list(intent_counts.values())
 
     return JsonResponse({"total": total, "labels": labels, "counts": counts})
+
+def get_avg_length(request):
+    """
+    Returns average call length and a breakdown by the given granularity (time period).
+    """
+    # Retrieve desired time period level from the request by user
+    gran = request.GET.get('granularity', 'year')
+    qs = Log.objects.all() # Might want to change this from all call logs to maybe past 12 months, etc.
+
+    if gran == 'year':
+        qs = qs.annotate(period=TruncYear('time_started'))
+    elif gran == 'month':
+        qs = qs.annotate(period=TruncMonth('time_started'))
+    elif gran == 'day':
+        qs = qs.annotate(period=TruncDay('time_started'))
+    else:
+        return JsonResponse({
+            'error': 'Invalid granularity'}, status=400)
+    # Group by time period and count number of logs in each 
+    data = qs.values('period') \
+                .annotate(avg_length=Avg('length_of_call')) \
+                .order_by('period')
+
+    labels = []
+    avg_lengths = []
+    for entry in data:
+        dt = entry['period']
+        # Format the label based on time period 
+        if gran == 'year':
+            label = dt.year
+        elif gran == 'month':
+            label = dt.strftime('%Y-%m')
+        else:
+            label = dt.strftime('%Y-%m-%d')
+        labels.append(label)
+        avg_lengths.append(entry['avg_length'].total_seconds())
+
+    total_avg_lengths = qs.aggregate(avg_length=Avg('length_of_call'))['avg_length']
+    if total_avg_lengths is not None:
+        total_avg_lengths = str(timedelta(seconds=int(total_avg_lengths.total_seconds())))
+    else:
+        total_avg_lengths = "00:00:00"
+    
+    # Return the total metrics as JSON 
+    return JsonResponse({
+        'total_average_lengths': total_avg_lengths,
+        'labels': labels,
+        'average_lengths': avg_lengths,
+    })

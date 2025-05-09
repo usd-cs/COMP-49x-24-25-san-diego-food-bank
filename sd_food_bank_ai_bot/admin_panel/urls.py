@@ -212,4 +212,7 @@ urlpatterns = [
     path("api/call-reasons/",
          views.get_reason_for_calling,
          name="get_reason_for_calling"),
+    path('api/call-avg-length/', 
+          views.get_avg_length, 
+          name='get_avg_length'),
 ]
