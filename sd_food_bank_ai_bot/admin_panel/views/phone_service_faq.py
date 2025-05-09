@@ -38,7 +38,7 @@ def init_answer(request):
             caller_response.say("Thank you for calling the San Diego Food Bank!", language="en", voice="Polly.Joanna")
             write_to_log(log, BOT, "Thank you for calling the San Diego Food Bank!")
         else:
-            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX", voice="Polly.Mia")
+            caller_response.say("Gracias por llamar al banco de alimentos de San Diego!", language="es-MX",  voice="Polly.Mia")
             write_to_log(log, BOT, "Gracias por llamar al banco de alimentos de San Diego!")
         caller_response.redirect("/answer/")
     else:
@@ -301,7 +301,7 @@ def prompt_post_answer(request):
         gather = Gather(input="speech", timeout=TIMEOUT,
                         action="/process_post_answer/", language="en")
         options = "Would you like to return to the main menu, ask another question, or end the call?"
-        gather.say(options)
+        gather.say(options, voice="Polly.Joanna")
         write_to_log(log, BOT, options)
     else:
         gather = Gather(input="speech", timeout=TIMEOUT,
@@ -342,7 +342,7 @@ def process_post_answer(request):
         if user.language == "en":
             caller_response.say("Have a great day!")
         else:
-            caller_response.say("¡Qué tengas un lindo día!", language="es-MX")
+            caller_response.say("¡Qué tengas un lindo día!", language="es-MX", voice="Polly.Mia")
         caller_response.hangup()
     else:
         caller_response.redirect("/answer/")
