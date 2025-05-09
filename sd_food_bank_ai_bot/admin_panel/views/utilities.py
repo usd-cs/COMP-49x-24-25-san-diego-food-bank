@@ -30,7 +30,8 @@ def strike_system_handler(log, reset=False):
                 log.forwarded = True
                 log.forwarded_reason = 'auto'
                 log.save()
-                return forward_operator(log)
+                return True
+    return False
 
 
 def get_phone_number(request):
@@ -97,21 +98,18 @@ def appointment_count(request):
     return appointment_count
 
 
-def forward_operator(log=None):
+def forward_operator(caller_response, log=None):
     """
     Relays info to and forwards caller to operator because requested or
     failed strike system
     """
-    caller_response = VoiceResponse()
 
     caller_response.say("I'm transferring you to an operator now. Please hold.", voice="Polly.Joanna")
     if log:
         write_to_log(log,
                     "bot",
                     "I'm transferring you to an operator now. Please hold.")
-    dial = Dial()
-    dial.number("###-###-####")
-    caller_response.append(dial)
+    caller_response.dial("###-###-####")
 
     return HttpResponse(str(caller_response), content_type="text/xml")
 
