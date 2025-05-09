@@ -75,8 +75,19 @@ class Log(models.Model):
         """
         Increment count for intent identified during dialogue
         """
-        self.intents[intent] = self.intents.get(intent, 0) + 1
+        if intent == "faq":
+            self.intents[intent] = self.intents.get(intent, {})
+        else:
+            self.intents[intent] = self.intents.get(intent, 0) + 1
         self.save()
+    
+    def add_question(self, question):
+        """
+        Increment count for question identified during dialogue
+        """
+        if self.intents.get("faq") == None:
+            self.intents["faq"] = {}
+        self.intents["faq"][question] = self.intents["faq"].get(question, 0) + 1
 
     def add_strike(self):
         """Failed intent identification so increment strike count and check

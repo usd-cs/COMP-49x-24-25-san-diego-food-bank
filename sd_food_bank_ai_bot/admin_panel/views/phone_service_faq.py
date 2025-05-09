@@ -73,12 +73,16 @@ def answer_call(request):
             log.save()
             caller_response.redirect("/answer/")
         elif digit_input == "1":
+            log.add_intent("schedule")
             caller_response.redirect("/check_account/?action=schedule")
         elif digit_input == "2":  # Reschedule
+            log.add_intent("reschedule")
             caller_response.redirect("/check_account/?action=reschedule")
         elif digit_input == "3":  # Cancel
+            log.add_intent("cancel")
             caller_response.redirect("/check_account/?action=cancel")
         elif digit_input == "4":  # FAQs
+            log.add_intent("faq")
             caller_response.redirect("/prompt_question/")
         elif digit_input == "5":
             if log:
@@ -260,6 +264,7 @@ def confirm_question(request, question):
                 return forward_operator(log)
 
             answer = get_corresponding_answer(question)
+            log.add_question(question)
 
             if user.language == "en":
                 caller_response.say(answer, voice="Polly.Joanna")

@@ -174,3 +174,28 @@ def get_time_of_day(request):
     counts = list(buckets.values())
 
     return JsonResponse({"labels": labels, "counts": counts})
+
+def get_reason_for_calling(request):
+    """
+    Returns the count of calls grouped by the users reason for calling.
+    """
+
+    gran = request.GET.get('granularity', 'year')
+    qs = Log.objects.all()
+    
+    pst = ZoneInfo("America/Los_Angeles")
+    now = timezone.now().astimezone(pst)
+
+    if gran == 'year':
+        qs = qs.filter(time_started__year=now.year)
+    elif gran == 'month':
+        qs = qs.filter(time_started__year=now.year, time_started__month=now.month)
+    elif gran == 'day':
+        qs = qs.filter(time_started__date=now.date())
+    else:
+        return JsonResponse({'error': 'Invalid granularity'}, status=400)
+    
+    labels = None
+    counts = None
+
+    return JsonResponse({"labels": labels, "counts": counts})
