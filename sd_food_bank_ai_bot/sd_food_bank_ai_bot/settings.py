@@ -37,11 +37,7 @@ SECRET_KEY = 'django-insecure-9-^=r3!5a^d+8*$q' \
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://joey-champion-reasonably.ngrok-free.app',
-]
+ALLOWED_HOSTS = ['']
 
 # Global parameters for the speech recognition aspect of bot's 'say' function to detect when to act
 SPEECHTIMEOUT=0.5

@@ -17,12 +17,34 @@ def monitoring_dashboard(request):
     """
     return render(request, "monitoring_page.html")
 
+def filter_by_topic_qs(qs, topic):
+    """Filters QuerySet by topic if possible (used before .values())."""
+    if topic == "All" or not topic:
+        return qs
+    return qs.filter(**{f"intents__has_key": topic})
+
+def filter_by_topic_list(qs, topic):
+    """Filters a list of logs (for manual iteration cases)."""
+    if topic == "All" or not topic:
+        return qs
+
+    def topic_filter(log):
+        if not log.intents:
+            return False
+        if topic == "faq":
+            return "faq" in log.intents and log.intents["faq"]
+        return topic in log.intents
+
+    return [log for log in qs if topic_filter(log)]
+
+
 def get_total_calls(request):
     """
     Returns total calls and a breakdown by the given granularity (time period).
     """
     # Retrieve desired time period level from the request by user
     gran = request.GET.get('granularity', 'year')
+    topic = request.GET.get('topic')
     qs = Log.objects.all() # Might want to change this from all call logs to maybe past 12 months, etc.
 
     if gran == 'year':
@@ -34,6 +56,10 @@ def get_total_calls(request):
     else:
         return JsonResponse({
             'error': 'Invalid granularity'}, status=400)
+    
+    if topic and topic != "All":
+        qs = filter_by_topic_qs(qs, topic)
+
     # Group by time period and count number of logs in each 
     data = qs.values('period') \
                 .annotate(count=Count('id')) \
@@ -66,6 +92,7 @@ def get_call_language(request):
     Returns the count of calls grouped by language (english or spanish)
     """
     gran = request.GET.get('granularity', 'year')
+    topic = request.GET.get('topic')
     pst = ZoneInfo("America/Los_Angeles")
     now = timezone.now().astimezone(pst)
     qs = Log.objects.all()
@@ -80,6 +107,9 @@ def get_call_language(request):
     else: 
         return JsonResponse({"error": "Invalid"}, status=400)
     
+    if topic and topic != "All":
+        qs = filter_by_topic_qs(qs, topic)
+
     # count by language
     data = qs.values('language').annotate(count=Count('id'))
     
@@ -97,6 +127,7 @@ def get_calls_forwarded(request):
     Returns counts of forwarded calls split by caller's request vs. automatic (based on strikes).
     """
     qs = Log.objects.filter(forwarded=True)
+    topic = request.GET.get('topic')
     pst = ZoneInfo("America/Los_Angeles")
     now = timezone.now().astimezone(pst)
     gran = request.GET.get('granularity', 'year')
@@ -107,6 +138,9 @@ def get_calls_forwarded(request):
         qs = qs.filter(time_started__year=now.year, time_started__month=now.month)
     elif gran == 'day':
         qs = qs.filter(time_started__date=now.date())
+
+    if topic and topic != "All":
+        qs = filter_by_topic_qs(qs, topic)
 
     data = (
         qs.values('forwarded_reason')
@@ -136,6 +170,7 @@ def get_time_of_day(request):
     """
 
     gran = request.GET.get('granularity', 'year')
+    topic = request.GET.get('topic')
     qs = Log.objects.all()
     
     pst = ZoneInfo("America/Los_Angeles")
@@ -150,6 +185,9 @@ def get_time_of_day(request):
     else:
         return JsonResponse({'error': 'Invalid granularity'}, status=400)
     
+    if topic and topic != "All":
+        qs = filter_by_topic_list(qs, topic)
+
     buckets = {
         "8am-12pm": 0,
         "12pm-4pm": 0,
@@ -184,6 +222,7 @@ def get_reason_for_calling(request):
     """
 
     gran = request.GET.get('granularity', 'year')
+    topic = request.GET.get('topic')
     qs = Log.objects.all()
     
     pst = ZoneInfo("America/Los_Angeles")
@@ -198,22 +237,49 @@ def get_reason_for_calling(request):
     else:
         return JsonResponse({'error': 'Invalid granularity'}, status=400)
     
-    total = 0
-    intent_counts = defaultdict(int)
-    for entry in qs:
-        intents = entry.intents
-        for key, value in intents.items():
-            if isinstance(value, dict):
-                intent_counts[key] += len(value)
-                total += len(value)
-            else:
-                intent_counts[key] += value
-                total += value
-    
-    labels = list(intent_counts.keys())
-    counts = list(intent_counts.values())
 
-    return JsonResponse({"total": total, "labels": labels, "counts": counts})
+    # Only filter topic AFTER time filtering
+    logs = list(qs)
+    if topic and topic != "All":
+        logs = filter_by_topic_list(logs, topic)
+
+    intent_counts = defaultdict(int)
+    total = 0
+
+    for log in logs:
+        intents = log.intents or {}
+
+        if topic == "faq":
+            faq_data = intents.get("faq", {})
+            if isinstance(faq_data, dict):
+                for question, count in faq_data.items():
+                    if isinstance(count, int):
+                        intent_counts[question] += count
+                        total += count
+        else:
+            if topic == "All":
+                for key, value in intents.items():
+                    if isinstance(value, dict):
+                        count = len(value)
+                    else:
+                        count = int(value)
+                    intent_counts[key] += count
+                    total += count
+            elif topic in intents:
+                value = intents[topic]
+                if isinstance(value, dict):
+                    count = len(value)
+                else:
+                    count = int(value)
+                intent_counts[topic] += count
+                total += count
+
+    return JsonResponse({
+        "labels": list(intent_counts.keys()),
+        "counts": list(intent_counts.values()),
+        "total": total,
+        "type": topic,
+    })
 
 def get_avg_length(request):
     """
@@ -221,6 +287,7 @@ def get_avg_length(request):
     """
     # Retrieve desired time period level from the request by user
     gran = request.GET.get('granularity', 'year')
+    topic = request.GET.get('topic')
     qs = Log.objects.all() # Might want to change this from all call logs to maybe past 12 months, etc.
 
     if gran == 'year':
@@ -232,6 +299,10 @@ def get_avg_length(request):
     else:
         return JsonResponse({
             'error': 'Invalid granularity'}, status=400)
+    
+    if topic and topic != "All":
+        qs = filter_by_topic_qs(qs, topic)
+
     # Group by time period and count number of logs in each 
     data = qs.values('period') \
                 .annotate(avg_length=Avg('length_of_call')) \
