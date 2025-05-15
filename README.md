@@ -71,17 +71,32 @@ listed above, you have generated your API keys and have a Twilio phone number as
    docker login -u <username>
 
 5. Update .env files
-    - Create 3 files in the root of the project: twilio.env, gpt.env, google.env
-    -twilio.env: paste your twilio_account_sid, twilio_auth_token, and twilio_phone_number in this file, do not commit to git
-    -gpt.env: paste your openai_api_key in this file, do not commit to git
-    -google.env: paste your google_application_credentials in this file, do not commit to git 
-    -never commit these files to git 
+    - Create 3 files in the root of the project (at the same directory level as the README): twilio.env, gpt.env, google.env
+      
+        MAKE SURE NOT TO COMMIT THESE FILES TO THE GIT REPOSITORY AS THEY ARE SENSITIVE CREDENTIALS
+      
+      The content of these files should look like the following:
+      
+    -twilio.env:
 
-6. Start ngrok: run this command in your terminal: ngrok http 8000 (then follow the steps in the twilio setup to paste this link)
+            TWILIO_ACCOUNT_SID=<PASTE ACCOUNT SID HERE>
+            TWILIO_AUTH_TOKEN=<PASTE AUTH TOKEN HERE>
+            TWILIO_PHONE_NUMBER=<PASTE PHONE NUMBER HERE>
+    - gpt.env:
 
-8. Running Docker
+            OPENAI_API_KEY="<PASTE API KEY HERE>"
 
-   Open a new terminal, separate from the one that is running ngrok
+7. Starting ngrok
+
+    Run the following command in your terminal:
+
+           ngrok http 8000
+
+   (then follow the steps in the twilio setup to paste this link)
+
+10. Running Docker
+
+   Open a new terminal, separate from the one that is running ngrok (Ensure the docker app is open/running)
 
    (First time running application)
 
@@ -91,7 +106,7 @@ listed above, you have generated your API keys and have a Twilio phone number as
 
            docker compose up
 
-10. Once the build is complete, visit http://127.0.0.1:8000 to access the admin panel via browser
+11. Once the build is complete, visit http://127.0.0.1:8000 to access the admin panel via browser
 
    (To terminate Docker run the below command)
            docker compose down
