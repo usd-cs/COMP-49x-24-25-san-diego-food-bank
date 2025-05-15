@@ -13,21 +13,35 @@
 
 ## Features:
 
-    - Audit Logs: TODO
+    - Audit Logs: Admins can monitor all of the calls that come in to the phone number associated with this bot 
+    to ensure that it is working as intended. The audit logs display various components of each phone call such as the call duration, call date, and call transcripts between the bot and the caller. These logs also allow the admin to filter calls based on a specific phone number or date to provide more control.
+
     -FAQs: Admins can create and manage FAQs here. This includes assigning question-answer as well as tags
     for easy sorting and searching. Along with this customization, it contains deletion, modification, and
     addition capabilities for them. These FAQs are the buckets by which the system will attempt to place a
     customer's FAQ request into for appropriate answering.
-    - Monitoring: TODO
-    - Account Approval: TODO
-    - Scheduling: (TODO remove this I'm assuming unless we want to explain how each feature of the bot works) Users can interact with the bot to scheduling appointments for the foodbank. This interacts with the scheduling service, Acuity, and ensures various constraints like <= 20 participants per slot, 2 week scheduling-out periods, and confirmation of scheduling via sms. All interactions are tracked for quality purposes.
+
+    - Monitoring: The monitoring page operates as a metric display for the admins to utilize and identify 
+    key insights based on the call system. There are several charts and displays to demonstrate how callers are interacting with the call service, and provide admins with statistics such as the total calls, total calls made in each language, and so forth. There are 2 buttons, the topic button which allows admins to filter the monitoring page charts by certain topics (FAQs, scheduling, etc.) and a time filter button to allow admins to filter the page by Year, Month, or Day. 
+
+    - Account Approval: In the account approval page, superadmins, or certain food bank employees with special approval access, can utilize this page to accept any food bank admin who wishes to use this dashboard. To uphold security, this page functions as a gatekeeper to allow any superuser to accept, or deny, an admin based on their food bank credentials to allow them to log into this dashboard. 
+
+    - Scheduling: (TODO remove this I'm assuming unless we want to explain how each feature of the bot works) Users can interact with the bot to schedule appointments for the foodbank. This service is intended to interact with the scheduling service and can ensure various constraints like <= 20 participants per slot, 2 week scheduling-out periods, and confirmation of scheduling via sms. All interactions are tracked for quality purposes.
 
 ## Software Dependencies
 
     Below are the API Keys required to run the application, along with instructions on how to generate them
         - Twilio:
-            1) TODO (instructions for setting up account + getting api key)
-            https://login.twilio.com/u/signup?state=hKFo2SBYZEsxUjhwejJKSzVTMFVqbGZ4R1RiVVY4Tm9nWDlZYaFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIGtOOHBPY1ZWeFBNQUs5M0lmS0xVNWNoZDZQX0FwWVJ3o2NpZNkgTW05M1lTTDVSclpmNzdobUlKZFI3QktZYjZPOXV1cks
+            1) Sign up: go to https://login.twilio.com/u/signup?state=hKFo2SBTclhJZG5jdHdJc0ROa2kxSFJnR2JUeU12Z2xPUWdTeqFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIEE3WTR5QWdxSUdlLWlKWnoyV3hqdHdkeHRlTlFFOVpBo2NpZNkgTW05M1lTTDVSclpmNzdobUlKZFI3QktZYjZPOXV1cks 
+
+            2) Get your credentials: In the Twilio Console under Settings -> General, copy your Account SID and Auth Token 
+
+            3) Buy a phone number: In Phone Numbers (on the left hand side of the page) -> Buy a number (choose one with Voice & SMS)
+
+            4) Configure webhook (come back to this when you get your NGROK URL)
+                - Under Phone Numbers -> Manage -> Active Numbers, click your number 
+                - In the voice configuration page, paste your NGROK URL + /init_answer/ to the ender of it and click save
+ 
         - OpenAI:
             1) TODO (instructions for setting up account + getting api key)
         - Google Cloud:
@@ -57,13 +71,13 @@ listed above, you have generated your API keys and have a Twilio phone number as
    docker login -u <username>
 
 5. Update .env files
+    - Create 3 files in the root of the project: twilio.env, gpt.env, google.env
+    -twilio.env: paste your twilio_account_sid, twilio_auth_token, and twilio_phone_number in this file, do not commit to git
+    -gpt.env: paste your openai_api_key in this file, do not commit to git
+    -google.env: paste your google_application_credentials in this file, do not commit to git 
+    -never commit these files to git 
 
-    TODO - describe how (pasting api keys you generated into the .env file)
-
-6. Start ngrok
-
-
-7. Copy and paste ngrok link into Twilio URL and save the configuration
+6. Start ngrok: run this command in your terminal: ngrok http 8000 (then follow the steps in the twilio setup to paste this link)
 
 8. Running Docker
 
