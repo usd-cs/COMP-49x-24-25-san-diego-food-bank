@@ -41,11 +41,11 @@
             4) Configure webhook (come back to this when you get your NGROK URL)
                 - Under Phone Numbers -> Manage -> Active Numbers, click your number 
                 - In the voice configuration page, paste your NGROK URL + /init_answer/ in the URL box next to the one labeled "A call comes in" (https://my-url/init_answer/)
-                - Paste your NGROK URL + /call_status_update/ in the URL box next to the one labeled "Call status changes" (https://my-url/call_status_update/)
+                - Paste your NGROK URL + /call_status_update/ in the box labeled "Call status changes" (https://my-url/call_status_update/)
                 - Scroll all the way down and click "Save Configuration"
-                ![Twilio phone number configuration](https://github.com/usd-cs/COMP-49x-24-25-san-diego-food-bank/raw/readme-updates/readMeImgs/TwilioConfig.png)
+![Twilio phone number configuration](https://github.com/usd-cs/COMP-49x-24-25-san-diego-food-bank/raw/main/readMeImgs/TwilioConfig.png)
 
- 
+
         - OpenAI:
             1) Sign up: got to https://platform.openai.com/docs/overview and click "Sign up"
 
