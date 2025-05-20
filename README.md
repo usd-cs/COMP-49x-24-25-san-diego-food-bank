@@ -43,7 +43,7 @@
                 - In the voice configuration page, paste your NGROK URL + /init_answer/ in the URL box next to the one labeled "A call comes in" (https://my-url/init_answer/)
                 - Paste your NGROK URL + /call_status_update/ in the URL box next to the one labeled "Call status changes" (https://my-url/call_status_update/)
                 - Scroll all the way down and click "Save Configuration"
-                ![alt text](https://github.com/usd-cs/COMP-49x-24-25-san-diego-food-bank/raw/readme-updates/readMeImgs/TwilioConfig.png "Twilio phone number configuration")
+                ![Twilio phone number configuration](https://github.com/usd-cs/COMP-49x-24-25-san-diego-food-bank/raw/readme-updates/readMeImgs/TwilioConfig.png)
 
  
         - OpenAI:
