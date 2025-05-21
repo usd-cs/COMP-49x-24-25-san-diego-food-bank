@@ -34,19 +34,46 @@
         - Twilio:
             1) Sign up: go to https://login.twilio.com/u/signup?state=hKFo2SBTclhJZG5jdHdJc0ROa2kxSFJnR2JUeU12Z2xPUWdTeqFur3VuaXZlcnNhbC1sb2dpbqN0aWTZIEE3WTR5QWdxSUdlLWlKWnoyV3hqdHdkeHRlTlFFOVpBo2NpZNkgTW05M1lTTDVSclpmNzdobUlKZFI3QktZYjZPOXV1cks 
 
-            2) Get your credentials: In the Twilio Console under Settings -> General, copy your Account SID and Auth Token 
+            2) Get your credentials: In the Twilio Console under Settings -> General, copy your Account SID and Auth Token (These will be needed later under Running the Application Step 5)
 
             3) Buy a phone number: In Phone Numbers (on the left hand side of the page) -> Buy a number (choose one with Voice & SMS)
 
             4) Configure webhook (come back to this when you get your NGROK URL)
                 - Under Phone Numbers -> Manage -> Active Numbers, click your number 
-                - In the voice configuration page, paste your NGROK URL + /init_answer/ to the ender of it and click save
- 
+                - In the voice configuration page, paste your NGROK URL + /init_answer/ in the URL box next to the one labeled "A call comes in" (https://my-url/init_answer/)
+                - Paste your NGROK URL + /call_status_update/ in the box labeled "Call status changes" (https://my-url/call_status_update/)
+                - Scroll all the way down and click "Save Configuration"
+![Twilio phone number configuration](https://github.com/usd-cs/COMP-49x-24-25-san-diego-food-bank/raw/main/readMeImgs/TwilioConfig.png)
+
+
         - OpenAI:
-            1) TODO (instructions for setting up account + getting api key)
+            1) Sign up: got to https://platform.openai.com/docs/overview and click "Sign up"
+
+            2) Follow through the account creation steps untill you reach the "Make your first API call" step. On this step choose "I'll do this later"
+
+            3) Continue through the account creation. (Note: Credits are needed for the bot to function, when creating your account you may choose to add credits then or wait till later)
+
+            4) Once through the account creation steps, select "Dashboard" at the top of your screen. Then select "API keys" on the left sidebar.
+
+            5) Click "Create new secret key". Give it a name, click "Create secret key" and then click "Copy" on the next window. Then click Done.
+            
+            6) Paste the secret key in the gpt.env file for the OPENAI_API_KEY (See Running the Application Step 5)
+
+
         - Google Cloud:
-            1) TODO (instructions for setting up account + getting api key)
-            https://cloud.google.com/translate/docs/setup
+            1) Visit https://cloud.google.com/translate/docs/setup and follow through the "Enabling the API" step
+
+            2) Once you have enabled the API, click the three bars in the upper left corner to see the Navigation menu. Hover over "IAM & Admin" and select "Service Accounts" on the menu that pops out.
+
+            3) Click "Create Service Account" and fill in the name and ID (Note: the Service account ID may automatically fill in, you can choose to proceed with this name or change it). Click "Create and Continue"
+
+            4) Click the "Role" box, hover over "Currently Used" and select "Owner". Click "Continue" and then click "Done".
+
+            5) You should now see your created service account. Click the three dots under "Actions" and select "Manage Keys".
+
+            6) Click "Add key" then "Create new key". Confirm JSON is selected and click "Create". A .json file should be downloaded to your computer.
+
+            7) Move this .json file to the root of this project (at the same directory level as the README). (This will be used under later during Running the Application Step 5. The file path should be ./NameOfYourFile.json)
 
 ## Running the Application
 
@@ -71,7 +98,7 @@ listed above, you have generated your API keys and have a Twilio phone number as
    docker login -u <username>
 
 5. Update .env files
-    - Create 3 files in the root of the project (at the same directory level as the README): twilio.env, gpt.env, google.env
+    - Create 2 files in the root of the project (at the same directory level as the README): twilio.env and gpt.env
       
         MAKE SURE NOT TO COMMIT THESE FILES TO THE GIT REPOSITORY AS THEY ARE SENSITIVE CREDENTIALS
       
@@ -85,6 +112,7 @@ listed above, you have generated your API keys and have a Twilio phone number as
     - gpt.env:
 
             OPENAI_API_KEY="<PASTE API KEY HERE>"
+            GOOGLE_APPLICATION_CREDENTIALS="<PASTE FILE PATH TO JSON FILE HERE>"
 
 7. Starting ngrok
 
