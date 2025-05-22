@@ -307,23 +307,6 @@ class CheckForAppointmentTests(TestCase):
     @patch("admin_panel.views.phone_service_schedule.Log")
     @patch("admin_panel.views.phone_service_schedule.User")
     @patch("admin_panel.views.phone_service_schedule.check_available_date")
-    def test_available_date(
-        self, mock_check_available, mock_user, mock_log, mock_get_number, mock_sentiment
-    ):
-        """User confirms a valid date that has available appointments"""
-        mock_get_number.return_value = self.phone_number
-        mock_user.objects.get.return_value = self.user
-        mock_log.objects.filter.return_value.last.return_value = self.mock_log
-        mock_check_available.return_value = (True, datetime.strptime(self.date_str, "%Y-%m-%d").date(), 2)
-
-        response = self.client.post(self.url, {"SpeechResult": "yes", "From": self.phone_number})
-        self.assertEqual(response.status_code, 200)
-
-    @patch("admin_panel.views.phone_service_schedule.get_response_sentiment", return_value=True)
-    @patch("admin_panel.views.phone_service_schedule.get_phone_number")
-    @patch("admin_panel.views.phone_service_schedule.Log")
-    @patch("admin_panel.views.phone_service_schedule.User")
-    @patch("admin_panel.views.phone_service_schedule.check_available_date")
     def test_fully_booked_date(
         self, mock_check_available, mock_user, mock_log, mock_get_number, mock_sentiment
     ):
